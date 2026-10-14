@@ -3,7 +3,7 @@
  * steps a run does, and what each step needs. run.ts does the reads and the launches;
  * github.ts talks to GitHub, cursor.ts to Cursor.
  *
- * The choices of issues are builder-resolve's `choose` and `toExplore`: run.ts imports them, not a copy.
+ * The choices of issues are builder's `choose` and `toExplore`: run.ts imports them, not a copy.
  */
 
 export const STEPS = ["explore", "implement"] as const;
@@ -21,7 +21,7 @@ export const SECRETS = ["CURSOR_API_KEY", "GH_APP_KEY_DEV"] as const;
 /**
  * The repo variable and secret of the GitHub App of the loop: the action mints the run's
  * GitHub tokens from them (GH_TOKEN_KIT, the read token of aboveloop for every agent;
- * GH_TOKEN_EXPLORER and GH_TOKEN_BUILDER for the two steps of builder-resolve), so they
+ * GH_TOKEN_EXPLORER and GH_TOKEN_BUILDER for the two steps of builder), so they
  * go to the mint steps, not to run.ts.
  */
 export const APP_NAMES = ["GH_APP_ID_DEV", "GH_APP_KEY_DEV"] as const;

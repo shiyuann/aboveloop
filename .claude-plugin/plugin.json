@@ -1,11 +1,11 @@
 {
   "name": "aboveloop",
-  "description": "跨项目共享：通用工程约定（entry skill）+ builder loop（builder-resolve、setup-app）+ 发版（prerelease）+ plugin 自身的装与更新（setup-dev skill）。",
+  "description": "跨项目共享：通用工程约定（entry skill）+ 知识库（knowledge skill）+ builder loop（builder、setup-app）+ owner 的工作队列（dev skill）+ 发版（prerelease）+ plugin 自身的装与更新（setup-dev skill）。",
   "author": {
     "name": "aboveloop contributors"
   },
   "homepage": "https://github.com/shiyuann/aboveloop",
   "repository": "https://github.com/shiyuann/aboveloop",
   "license": "MIT",
-  "version": "20261013.2"
+  "version": "20261014.3"
 }

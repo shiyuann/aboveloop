@@ -20,8 +20,9 @@ bad=0
 ok() { printf '  ✓ %-36s %s\n' "$1" "$2"; }
 no() { printf '  ✗ %-36s %s\n' "$1" "$2"; bad=$((bad + 1)); }
 hand() { printf '  · %-36s %s\n' "$1" "$2"; }
-# A file on the repo's default branch, as text (empty when it is not there).
-file() { gh api -H "Accept: application/vnd.github.raw+json" "repos/$1/contents/$2" 2>/dev/null; }
+# A file on the repo's default branch, as text (empty when it is not there). On a 404, gh prints GitHub's JSON
+# error on stdout, so only the output of a call that worked counts.
+file() { local out; out=$(gh api -H "Accept: application/vnd.github.raw+json" "repos/$1/contents/$2" 2>/dev/null) && printf '%s\n' "$out"; }
 
 echo "Loop: $REPO"
 
@@ -58,13 +59,26 @@ done
 app_id=$(gh variable get GH_APP_ID_DEV -R "$REPO" 2>/dev/null)
 [ -n "$app_id" ] && ok "variable GH_APP_ID_DEV" "$app_id" || no "variable GH_APP_ID_DEV" "missing: make loop-secrets REPO=$REPO"
 
-cfg=$(file "$REPO" .agents/builder-resolve.md)
+# The configuration of builder (L3-loop-builder §1).
+cfg=$(file "$REPO" .agents/builder.md)
 if [ -z "$cfg" ]; then
-  no ".agents/builder-resolve.md" "missing"
+  no ".agents/builder.md" "missing"
 elif grep -qi '^#.*explore' <<<"$cfg" && grep -qi '^#.*implement' <<<"$cfg"; then
-  ok ".agents/builder-resolve.md" "has Explore and Implement"
+  ok ".agents/builder.md" "has Explore and Implement"
 else
-  no ".agents/builder-resolve.md" "needs an Explore part and an Implement part"
+  no ".agents/builder.md" "needs an Explore part and an Implement part"
+fi
+
+# The configuration of dev (L3-loop-dev §3) is optional: with no file (HTTP 404), the default rank. The session entry
+# of dev reads its ## Rank and says when it cannot; this check does not parse it.
+if ! dev=$(gh api -H "Accept: application/vnd.github.raw+json" "repos/$REPO/contents/.agents/dev.md" 2>&1); then
+  if grep -q "HTTP 404" <<<"$dev"; then
+    hand ".agents/dev.md" "default rank"
+  else
+    no ".agents/dev.md" "cannot be read: $(head -1 <<<"$dev")"
+  fi
+else
+  ok ".agents/dev.md" "on the default branch: dev reads its ## Rank"
 fi
 
 last=$(gh run list -R "$REPO" -w loop.yml -L 1 --json conclusion,status -q '.[] | "\(.status) \(.conclusion)"' 2>/dev/null)
@@ -86,9 +100,18 @@ if [ -n "$app_id" ] && [ -s "$APP_PEM" ]; then
   [ "$code" = 200 ] && ok "GitHub App of the loop" "installed on $REPO" || no "GitHub App of the loop" "not installed on $REPO ($code): Install App → add the repo"
   code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $jwt" "https://api.github.com/repos/$KIT_REPO/installation")
   [ "$code" = 200 ] && ok "GitHub App on aboveloop" "installed: loop.yml reads the latest release with it" || no "GitHub App on aboveloop" "not installed on $KIT_REPO ($code)"
+  # The release variable (L2-release §2.3): the App reads it, and never writes it.
+  vars=$(curl -s -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" "https://api.github.com/app" |
+    node -e 'try { const a = JSON.parse(require("fs").readFileSync(0, "utf8")); process.stdout.write(a.permissions ? a.permissions.actions_variables || "none" : "?"); } catch { process.stdout.write("?"); }')
+  [ "$vars" = read ] && ok "GitHub App of the loop: Variables" "read, not write" || no "GitHub App of the loop: Variables" "is '$vars', want read (Settings › Developer settings › GitHub Apps › <your GitHub App> › Permissions)"
 else
   hand "GitHub App of the loop" "cannot be read here (no GH_APP_ID_DEV or no $APP_PEM): the owner checks that it is installed on $REPO"
 fi
+
+# The Cursor GitHub App stays on the repos for the owner's own agents: it must have no Variables permission,
+# so it cannot write the release variable (L2-release §2.3). `GET /apps/cursor` needs no key.
+cursor=$(gh api apps/cursor -q '.permissions.actions_variables // "none"' 2>/dev/null)
+[ "$cursor" = none ] && ok "Cursor GitHub App Variables" "none" || no "Cursor GitHub App Variables" "is '${cursor:-not readable}', want none: it could write the release variable"
 
 echo
 [ "$bad" -eq 0 ] && echo "All set." || echo "$bad not set."

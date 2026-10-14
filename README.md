@@ -4,11 +4,13 @@
 
 它分两层：
 
-- **里层是 builder loop**：一个 issue 的一生。explore 补 context、分类、调研；implement 在分支
-  `issues/<N>` 上写 plan、spec 和代码，开 PR，跑测试。两种模式走同样的步骤：owner 和 agent 在会话里一起做
-  （半自动），或者 CI 里没有 owner 地做（自动：项目仓库的 `loop.yml` workflow 经 Cursor 的 Cloud Agents API 开 agent）。
-  owner 只做决定和 merge。
-- **外层是 dev loop**：owner 的注意力。会话开工时 `start` 扫一遍在等的活，更新依赖图，给出先做的几件，一件一件带 owner 做。
+- **里层是两个 loop，做活。**
+  - **builder loop**：一个 issue 的一生，三步（`builder` skill）。explore 补 context、分类、调研；spec 和 owner 定 spec 和 plan；
+    implement 在分支 `issues/<N>` 上写代码，开 PR，跑测试。两种模式走同样的步骤：owner 和 agent 在会话里一起做
+    （半自动），或者 CI 里没有 owner 地做（自动：项目仓库的 `loop.yml` workflow 经 Cursor 的 Cloud Agents API 开 agent）。
+    owner 只做决定和 merge。
+  - **knowledge loop**：让项目的 `knowledge/`（spec、plan、依赖图）一直是真的（`knowledge` skill）。
+- **外层是 dev loop**：owner 的注意力。会话开工时 `dev` 扫一遍在等的活，更新依赖图，给出先做的几件，一件一件带 owner 做。
 
 设计在 [`knowledge/`](knowledge/index.md)，以那里的 spec 为准；这份 README 只写它是什么、怎么装、怎么改。
 

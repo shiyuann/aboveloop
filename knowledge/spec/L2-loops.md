@@ -1,178 +1,204 @@
-# Loops: the dev loop and what the loops share
+# Loops: the two levels and what the loops share
 
-> The loops have two levels. One inner loop, the [builder loop](L2-loop-builder.md), does the work: it changes issues into PRs, in a session or in CI. One outer loop, the dev loop, decides where the attention of the owner goes: `start`, the graph of open work, the owner's decisions, the release, and the briefing as a design (§2). This page holds the dev loop and what the loops share: how they connect, the jobs, and the names. The skills, the workflow `loop.yml`, `start` and the graph are built; the briefing is a design that aboveloop does not implement. The loop in CI starts in each project after `setup-app`. ⬜ The rules in `skills/` do not use these terms yet (the dev loop; the builder loop in both modes). The reference of `start` is still `start.md`, and "dev loop" is not a trigger word yet. In a session, the code step still follows `entry`, not `implement.md`.
+> What the loops share: the terms, one overview, the two inner loops in one form, how they connect, how they talk to the owner, the jobs, the names and what is pending. The skills (`knowledge` too), the workflow `loop.yml`, the session entry and the graph of open work are built; the briefing is a design that aboveloop does not implement. The loops in CI start in each project after `setup-app`.
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
+
+## Summary
+
+- **Two levels.** Two inner loops do the work: the builder loop (issues) and the knowledge loop (changes to `knowledge/`). The dev loop, the outer loop, decides where the attention of the owner goes ([§1](#1-overview), the overview chart).
+- All tasks are issues. The owner, an agent in a session of the owner, or a script opens them.
+- **Each inner loop has the same form** (§2): its input, its steps, its output, what starts it, and its page. The builder loop and the dev loop have their own pages; the knowledge loop is §2.2 of this page.
+- **One table lists each point where two loops connect** (§3). A change to `knowledge/` starts the knowledge loop, and a direction-level finding returns to the builder loop as a D. The owner points of all inner loops enter the one queue of the dev loop.
+- **The knowledge loop has a fast part and a slow part** ([§2.2](#22-the-knowledge-loop)). The cascade goes into the commit of the change, so the owner sees it at once. The deep-verify runs in the background before each spec review, and does not stop the owner.
+- **The owner acts only at the owner points** ([§4](#4-how-the-loops-talk-to-the-owner)). How to ask the owner is in `entry`; where the owner acts is in the page of each loop; which point comes first is the rank of the dev loop.
+- **The owner merges every PR of the loops** (P2). The agent merges a small change: [L2-loop-builder §2.1](L2-loop-builder.md#21-where-issues-come-from).
+- **The workflow `loop.yml` of each project is the only trigger of the loops in CI** (§5). It launches a cloud agent only when there is work. A product's own loop (for example a data loop) has its own workflow, under the same rules (`entry`: routines; [L2-loop-architecture §2](L2-loop-architecture.md#2-routines)).
 
 ## 0. Terms
 
 | Term | Meaning |
 | --- | --- |
-| The owner | The person who owns the repos. Only the owner merges PRs (P2). |
+| The owner | The person who owns the repos. Only the owner merges the PRs of the loops (P2). A small change is not a PR of the loops ([L2-loop-builder §2.1](L2-loop-builder.md#21-where-issues-come-from)). |
 | Agent | A model that does work in a repo. |
 | Cloud agent | An agent that the Cursor Cloud Agents API starts on a Cursor machine. Each one does one job one time. |
 | Skill | A file of instructions for an agent. In the charts, the name of a skill starts with `/`. |
-| Routine | One skill, the trigger that starts it, and the platform that runs it. [L2-loop-architecture §2](L2-loop-architecture.md#2-routines) gives the routines of the loops. |
+| Routine | One skill, the trigger that starts it, and the platform that runs it ([L2-loop-architecture §2](L2-loop-architecture.md#2-routines)). |
 | Workflow `loop.yml` | The GitHub Actions workflow `.github/workflows/loop.yml` of a project. It uses no model. It reads GitHub and launches cloud agents ([L3-loop-workflow §1](L3-loop-workflow.md#1-the-workflow-loopyml)). |
-| Inner loop | A loop that does the work of one item. There is one: the builder loop. |
-| Outer loop | The loop above the inner loop. It does no work of an item. It decides where the attention of the owner goes. There is one: the dev loop. |
-| Dev loop | The outer loop: the attention queue of the owner. Its parts are `start`, the graph of open work, the owner's decisions, the release, and the briefing as a design (§2). |
-| Builder loop | The life of an issue: open → explore → spec → code → a PR that the owner merges. It has two modes: the semi-automatic mode in a session, and the automatic mode in CI (the workflow `loop.yml` and `/builder-resolve`). The modes have the same steps, plan and rules. Explore and the code step each have one text that both modes read. [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-). |
+| Inner loop | A loop that does the work of one item. There are two: the builder loop and the knowledge loop (§2). |
+| Outer loop | The loop above the inner loops. It does no work of an item. It decides where the attention of the owner goes. There is one: the dev loop. |
+| Builder loop | The life of an issue: open → explore → spec → implement → a PR that the owner merges. Its two modes, semi-automatic (a session) and automatic (CI), share the three steps, the plan and the rules. Each step has one text that both modes read (`explore.md`, `spec.md`, `implement.md`). How the modes differ: [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-) (§2.1). |
+| Knowledge loop | The inner loop that keeps `knowledge/` true. Its item is one change to `knowledge/` (§2.2). |
+| Dev loop | The outer loop: the attention queue of the owner ([L2-loop-dev](L2-loop-dev.md)). |
+| Cascade | The fast work of the knowledge loop: examine each page that builds on a changed page, and change it if it no longer holds. It goes into the commit of the change (§2.2). |
+| Deep-verify | The slow work of the knowledge loop: subagents verify a spec change and its plan, and the agent repairs what they find (`knowledge`, deep-verify-knowledge). Its two forms, panel and solo: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). |
+| Owner point | A step of a loop where the owner acts: a decision (D), a step (O), a merge, a release, or a thing that only the owner can do (§4). |
 | Issue | A GitHub issue. One issue is one task. |
 | PR | A GitHub pull request. |
-| Briefing | A daily email to the owner: the entry of the dev loop with no session. A design that aboveloop does not implement (§2.1). |
-| `start` | The entry of the dev loop in a session (§2.2). |
-| Graph of open work | `knowledge/plan/index.md` on `main`: all open work of the repo in one chart (§2.3). |
 
-The terms of the builder loop are in its own page.
-
-## Summary
-
-- The loops have two levels. The inner loop, the builder loop, does the work of issues. The outer loop, the dev loop, decides where the attention of the owner goes.
-- All tasks are issues. The owner, an agent in a session of the owner, or a script opens them.
-- The builder loop researches issues and makes PRs from them. It is the life of an issue, in two modes with the same steps, plan and rules: the owner and an agent in a session (semi-automatic), or CI with no owner (automatic) ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)). The differences come from what starts the work and who answers the questions.
-- The dev loop shows the owner what waits, in order: `start` in a session, which also keeps the graph of open work. The design also has a daily briefing by email, which reads the same facts (§2.1; aboveloop does not implement it). The owner decides; agents do the work.
-- **The owner merges every PR** (P2). Each project decides which issues can start without the owner; all others wait for the owner.
-- **The workflow `loop.yml` of each project is the only trigger of the loop in CI.** It starts the automatic mode of the builder loop. It launches a cloud agent only when there is work. A product's own loop (for example a data pipeline) has its own workflow, under the same rules (`entry`: routines) ([L2-loop-architecture §2](L2-loop-architecture.md#2-routines)).
+The terms of each loop are in its own page. The terms of the dev loop (briefing, session entry, rank, graph of open work) are in [L2-loop-dev §0](L2-loop-dev.md#0-terms).
 
 ## 1. Overview
 
 ```mermaid
-flowchart LR
-  subgraph IN["Inner loop: the work"]
-    BL["builder loop<br/>semi-automatic or automatic"]
-  end
-  subgraph OUT["Dev loop: the outer loop"]
-    ST["start, in a session<br/>with the graph of open work"] --> DE["the owner decides"]
-    BR["briefing, email each day<br/>a design, not built"] -.-> DE
-    DE --> RL["release"]
-  end
-  BL -->|"what waits: PRs with evidence,<br/>questions, issues"| ST
-  BL -.->|"the same facts"| BR
-  DE -->|"start an issue, hand it to CI,<br/>a spec review, a merge"| BL
+flowchart TB
+  OP["the owner, a session<br/>or a script"] -->|"an issue"| BL["builder loop<br/>explore → spec → implement"]
+  BL -->|"a change to knowledge/"| KL["knowledge loop<br/>fast: the cascade<br/>slow: the deep-verify"]
+  KL -->|"a new D"| BL
+  BL -->|"an explored issue, a D,<br/>an O, a ready PR"| DL["dev loop: one rank<br/>dev in a session"]
+  DL -->|"feedback, 记一下"| KL
+  DL -->|"one item at a time"| OW(["the owner: D, O, merge, release"])
+  OW -->|"answers, merges"| BL
+  OW -->|"prerelease"| RL["release"]
+  RL -.->|"cleanup"| KL
 ```
 
-The inner loop does the work. The dev loop gives the owner what waits, in order, and the owner's decisions go back into the inner loop. The release takes all merged PRs ([L2-release](L2-release.md)). Dotted lines are the briefing, a design that aboveloop does not implement (§2.1).
+The inner loops do the work, and send what waits for the owner to the dev loop. The dev loop puts it in one order. The owner acts one item at a time, and the answers go back into the inner loops.
 
-The inner loop, the builder loop:
+- **The inner loops** are in §2, and the arrows between them in §3. The owner's points are in §4.
+- **The dev loop** is the attention queue of the owner. Its parts are the session entry (`dev` in a session), the graph of open work, the owner's decisions and the release. The session entry also keeps the graph. Its skill is `dev`. The briefing, an email each day with the same rank, is a design that aboveloop does not implement. [L2-loop-dev](L2-loop-dev.md) holds its decisions; [L3-loop-dev](L3-loop-dev.md) (the session entry, the rank, the graph and `.agents/dev.md`) holds the details.
+- **The release** takes all merged PRs ([L2-release](L2-release.md)).
+
+## 2. The two inner loops
+
+Each inner loop has the same form: input, steps, output, what starts it, and its page. The links between the loops are in §3.
+
+- Why: the inner loops are easier to compare in one form and in one place. §3 holds the arrows between them, and §4 holds how the loops talk to the owner.
+
+### 2.1 The builder loop
+
+- **Input:** an open issue. The owner, an agent in a session of the owner, or a script opens it.
+- **Steps:** explore → spec → implement → a ready PR → the merge (the chart below).
+- **Output:** a PR that the owner merges; the issue closes.
+- **What starts it:** in CI, the workflow `loop.yml`: the explore run takes a batch every 6 hours; the implement run takes an issue with `explored` and `ready-for-auto-builder`. Each run is a cloud agent. In a session, the owner starts each issue. Each project decides which issues can start with no owner; all others wait for the owner.
+- **Page:** [L2-loop-builder](L2-loop-builder.md), [L3-loop-builder](L3-loop-builder.md).
 
 ```mermaid
 flowchart TB
-  ME["the owner, an agent in a session<br/>of the owner, or a script"] -->|opens an issue| B["open issue"]
-  B --> WF{{"automatic: loop.yml workflow<br/>every 6 hours"}}
-  B --> SE["semi-automatic: the owner<br/>and an agent in a session"]
-  WF --> RX["/builder-resolve explore"]
-  SE --> RX
-  RX -->|"semi-automatic"| EN["spec and plan on main<br/>by the rules of entry"]
-  EN -->|"the last spec review"| CS["code on issues/N<br/>by the text implement.md"]
-  RX -->|"automatic"| RI["/builder-resolve implement<br/>plan, L3 spec and code on the branch"]
-  RI --> PR["PR"]
-  CS --> PR
-  PR -->|the owner merges| DN["issue closed"]
+  B["open issue"] --> RX["/builder explore<br/>CI: loop.yml, a batch every 6 hours<br/>session: the agent, at once"]
+  RX -->|"start: the owner in a session,<br/>or ready-for-auto-builder in CI"| EN["/builder spec<br/>a D: the owner in the dialog,<br/>or a question comment in CI"]
+  EN -->|"no D or O is open"| CS["/builder implement<br/>the agent nodes of the plan"]
+  CS --> PR["PR ready"]
+  PR -->|"the owner merges"| DN["issue closed"]
 ```
 
-Boxes that start with `/` are skills. In the automatic mode, each one runs as a cloud agent. In the semi-automatic mode, the agent of the session reads the same two texts, `explore.md` and `implement.md`. It writes the spec and the plan on `main` by the rules of `entry` first ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)). ⬜ In a session, the code step still follows `entry` (execute-plan). The six-sided box is the workflow `loop.yml`, the trigger in CI. The steps inside the loop are in its own page.
+- **Two modes, one path:** a session and CI do the same three steps. How they differ: [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-).
 
-## 2. The dev loop
+### 2.2 The knowledge loop
 
-- **The dev loop is the attention queue of the owner.** It does no work of an issue itself. It shows the owner what waits, in order, and leads the owner through the decisions. When the owner picks an item, its work goes into the inner loop: the semi-automatic mode of the builder loop (in the session, or in a subagent of it), or CI.
-  - Why: the decision bandwidth of the owner limits all loops (P1).
-  - Why: a loop that manages the issues, the PRs and the plans sits above the loop that does the work of one issue.
-  - Why: published work on agent loops puts a human at a boundary of review or decision, and the bandwidth of that human limits the throughput. Some of it has two levels, with the human in the outer loop: Osmani, "Engineers own the outer loop."; Codex, "The Scheduled view acts as your inbox."
-- **The evidence in each PR is what the owner decides on.** So the inner loop spends effort on the evidence: the spec diff, a deep-verify before each spec review (full before the first, light before each later one: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part); ⬜), and the test output in the PR. The test output that an agent reports is a claim, not proof (P2). When a session runs `start`, `start` also reviews each ready PR once for each head commit (§2.2). The owner does not read all code.
-  - Why: the owner cannot review all code.
-  - A known limit: in the automatic mode, implement verifies its own work. Published loops use one agent to do the work and a different agent to verify it. The owner accepts this limit.
+- **Input:** one change to `knowledge/`: a spec page, the index, a reference or a plan.
+- **Steps:** write the change; the fast work (the cascade, in the same commit); the slow work (the deep-verify, in the background, before each spec review); the cleanup at the release (the chart below).
+- **Output:** a `knowledge/` that is true: the change and its cascade in one commit of the PR, and the deep-verify mark and report.
+- **What starts it:** it has no trigger, no job in CI and no cost of its own. The other loops start it and pay for it: the builder loop (mainly its spec step), the dev loop in a session, and the release for the cleanup (§3).
+  - Why: the knowledge loop has steps of its own, but other work starts it. The main start is a spec step that changes `knowledge/`: `plan/`, `spec/` and other pages.
+  - Why: the behavior stays as it is now: the dev loop and the builder loop start the knowledge loop. Its later forms are pending (§7).
+- **Page:** this section. The skill `knowledge` holds its rules: the knowledge base (the levels, the graph in `knowledge/index.md`, what to examine after a change, conflicts), the form of specs and plans, the deep-verify and the knowledge check. Why it is a skill: [L2-plugin §2](L2-plugin.md#2-entry-the-start-for-all-rules-and-skills).
+  - Why: the steps occur in three loops. One name lets each loop link to one description (P3).
 
-| Part | What it does | Where |
-| --- | --- | --- |
-| The briefing | The entry with no session: one email each day. What occurred, what waits for the owner, which three tasks first. A design that aboveloop does not implement. | §2.1 |
-| `start` | The entry in a session. It scans, updates the graph, ranks, and leads the owner one item at a time. | §2.2 |
-| The graph of open work | All open work of the repo in one chart, with the real waits. | §2.3 |
-| The owner's decisions | The start of an issue, a spec review, the merge; the owner's decisions (D) and steps (O) in the plans. | §2.4, [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part) |
-| The release | `prerelease` releases all merged PRs. Only the owner runs it. | [L2-release](L2-release.md) |
+```mermaid
+flowchart TB
+  S["a start: the spec step of the builder loop (mainly),<br/>or the dev loop in a session"] --> W["write the change"]
+  W --> F["FAST, the same commit:<br/>the cascade and the update records"]
+  F --> P["the PR diff:<br/>the owner sees it at once"]
+  P -.->|"the owner talks;<br/>the spec changes"| W
+  F --> H{"a heavy spec?"}
+  H -->|"no: a light spec<br/>or a small change"| M
+  H -->|"yes, at a start time<br/>of the node"| T{"a meaning changed since<br/>the last deep-verify?"}
+  T -->|"no: the node is done<br/>with no run"| O
+  T -->|"yes"| V["SLOW, in the background:<br/>the deep-verify node<br/>reads one fixed commit"]
+  V -->|"a small conflict"| RP["one subagent repairs it"]
+  V -->|"a direction-level finding"| D["a new D node:<br/>the owner decides"]
+  RP --> O["O: the spec review<br/>the whole diff and the summary"]
+  D --> O
+  O --> M["the merge"]
+  M -.->|"the next release"| C["cleanup: prerelease removes<br/>finished plans, reports and ✅ items"]
+```
 
-- **The briefing is a part of the dev loop, not a loop of its own.**
-  - Why: it does no work of an item. It only shows the owner what waits.
-- **One set of facts.** `start` and the briefing read the same facts, by the same rules (one implementation, P3).
-
-### 2.1 The briefing
-
-The briefing is a design. aboveloop does not implement it: there is no skill, no workflow step and no server for it. A project that wants it can build it by these rules.
-
-- **The briefing is the entry of the dev loop with no session.** One email to the owner each day tells three things: what waits for the owner (explored issues to decide, ready PRs, questions and refusals of the agents, stopped work), what occurred in each repo since the last briefing, and which three tasks to do first. Small tasks follow in a short list.
-  - Why: the owner is not in a session each day. The briefing brings the queue of the owner to the owner, so that the inner loop does not wait for a session (P1).
-- **The briefing is an email.** It makes no issue and no file.
-  - Why: the data in the briefing is already recorded where it occurred (P4): issues and PRs keep their history.
-  - Other data from a project (for example, a pipeline incident) must be an issue, or it does not get into the briefing. The one exception: the next nodes of a plan of an issue on `main` (L2-loop-builder §5).
-- **The briefing finds its work in the current state** (E4). It starts at the last briefing, not at a fixed time.
-- **One email every day.** If nothing occurred and nothing waits for the owner, a short fixed email says so, and no agent starts (P6).
-  - Why: a day with no email then means that the briefing failed, not that the day was quiet.
-
-### 2.2 `start`: the entry in a session
-
-- **`start` begins the work of a session** (`entry`, reference `dev-loop.md`; ⬜ the reference is still `start.md`). It is not a skill of its own: it is a part of `entry`. The owner says "start" or "work" (⬜ also "dev loop"), or selects it at the start of a session. Three subagents scan at the same time:
-  1. PRs that are ready (not drafts): the agent reviews the code of each, against its spec diff (in the semi-automatic mode, also the spec commits `#N` on `main`), its issue and its plan on the branch, once for each head commit: the review is a comment of the owner that starts with `<!-- start:review <head commit> -->`.
-  2. Open issues: explored issues that wait for the owner ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)), and issues that explore has not done yet.
-  3. Plans: the open nodes of each plan on `main` and on the branch of each open draft PR, whose nodes before them are done. The plans of issues on `main` (`<N>-<slug>.md`) are in `start` and in the briefing, by one rule. The plans with no issue number are only in `start`. A plan that implement wrote, on a branch or on `main`, shows as one item, and the agent examines that work before it does a node of it (R23).
-
-  Without a subagent tool, the agent does the three scans one after the other. A scan with nothing to read starts no subagent.
-
-  The agent then updates the graph of open work (§2.3) from the scans, and ranks from it. It shows the `Now:` line and the top 5, with one line each about why. Then it leads the owner through them one at a time: a PR to merge, an issue to decide, a decision (D) or a step (O) of the owner, or an agent node to do.
-  - Why: the session leads the start of the work. Subagents scan at the same time; the agent then gives the top 5 and leads the owner through them, one at a time.
-  - The order: first what lets the most work in the graph continue (a ready PR, an open D or O, a release), then the oldest.
-  - **One item, one question.** Before each question, the agent tells four things: what it is; where it stops now; what the agent recommends, and what occurs then (who does it, cost, can it be undone); what occurs with no action. One question has one issue. The four things go into the question itself and its option descriptions, because the owner reads the question box.
-    - Why: a question with no context, or many questions at once, cannot get a good answer. The agent follows `entry` to lead the conversation.
-  - **Questions go one at a time; the work goes in parallel.** When the owner chooses agent work, the agent starts a background subagent for it and goes on to the next item. Agent work that does not wait for other work in the graph (several issues, or several A or C nodes of one plan) starts in parallel, one subagent each. Each issue has one worktree: git does not check out one branch in two worktrees. The subagents of one plan share the worktree of its issue and change files that do not overlap. They do not commit: the main agent runs the tests, ticks the plan and commits each node (⬜ `start.md` and execute-plan do not say this yet). One subagent at a time changes the spec and the plans on `main`; only the main agent changes the graph. Two pieces of work that change the same files go one after the other. The main agent orchestrates: it asks the owner, starts subagents, examines their results and reports. Subagents do the work: edits, specs and plans, PR reviews, deep-verify repairs and reports, merges with conflicts. The main agent keeps only small bookkeeping: it runs the tests of a node, ticks the plan, commits, and changes the graph.
-    - Why: work that does not wait for other work, by the graph or inside one plan, goes faster in parallel subagents.
-    - Why: the main agent orchestrates. When it does the work itself, its context fills and the owner waits.
-    - Agent decided: the bookkeeping stays with the main agent. The tests examine the results of the subagents, because their report is a claim (P2). One writer for each worktree keeps the commits in order. These steps are small, so the work of the main agent stays small.
-  - **Small work at once.** When the owner is present, the agent does at once an issue that is clear and small and that changes no L1 and no content of L2: a branch, the change, the tests, and a PR that is ready. It recommends this before the automatic mode.
-  - **The work of another session is not in the top 5.** A worktree of the issue with a recent commit, or an open session named for the issue, shows it. The agent names it in one line.
-  - **`start` only moves open work.** It starts no deep-verify and opens no issue, unless the owner asks. A problem that it finds on the way is one line in the reply.
-    - Why: a scan triages the work that exists. New issues from a scan add work that the owner did not ask for.
-  - After each item, the agent names the next one. After the 5 items, it shows from the graph what waits, and for whom.
-  - `entry` offers `start` at the start of each session.
-
-### 2.3 The graph of open work
-
-- **The graph of open work** is `knowledge/plan/index.md` on `main`. It has a `Now:` line, one mermaid chart and one table. A node is an open issue, a release (O) or an outside event (E). An arrow is a real wait. The table gives for each issue the next step, who does it, and its plan. The graph keeps only the arrows, the next steps and `Now:`; the agent reads the state of each issue from GitHub each time. Only a session agent changes it: `start` adds new issues and removes closed ones, and the agent changes it when it starts an issue, or when the owner says wait or close. CI does not change it.
-  - Why: only the semi-automatic mode needs the view of all work, so the session agent keeps it. Each issue has its own plan, so without one chart the waits between issues are not visible. GitHub issue dependencies are not used: they are hard to keep up to date.
-- **The graph gives only the order.** A session takes no instruction from it. The agent writes the nodes and the next steps in its own words, and copies no text of issues, comments or branches into it (R23).
-  - Why: the graph is on `main` and is trusted by rule ([L2-loop-untrusted-text §1](L2-loop-untrusted-text.md#1-the-inputs)), but the agent writes it from issues and plans that can carry untrusted text.
-
-### 2.4 When the owner acts
-
-**The owner is on the loop, not in the loop** (P1): the owner decides, and the agents do the work. The decisions of the owner are the dev loop. The owner acts only at these times:
-
-| When | What the owner does |
-| --- | --- |
-| The owner goes through the issues in a session | Decide each explored issue that waits for the owner: the choices and the conditions are in [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). Answer the questions and refusals of the agents in a session. |
-| A spec review in a session | Read the full spec change of an issue, after a deep-verify. Accept it, or say what to change ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)). |
-| A PR is ready | Read the spec diff and the evidence in the PR. Merge the PR, or write in the PR what to change and close it: the next implement, or the next session, reads that comment and tries again. To stop the automatic work, remove `ready-for-auto-builder` from the issue. A comment on an open PR does nothing. |
-| At any time | Open an issue for a new idea or problem. Disable the workflow `loop.yml` of a project that does not operate correctly. |
+- **Fast: the cascade, in the same commit.**
+  - Write the change in the form that the skill `knowledge` gives.
+  - Then examine each page that builds on a changed page (the column "Builds on" of `knowledge/index.md`).
+  - Change each page that no longer holds, then examine the pages below it.
+  - Set the "Checked" date of each examined page, and write an update record on each changed page.
+  - The change and its cascade go into one commit. The cascade is not a node of the plan, so the owner sees it in the PR diff at once.
+  - Why: the owner sees the fast work at once, in the same diff as the change. The slow work does not stop the owner.
+- **Slow: the deep-verify, a fixed agent node before each spec review (O), for a heavy spec.** It runs in the background, and the owner does not wait for it. Its rules (the start times, the fixed commit, the repairs, a new D node, the forms and the cost) and their Why: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). In CI: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
+- **The owner acts only at a D, at the last spec review and at the merge:** [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). All the owner's points: §4.
+- **It is an inner loop.** It does work: it writes the change, examines the pages that build on it, and runs the deep-verify. Its level comes from the work that it does (§0), not from what starts it.
+  - Why: a loop that is neither inner nor outer would be a third kind, with no rule.
 
 ## 3. How the loops connect
 
-The builder loop and the dev loop meet at two points.
+Each row is one arrow between two loops. The page of each loop tells its own part.
 
 | Point | From | To |
 | --- | --- | --- |
-| What waits for the owner: explored issues, questions and refusals of the agents, ready PRs with their evidence | Builder loop: explore and implement ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) | Dev loop: `start` (§2.2), and the briefing in the design (§2.1) |
-| The owner's decisions: start an issue in a session, hand it to CI with `ready-for-auto-builder`, a spec review, a merge | Dev loop: the owner (§2.4) | Builder loop: the next step of the issue ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) |
+| A change to `knowledge/` | Builder loop, mainly its spec step: the spec, the plan and other pages. The implement step removes the ⬜ marks of what it built ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | Knowledge loop: the cascade, in the same commit (§2.2) |
+| The deep-verify node before each spec review (O) | Builder loop: the spec step of a heavy spec | Knowledge loop: the slow work, in the background (§2.2) |
+| A direction-level finding of the deep-verify | Knowledge loop | Builder loop: a new D node of the plan of the issue |
+| The owner's feedback, "记一下", or the result of a design discussion | Dev loop, in a session (`entry`, 「owner 说『应该怎么样』」) | Knowledge loop: a small change in a PR that the agent merges at once; or an issue for the builder loop |
+| A release | `prerelease` (the dev loop) | Knowledge loop: the cleanup removes the finished plans, their deep-verify reports and the ✅ items of the graph of open work ([L2-release §2.8](L2-release.md#28-a-release-removes-finished-plans-and-deep-verify-reports-)) |
+| The owner points | Each inner loop (§4) | Dev loop: the one queue and its rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)) |
 
-## 4. The jobs
+## 4. How the loops talk to the owner
 
-Each job is a skill, or a step of a skill. The job has the same name in all pages, in the charts, and in `skills/`. **Each job finds its work in the current state, not in a time window** (E4). For example, the workflow reads the agents that still run before it launches one ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)).
+**Three places, each with one job:** the general rule in `entry`, and the points of each loop in its own page; the dev loop gives only the order.
+
+- **How to ask** is in `entry` (「拍板只问方向」, 「怎么问 owner」), in one copy. These rules keep the owner's attention, the most expensive resource, for the decisions that only the owner can make (P1).
+- **Where the owner acts** is in the page of each loop: L2-loop-builder ([§1](L2-loop-builder.md#1-the-life-of-an-issue-), [§2.1](L2-loop-builder.md#21-where-issues-come-from), [§3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder), [§7](L2-loop-builder.md#7-the-owners-part)), [L2-loop-dev §5](L2-loop-dev.md#5-when-the-owner-acts), [L2-release §5](L2-release.md#5-the-owners-part) and §2.2 of this page. The table below lists all of them.
+- **Which point comes first** is in the dev loop: the rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The dev loop holds no rule of how to ask.
+- Why: a session that does not go through `dev` (the owner says 「继续 #N」), a design discussion, and CI that asks in an issue comment must obey the same rules. Every session reads `entry`. So the rules are there, in one copy, not in one copy for each loop (P3).
+
+**How a question goes to the owner, in each mode.**
+
+- **A session:** a question in the dialog, one at a time, by the fixed order of `entry`. The part of a session of `builder` spec.md leads the owner through a D or an O of one issue: it records the answer, gives the steps, and verifies each step.
+- **CI:** a question comment on the issue. Which run stops, the label and the owner's answer: [L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder).
+- **What waits:** `dev` in a session shows each point that waits for the owner, in one rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The briefing, a design that aboveloop does not implement, lists the same points, except the next nodes of the plans on draft branches and of the plans of milestones: these are only in `dev` in a session.
+
+**The owner's points.** Each row is one point where the owner acts. The page of each loop holds the detail.
+
+| Loop | Step | What the owner does | How the owner is told | Blocks |
+| --- | --- | --- | --- | --- |
+| Builder | Open, in a session | Choose: an issue, or a small change with no issue ([L2-loop-builder §2.1](L2-loop-builder.md#21-where-issues-come-from)) | A question in the session | That change |
+| Builder | Explore: a vague issue (no reading that the evidence holds). ⬜ | Answer; write the answer in a comment ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | A question comment on the issue | That issue |
+| Builder | After explore | Choose for each explored issue: do it at once, start it, hand it to CI, close it, or wait ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) | `dev` in a session | That issue |
+| Builder | Spec: a D | Decide a direction-level question. Each change of L1 is a D | By mode (above) | The nodes after the D |
+| Builder | Spec, heavy, in a session: the spec review (an O) | Read the spec diff of the draft PR and the summary of the deep-verify. Accept, or say what to change ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) | A question in the session, after the deep-verify node ends | The implement step waits for the last one |
+| Builder | Any step: an O that only the owner can do | Log in with the owner's own account, use the owner's device, pay, give a key, or do an action that cannot be undone (P1) | Session: the steps, one at a time. CI: a question comment; the run stops | The nodes after the O |
+| Builder | A D or an O of the plan of a milestone (no issue; [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | Decide it, or do the step, as for an issue (`spec.md`, the part of a session). A PR that changes the content of that plan is a ready PR (the row "The PR is ready"): its merge is the owner's review, in place of a spec review | The D or the O: `dev` in a session ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The PR: as the row "The PR is ready" | The nodes after it in that plan |
+| Builder | CI: the implement run stops for a reason that is not a D or an O: it refuses the issue, or the change must change L1 or the content of L2 | A refusal: answer in a comment and add the label again, or take the issue into a session. A change of L1 or of the content of L2: take the issue into a session, where the owner decides it ([L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder), [§6](L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)) | A question comment on the issue; `dev` in a session | That issue |
+| Builder | The PR is ready | Merge, modify or reject, after the review of the dev loop ([L2-loop-dev §5](L2-loop-dev.md#5-when-the-owner-acts)). A small change has no owner point: the agent merges it | `dev` in a session | The code does not go to `main` |
+| Knowledge | The cascade | Nothing at once. The owner sees it in the PR diff, with the change (§2.2) | The PR | No |
+| Knowledge | The deep-verify finds a direction-level question | Decide it: it is a new D (the row "Spec: a D") | As a D | The nodes after the D |
+| Dev | Release | Run `prerelease` ([L2-release §5](L2-release.md#5-the-owners-part)) | The daily options at the start of a session; a release O in the rank | The nodes after the release |
+| Dev | A push to `main` or of a tag that the owner did not make; a failed run of `loop.yml` | Examine it. Disable the `loop.yml` of a project that does not operate correctly ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)) | `dev`, at the top of the rank | No |
+| Any | A session: an agent asks a question or refuses | Answer it | A question in the session | — |
+| Any | The setup: once for all apps, and for each app | The keys, the GitHub App (`<your GitHub App>`), its install on the repo of each app. `setup-app` gives the exact clicks ([L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once), [§2](L3-loop-components.md#2-each-app-setup-app)) | The open global steps: the issues of aboveloop. The open steps of an app: the plan of that app | The loops in CI of that app start after `setup-app` |
+| Any | At any time | Open an issue. Remove `ready-for-auto-builder` from an issue to stop its automatic work. Disable the workflow `loop.yml` of a project that does not operate correctly | — | No |
+
+## 5. The jobs
+
+Each job is a skill, or a run of a skill (the field `step` of its input). The job has the same name in all pages, in the charts, and in `skills/`. **Each job finds its work in the current state, not in a time window** (E4). For example, the workflow reads the agents that still run before it launches one ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)).
 
 | Job | Loop | What it does |
 | --- | --- | --- |
-| `builder-resolve`, explore and implement | Builder loop | [L3-loop-builder §1](L3-loop-builder.md#1-builder-resolve-) |
-| `start`, a part of `entry` | Dev loop | §2.2 |
+| `builder`: the explore run and the implement run | Builder loop | [L3-loop-builder §1](L3-loop-builder.md#1-builder-) |
+| `dev`: the session entry | Dev loop | [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry), [L3-loop-dev §1](L3-loop-dev.md#1-the-session-entry) |
+| `knowledge` | Knowledge loop | §2.2. It runs inside the jobs of the other loops, and in a session. |
 
-How the workflow `loop.yml` starts each job in CI, and with which model and access, is in [L2-loop-architecture §2](L2-loop-architecture.md#2-routines).
+The workflow `loop.yml` of each project starts the automatic mode of the builder loop. How it starts each job in CI, and with which model and access, is in [L2-loop-architecture §2](L2-loop-architecture.md#2-routines).
 
-## 5. Names and domains
+## 6. Names and domains
 
 - **Role addresses:** `dev-<role>@<domain>`, the address of each role in CI, on a domain of the owner. The builder loop is `dev-builder`, for example `dev-builder@example.com`. Each project's `.agents/*.md` names its address on an `Address:` line.
-- **GitHub identity:** one GitHub App of the loop, on every repo. The agents in CI act as its bot (`<your GitHub App>[bot]`); an agent in a session acts as the owner. The footer names the app and the role (`dev-builder@example.com`). Its tokens: [L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once).
+- **GitHub identity:** one GitHub App of the loops, on every repo. The agents in CI act as its bot (`<your GitHub App>[bot]`); an agent in a session acts as the owner. The footer names the app and the role (`dev-builder@example.com`). Its tokens: [L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once).
   - Why: one App for all repos and all jobs is one key to keep and one installation to examine.
+
+## 7. Pending
+
+**The later forms of the knowledge loop.** The behavior stays as it is now (§2.2, "What starts it"). Each form below gives the knowledge loop a trigger of its own, and is a later issue. With a trigger, it gets its own pages, like the other inner loop. Its level does not change.
+
+| Form | What it adds | Cost |
+| --- | --- | --- |
+| A. Detection | The session entry of the dev loop runs the knowledge check and finds the stale pages. It shows the drift as items that wait for the owner. | A script, no model (E3, P6) |
+| B. Repair in CI | A job of `loop.yml` repairs small drift as a PR: only L3 pages and mechanical edits, such as old update records, a stale mark of a part not built, or a link. Large drift becomes an issue for the builder loop. | One cloud agent for each repair. The owner merges each PR (P2). |
+| C. A periodic full deep-verify | A full deep-verify of `knowledge/` at a fixed interval, for example at each release. | One full deep-verify each time ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) |

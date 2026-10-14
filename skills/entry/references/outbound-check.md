@@ -1,6 +1,6 @@
 # 发出去之前：恶意检测和网址验证
 
-> 读外来文字的 agent 读：`builder-resolve`（explore、implement）、`start`，和在会话里读 issue 的 agent。每个 skill 写了在哪一步读这一页，和查出问题后怎么处理。
+> 读外来文字的 agent 读：`builder`（explore、implement）、`dev`（会话里的入口），和在会话里读 issue 的 agent。每个 skill 写了在哪一步读这一页，和查出问题后怎么处理。
 
 云端 agent 的网络不设限，任何地址都连得上。所以挡数据外泄靠的是 agent 自己守下面这条规矩，并在发出去之前查一遍。
 

@@ -6,8 +6,8 @@
 
 会话里听到的 feedback，当场记下，不另记文件，不攒着以后消化。应该的样子最后写进 spec，要做的活写进 plan；在那之前，它记在 issue 里。记在哪，照这几条（[SKILL.md](../SKILL.md) 的「owner 说『应该怎么样』」）：
 
-- 和手上这个 issue 有关：写进它在 main 上的 spec 和 plan；已经在写代码了，写进它的分支。
-- 小改动（错字、链接、规矩里的一段）：问一句，直接改，commit 进 main，当场 push。
+- 和手上这个 issue 有关：写进它的分支上的 spec 和 plan。
+- 小改动（错字、链接、规矩里的一段）：问一句，开一个分支和一个 PR，检查过了 agent 当场 merge（[SKILL.md](../SKILL.md) 的同名一节第 2 步）。
 - 别的：问 owner 开不开 issue。开了，照 SKILL.md 的步骤走。
 
 ## 什么时候记
@@ -37,11 +37,11 @@
 
 - **spec 和规矩写应该的样子，和为什么。** 「owner 说提交带了无关的文件」没用。「agent 为了凑一个干净的 commit 去改工作区；约定只说了『只带本轮改动』，没说不许 stash」才有用。由此写出的规矩是：不用 stash 挪走无关的改动。
 - **owner 的原话，只在它就是理由时写进来。** 写上日期。
-- **plan 的节点写做什么、怎样算过**（[spec-and-plan.md](spec-and-plan.md) 的「plan 怎么写」）。
+- **plan 的节点写做什么、怎样算过**（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md) 的「plan 怎么写」）。
 - **agent 自己发现的毛病，owner 没说过应该怎样：** 写成 plan 里的 owner 拍板（D），给推荐。不自己定下来写进 spec。
 
 ## 之后
 
-- 照 SKILL.md 的步骤走到 spec review。最后一次 spec review 过了，agent 才写代码。
-- issue 照 [issue-template.md](issue-template.md) 开。owner 说「交给 builder」，agent 就替 owner 打 `ready-for-auto-builder`（`gh issue edit <N> --add-label ready-for-auto-builder`）。owner 没说，就不打。
-- 改规矩也走 issue 的分支和 PR，小改动除外。aboveloop 的规矩 merge 以后，下一版才到 owner 的会话里：告诉 owner，不替 owner 发版。
+- 照 `builder` 的 [spec.md](../../builder/references/spec.md) 走完 spec 那一步（重的：到最后一次 spec review；轻的：短 plan），agent 才写代码。
+- issue 照 [issue-template.md](issue-template.md) 开。owner 说「交给 builder」，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「交给 builder」。owner 没说，就不打 `ready-for-auto-builder`。
+- 改规矩也走 issue 的分支和 PR。小改动走自己的分支和 PR，agent 当场 merge。aboveloop 的规矩 merge 以后，下一版才到 owner 的会话里：告诉 owner，不替 owner 发版。

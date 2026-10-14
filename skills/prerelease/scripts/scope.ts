@@ -6,10 +6,12 @@
  *   node --experimental-strip-types --no-warnings scope.ts --latest [--cwd <repo>]   only the name of the latest release
  *   … scope.ts --seen <sha>[,<sha>…]   pushes that the owner has looked at (L2-release §1 step 1): not a stop, listed in `seen`
  *
- * - The latest release (L2-release §0): of the tags `YYYYMMDD.N` that origin/main
- *   reaches, the largest whose newest run of the tag record (`.github/workflows/tag-record.yml`,
- *   started by the tag push) is the owner's, with the tag's commit. Another tag is
- *   ignored and listed; the owner decides what to do with it. A record that cannot be read stops the scope.
+ * - The latest release (L2-release §0): the release that the release variable `RELEASE` names
+ *   (release-var.ts). Its tag must be on origin (`git ls-remote`, not the local tag) at the SHA of the
+ *   variable, and origin/main must reach that commit; else a stop. Each other release tag on origin/main
+ *   with a larger version is ignored and listed; the owner decides what to do with it. A variable that cannot be
+ *   read, or has another form, stops the scope. No variable: with no release tag on origin/main, this is
+ *   the first release (all in scope); with a release tag there, a stop: the owner writes the variable first.
  * - The commits after it on HEAD, and the files of the working tree, each put in its
  *   area of the project configuration. The local steps of those areas.
  * - The pushes to `main` since the latest release that the owner did not make
@@ -25,8 +27,8 @@ import { readFileSync, realpathSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { NAME, readRelease, type Release, remoteTagCommit } from "./release-var.ts";
 
-export const RECORD_WORKFLOW = "tag-record.yml";
 const VERSION_RE = /^(\d{8})\.(\d+)$/;
 
 /** `20261010.10` → [20261010, 10]; another name → null. */
@@ -94,32 +96,32 @@ export function byArea(files: string[], areas: Area[]) {
   return { areas: areasOut, outside, steps };
 }
 
-export interface TagRecord {
-  actor: string;
-  sha: string;
-}
-
 export interface TagInfo {
   name: string;
   commit: string;
 }
 
 /**
- * The latest release: the largest tag (on main) whose newest record is the owner's,
- * with the tag's commit now. Others are ignored. `record` throws when it cannot read:
- * that stops the scope (fail closed); null means no record (the tag does not count).
+ * The latest release (L2-release §0, §1 step 1). `variable` is the release variable (null: missing).
+ * `tags`: the release tags that origin/main reaches. `remote(tag)`: the commit of the tag on origin, or null.
+ * `onMain(sha)`: origin/main reaches sha. It throws (a stop) on each case of §0 that stops a job; it never
+ * falls back to another tag. The other release tags with a larger version are ignored and listed.
  */
-export function latestRelease(tags: TagInfo[], owner: string, record: (tag: string) => TagRecord | null) {
-  const ignored: { tag: string; why: string }[] = [];
-  const sorted = tags.filter((t) => parseVersion(t.name)).sort((a, b) => byVersionDesc(a.name, b.name));
-  for (const t of sorted) {
-    const r = record(t.name);
-    if (!r) ignored.push({ tag: t.name, why: "no tag record" });
-    else if (r.actor !== owner) ignored.push({ tag: t.name, why: `pushed by ${r.actor}` });
-    else if (r.sha !== t.commit) ignored.push({ tag: t.name, why: "moved after the owner pushed it" });
-    else return { latest: t, ignored };
+export function latestRelease(variable: Release | null, tags: string[], remote: (tag: string) => string | null, onMain: (sha: string) => boolean) {
+  const releases = tags.filter((t) => parseVersion(t)).sort(byVersionDesc);
+  if (!variable) {
+    if (releases.length)
+      throw new Error(
+        `no release variable ${NAME}, but release tags on origin/main (${releases.slice(0, 3).join(", ")}): the owner writes the variable first (L2-release §0, the first write: release-var.ts write <tag>)`,
+      );
+    return { latest: null, ignored: [] as { tag: string; why: string }[] };
   }
-  return { latest: null, ignored };
+  const at = remote(variable.tag);
+  if (!at) throw new Error(`the tag ${variable.tag} of the release variable is not on origin: the owner looks first`);
+  if (at !== variable.sha) throw new Error(`the tag ${variable.tag} is at ${at.slice(0, 7)} on origin, not at ${variable.sha.slice(0, 7)} of the release variable: the owner looks first`);
+  if (!onMain(variable.sha)) throw new Error(`origin/main does not reach ${variable.tag} (${variable.sha.slice(0, 7)}): the owner looks first`);
+  const ignored = releases.filter((t) => byVersionDesc(t, variable.tag) < 0).map((tag) => ({ tag, why: "not the release variable" }));
+  return { latest: { name: variable.tag, commit: variable.sha } as TagInfo, ignored };
 }
 
 export interface Push {
@@ -202,35 +204,21 @@ export const ghApi =
     }
   };
 
-/** The latest release of the repo in `cwd` (L2-release §0), or null; it throws when a record cannot be read. */
+/** owner/name of the repo in `cwd`, from the configured URL of origin. */
+export const originRepo = (cwd: string) => repoOf(run("git", ["config", "--get", "remote.origin.url"], cwd));
+
+/** The latest release of the repo in `cwd` (L2-release §0), or null for the first release; it throws on each stop. */
 export function latestOf(cwd: string, gh: Gh = ghApi(cwd), fetch = true): TagInfo | null {
   const git = (...a: string[]) => run("git", a, cwd);
-  const repo = repoOf(git("remote", "get-url", "origin"));
   if (fetch) git("fetch", "-q", "origin", "main", "--tags");
-  const owner = (gh(`repos/${repo}`) as { owner: { login: string } }).owner.login;
-  return latestRelease(tagsOnMain(git), owner, recordOf(gh, repo)).latest;
+  return latestIn(cwd, git, gh).latest;
 }
 
-const tagsOnMain = (git: (...a: string[]) => string): TagInfo[] =>
-  git("tag", "--merged", "origin/main")
-    .split("\n")
-    .filter((n) => parseVersion(n))
-    .map((name) => ({ name, commit: git("rev-list", "-n", "1", name) }));
-
-/** The newest run of the tag record for a tag; null when there is none (HTTP 404: no record workflow). */
-const recordOf =
-  (gh: Gh, repo: string) =>
-  (tag: string): TagRecord | null => {
-    let res: { workflow_runs?: { actor?: { login?: string }; head_sha?: string }[] };
-    try {
-      res = gh(`repos/${repo}/actions/workflows/${RECORD_WORKFLOW}/runs?event=push&branch=${encodeURIComponent(tag)}&per_page=1`) as typeof res;
-    } catch (e) {
-      if (/HTTP 404/.test(String(e))) return null;
-      throw new Error(`the tag record of ${tag} cannot be read: stop`);
-    }
-    const r = res.workflow_runs?.[0];
-    return r?.actor?.login && r.head_sha ? { actor: r.actor.login, sha: r.head_sha } : null;
-  };
+function latestIn(cwd: string, git: (...a: string[]) => string, gh: Gh) {
+  const variable = readRelease(gh, originRepo(cwd));
+  const tags = git("tag", "--merged", "origin/main").split("\n").filter(Boolean);
+  return latestRelease(variable, tags, (tag) => remoteTagCommit(cwd, tag), (sha) => ok(() => git("merge-base", "--is-ancestor", sha, "origin/main")));
+}
 
 /** The release worktree (L2-release §0): `<main folder>-release`, beside the main folder of the repo. */
 export function releaseWorktreeOf(git: (...a: string[]) => string): string {
@@ -252,13 +240,13 @@ export const isSeen = (sha: string, seen: string[]) => seen.some((s) => /^[0-9a-
 export function scope(cwd: string, configPath: string, gh: Gh = ghApi(cwd), fetch = true, seen: string[] = []) {
   const git = (...a: string[]) => run("git", a, cwd);
   const areas = parseAreas(readFileSync(`${cwd}/${configPath}`, "utf8"));
-  const repo = repoOf(git("remote", "get-url", "origin"));
+  const repo = originRepo(cwd);
   const branch = git("rev-parse", "--abbrev-ref", "HEAD");
   const where = releaseWorktreeStop(git, branch);
   if (where) return { repo, branch, stop: where };
   if (fetch) git("fetch", "-q", "origin", "main", "--tags");
   const owner = (gh(`repos/${repo}`) as { owner: { login: string } }).owner.login;
-  const { latest, ignored } = latestRelease(tagsOnMain(git), owner, recordOf(gh, repo));
+  const { latest, ignored } = latestIn(cwd, git, gh);
   const head = git("rev-parse", "HEAD");
   const range = latest ? `${latest.commit}..HEAD` : "HEAD";
   const commits = git("log", "--format=%H %s", range).split("\n").filter(Boolean).map((l) => ({ sha: l.slice(0, 7), subject: l.slice(41) }));

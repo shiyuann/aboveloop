@@ -7,7 +7,7 @@
  * An error names the call and the status, never the token or the response
  * body (a body can quote issue text).
  */
-import { type Issue, type Pr, READY_LABEL } from "../../skills/builder-resolve/scripts/loop.ts";
+import { type Issue, type Pr, READY_LABEL } from "../../skills/builder/scripts/loop.ts";
 
 export const API = "https://api.github.com";
 

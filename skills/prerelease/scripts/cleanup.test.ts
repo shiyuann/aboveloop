@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFil
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { cleanup, planState } from "./cleanup.ts";
+import { cleanup, finishedItems, planState } from "./cleanup.ts";
 import { brokenLinks, linksOf } from "./links.mjs";
 
 /** The plan of #36 with four open nodes. */
@@ -74,7 +74,7 @@ const SPEC = `# L2-x
 - Measured ([deep-verify §3.3](../reference/deep-verify-2026-09-01-36.md#33-claude-code-reads)) and [the plan](../plan/36-issue-life.md "the plan").
 - At main: [A8](https://github.com/acme/app/blob/main/knowledge/plan/36-issue-life.md#a8-agent) and <https://github.com/Acme/App/blob/main/knowledge/reference/deep-verify-2026-09-01-36.md>.
 - Another repo: [x](https://github.com/acme/other/blob/main/knowledge/plan/36-issue-life.md).
-- Kept: [report 44](../reference/deep-verify-2026-10-20-44.md), [old plan](../plan/release.md).
+- Kept: [report 44](../reference/deep-verify-2026-10-20-44.md), [the plan of a milestone](../plan/release.md).
 - In code: \`[c](../plan/36-issue-life.md)\`.
 
 \`\`\`text
@@ -287,4 +287,133 @@ test("step 6: after the merge of origin/main, a new link to a file that the vers
   assert.equal(r.git("diff", "--cached", "--name-only"), "knowledge/spec/L3-new.md", "staged for the commit Merge follow-up: links");
   r.git("commit", "-q", "-m", "Merge follow-up: links");
   assert.deepEqual(cleanup(r.dir).changed, [], "a second run changes nothing");
+});
+
+// ---------- the graph of open work ----------
+
+/** A graph of open work (`knowledge/plan/index.md`) with ✅ items; the format is in knowledge's spec-and-plan.md. */
+const GRAPH = `# Open work of acme
+
+> **Now:** #44 A1 (the agent). The ✅ items leave at the release.
+
+\`\`\`mermaid
+flowchart LR
+  REL["O: release 20261101.1 ✅"]
+  REL --> I43["#43 live runs"]
+  I52["#52 release step ✅"] --> I53["#53 next thing"]
+  I44["#44 open plan"] --> I36["#36 issue life ✅"]
+  I44 --> I45["#45 no nodes"]
+  I36b["#36b A1 ✅; next C1"] --> I43
+  E1["E: an outside event"] --> I45
+  I36 --> I53 --> I45
+  style I36 fill:#cfc
+\`\`\`
+
+- #44 waits for nothing.
+
+| Issue | Next step | Who | Plan |
+| --- | --- | --- | --- |
+| #36 ✅ | Done | — | [36-issue-life.md](36-issue-life.md) |
+| #44 | A1 | The agent | [44-open-plan.md](44-open-plan.md) |
+| #52 ✅ | Done | — | — |
+
+\`\`\`text
+| #99 ✅ | in code: stays |
+  I99["#99 in code ✅"]
+\`\`\`
+`;
+
+/** GRAPH after the release: the ✅ nodes, each line that names one, and the ✅ rows are gone. */
+const GRAPH_AFTER = `# Open work of acme
+
+> **Now:** #44 A1 (the agent). The ✅ items leave at the release.
+
+\`\`\`mermaid
+flowchart LR
+  I43["#43 live runs"]
+  I53["#53 next thing"]
+  I44["#44 open plan"]
+  I44 --> I45["#45 no nodes"]
+  I36b["#36b A1 ✅; next C1"] --> I43
+  E1["E: an outside event"] --> I45
+\`\`\`
+
+- #44 waits for nothing.
+
+| Issue | Next step | Who | Plan |
+| --- | --- | --- | --- |
+| #44 | A1 | The agent | [44-open-plan.md](44-open-plan.md) |
+
+\`\`\`text
+| #99 ✅ | in code: stays |
+  I99["#99 in code ✅"]
+\`\`\`
+`;
+
+test("the graph: a ✅ node, each chart line that names it and each ✅ table row go; a node that stays keeps its label", () => {
+  const cut = finishedItems(GRAPH);
+  assert.deepEqual(cut.nodes, ["REL", "I52", "I36"], "a ✅ inside a label does not count; code that is not mermaid does not count");
+  assert.deepEqual(
+    cut.lines.map((l) => [l.line, l.to]),
+    [
+      [7, null],
+      [8, '  I43["#43 live runs"]'],
+      [9, '  I53["#53 next thing"]'],
+      [10, '  I44["#44 open plan"]'],
+      [14, null],
+      [15, null],
+      [22, null],
+      [24, null],
+    ],
+  );
+  assert.deepEqual(cut.warnings, [{ line: 14, text: "I36 --> I53 --> I45" }], "an arrow between two nodes that stay can go with it");
+  assert.equal(cut.text, GRAPH_AFTER);
+  assert.deepEqual(finishedItems(GRAPH_AFTER).lines, [], "a second pass removes nothing");
+  assert.deepEqual(finishedItems("# Open work\n\nNothing open.\n").lines, []);
+});
+
+test("the release removes the ✅ items of the graph and stages it; links on the rows that go are not counted", () => {
+  const r = repo();
+  writeFileSync(join(r.dir, "knowledge/plan/index.md"), GRAPH);
+  r.git("add", "knowledge/plan/index.md");
+  r.git("commit", "-q", "-m", "plan index");
+
+  const dry = cleanup(r.dir, true);
+  assert.equal(dry.stop, null);
+  assert.ok(dry.changed.includes("knowledge/plan/index.md"));
+  assert.deepEqual(dry.graph.map((g) => `${g.file}:${g.line}`), [7, 8, 9, 10, 14, 15, 22, 24].map((n) => `knowledge/plan/index.md:${n}`));
+  assert.ok(!dry.links.some((l) => l.file === "knowledge/plan/index.md"), "the link to the #36 plan is on a row that goes");
+  assert.ok(dry.warnings.includes("knowledge/plan/index.md:14: a chart line with more than one arrow went whole: I36 --> I53 --> I45"));
+  assert.equal(r.git("status", "--porcelain"), "", "the dry run changes nothing");
+
+  const out = cleanup(r.dir);
+  assert.equal(out.stop, null);
+  assert.equal(r.read("knowledge/plan/index.md"), GRAPH_AFTER);
+  assert.ok(r.git("diff", "--cached", "--name-status").split("\n").includes("M\tknowledge/plan/index.md"), "staged for the version commit");
+  assert.equal(r.git("diff", "--name-only"), "");
+  assert.deepEqual(cleanup(r.dir).graph, [], "a second run changes nothing");
+});
+
+test("the graph alone: with no finished plan, the ✅ items still go", () => {
+  const r = repo();
+  r.git("rm", "-q", "knowledge/plan/36-issue-life.md", "knowledge/reference/deep-verify-2026-09-01-36.md", "knowledge/reference/deep-verify-2026-09-02-40.md", "knowledge/reference/deep-verify-2026-09-03-36.md");
+  writeFileSync(join(r.dir, "knowledge/plan/index.md"), GRAPH.replace("[36-issue-life.md](36-issue-life.md)", "—"));
+  r.git("add", "-A");
+  r.git("commit", "-q", "-m", "gone; plan index");
+  const out = cleanup(r.dir);
+  assert.deepEqual([out.remove, out.changed, out.stop], [[], ["knowledge/plan/index.md"], null]);
+  assert.equal(r.read("knowledge/plan/index.md"), GRAPH_AFTER);
+  assert.equal(r.git("diff", "--cached", "--name-only"), "knowledge/plan/index.md");
+});
+
+test("the graph with changes that are not staged: it stops and changes nothing", () => {
+  const r = repo();
+  const graph = GRAPH.replace("[36-issue-life.md](36-issue-life.md)", "—");
+  writeFileSync(join(r.dir, "knowledge/plan/index.md"), graph);
+  r.git("add", "knowledge/plan/index.md");
+  r.git("commit", "-q", "-m", "plan index");
+  writeFileSync(join(r.dir, "knowledge/plan/index.md"), `${graph}\nA new line.\n`);
+  const out = cleanup(r.dir);
+  assert.match(out.stop ?? "", /knowledge\/plan\/index\.md \(not staged\)/, "only its ✅ items make it change");
+  assert.equal(r.read("knowledge/plan/index.md"), `${graph}\nA new line.\n`);
 });

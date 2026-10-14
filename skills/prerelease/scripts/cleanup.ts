@@ -9,10 +9,13 @@
  * What leaves, decided from the files at HEAD:
  * - A plan `knowledge/plan/<N>-<slug>.md` whose `##` headings (outside fenced code) all end with ✅.
  *   A plan with no `##` heading is not finished. A `- [ ]` under a ✅ heading is a warning, not a stop.
- *   A plan with no number (an old plan of the project) stays.
+ *   A plan with no number (the plan of a milestone) stays.
  * - A report `knowledge/reference/deep-verify-<date>-<N>.md` of an issue whose plan leaves, or of an
  *   issue that has no plan at HEAD (its plan left before, or never came to main).
  * - A report with no number stays, with a warning: each report names its issue.
+ *
+ * The ✅ items of the graph of open work `knowledge/plan/index.md` (L2-loop-dev §4, L3-loop-dev §2) leave too: in its mermaid
+ * chart, each node `ID["… ✅"]` and each line that names one; each table row whose first cell ends with ✅.
  *
  * Then:
  * - The table rows of `knowledge/index.md` whose first cell links to a file that leaves go.
@@ -38,6 +41,7 @@ import { repoOf, run } from "./scope.ts";
 const PLAN = /^knowledge\/plan\/(\d+)-[a-z0-9-]+\.md$/;
 const REPORT = /^knowledge\/reference\/deep-verify-\d{4}-\d{2}-\d{2}(?:-(\d+))?\.md$/;
 const INDEX = "knowledge/index.md";
+const GRAPH = "knowledge/plan/index.md";
 const DONE = "✅";
 
 /** A plan is finished when it has a `##` heading and each one ends with ✅. Open items under a ✅ heading are warnings. */
@@ -58,6 +62,63 @@ export function planState(text: string) {
     } else if (done && /^\s*[-*+][ \t]+\[ \][ \t]/.test(line)) warnings.push({ line: i + 1, text: line.trim().slice(0, 120) });
   });
   return { finished: headings > 0 && open.length === 0, open, warnings };
+}
+
+/** A node of a mermaid chart in the graph: `ID["label"]` (the format in knowledge's spec-and-plan.md). */
+const NODE = /([A-Za-z_]\w*)\["([^"]*)"\]/g;
+
+/**
+ * The ✅ items of the graph of open work (L2-loop-dev §4, L3-loop-dev §2): in a mermaid chart, each node whose label ends with ✅,
+ * and each line that names one by its id; outside code, each table row whose first cell ends with ✅. A line that
+ * goes keeps, on a line of its own, the label of each node that stays and has no label on a line that stays.
+ * `to` is that text, or null. A line with more than one arrow goes whole: a warning. Lines from 1.
+ */
+export function finishedItems(text: string) {
+  const lines = text.split("\n");
+  const code = fenced(lines);
+  const chart: boolean[] = [];
+  let fence: string | null = null;
+  let mermaid = false;
+  for (const line of lines) {
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && !m[2].trim()) fence = null;
+      chart.push(fence !== null && mermaid);
+    } else {
+      if (m && !(m[1][0] === "`" && m[2].includes("`"))) [fence, mermaid] = [m[1], m[2].trim() === "mermaid"];
+      chart.push(false);
+    }
+  }
+  const nodes: string[] = [];
+  lines.forEach((line, i) => {
+    if (chart[i]) for (const m of line.matchAll(NODE)) if (m[2].trim().endsWith(DONE) && !nodes.includes(m[1])) nodes.push(m[1]);
+  });
+  const ids = new RegExp(`(?<![\\w])(?:${nodes.join("|") || "(?!)"})(?![\\w])`);
+  const bare = (line: string) => line.replace(NODE, "$1").replace(/\|[^|]*\|/g, "");
+  const goes = lines.map((line, i) =>
+    chart[i]
+      ? ids.test(bare(line))
+      : !code[i] && line.trimStart().startsWith("|") && line.trim().slice(1).split("|")[0].trim().endsWith(DONE),
+  );
+  const labelled = new Set(lines.flatMap((line, i) => (chart[i] && !goes[i] ? [...line.matchAll(NODE)].map((m) => m[1]) : [])));
+  const out: { line: number; text: string; to: string | null }[] = [];
+  const warnings: { line: number; text: string }[] = [];
+  lines.forEach((line, i) => {
+    if (!goes[i]) return;
+    const keep: string[] = [];
+    if (chart[i])
+      for (const m of line.matchAll(NODE))
+        if (!nodes.includes(m[1]) && !labelled.has(m[1])) {
+          labelled.add(m[1]);
+          keep.push(`${/^\s*/.exec(line)![0]}${m[0]}`);
+        }
+    if (chart[i] && (bare(line).match(/-->|---|==>|-\.->/g) ?? []).length + (bare(line).includes("&") ? 1 : 0) > 1)
+      warnings.push({ line: i + 1, text: line.trim() });
+    out.push({ line: i + 1, text: line.trim().slice(0, 160), to: keep.length ? keep.join("\n") : null });
+  });
+  const to = new Map(out.map((o) => [o.line, o.to]));
+  const result = lines.flatMap((line, i) => (!to.has(i + 1) ? [line] : to.get(i + 1) === null ? [] : [to.get(i + 1)!]));
+  return { nodes, lines: out, warnings, text: result.join("\n") };
 }
 
 export interface Leave {
@@ -217,6 +278,7 @@ export function cleanup(cwd: string, dryRun = false) {
     kept,
     removed_by_version: version?.removed.length ? { commit: version.commit, links_at: version.parent, paths: version.removed } : null,
     rows: [] as ReturnType<typeof indexRows>,
+    graph: [] as { file: string; line: number; text: string; to: string | null }[],
     links: [] as ReturnType<typeof permanentLinks>["links"],
     changed: [] as string[],
     mentions: [] as ReturnType<typeof mentionsIn>,
@@ -225,23 +287,31 @@ export function cleanup(cwd: string, dryRun = false) {
   };
   // Each file that leaves now, at HEAD; each file that the version commit removed, at its parent.
   const leaving = new Map<string, string>([...(version?.removed ?? []).map((p): [string, string] => [p, version!.parent]), ...leave.map((l): [string, string] => [l.path, sha])]);
-  if (!leaving.size) return result;
-
-  const repo = repoOf(git("remote", "get-url", "origin"));
-  const paths = leave.map((l) => l.path);
-  const onDisk = (f: string) => existsSync(join(cwd, f));
   // Only regular files: a tracked symlink (for example `.claude/skills -> ../.agents/skills`) or a submodule is a directory to
   // `readFileSync`, which stops with EISDIR; the files behind a symlink are tracked, and read, by their own paths.
   const regular = (f: string) => lstatSync(join(cwd, f), { throwIfNoEntry: false })?.isFile() === true;
+  const graphDone = regular(GRAPH) && finishedItems(readFileSync(join(cwd, GRAPH), "utf8")).lines.length > 0;
+  if (!leaving.size && !graphDone) return result;
+
+  const repo = leaving.size ? repoOf(git("remote", "get-url", "origin")) : "";
+  const paths = leave.map((l) => l.path);
+  const onDisk = (f: string) => existsSync(join(cwd, f));
   const tracked = list("ls-files").filter((f) => !leaving.has(f) && regular(f));
   const next = new Map<string, string>();
   for (const file of tracked.filter((f) => f.endsWith(".md"))) {
     const text = readFileSync(join(cwd, file), "utf8");
     const rows = file === INDEX ? indexRows(text, file, leaving, repo) : [];
-    const gone = new Set(rows.map((r) => r.line));
+    const graph = file === GRAPH ? finishedItems(text) : null;
+    const to = new Map(graph?.lines.map((g) => [g.line, g.to]));
+    const gone = new Set([...rows.map((r) => r.line), ...to.keys()]);
     const p = permanentLinks(text, file, leaving, repo);
-    const out = p.text.split("\n").filter((_, i) => !gone.has(i + 1)).join("\n");
+    const out = p.text
+      .split("\n")
+      .flatMap((line, i) => (!gone.has(i + 1) ? [line] : to.get(i + 1) ? [to.get(i + 1)!] : []))
+      .join("\n");
     result.rows.push(...rows);
+    result.graph.push(...(graph?.lines ?? []).map((g) => ({ file, ...g })));
+    for (const w of graph?.warnings ?? []) result.warnings.push(`${file}:${w.line}: a chart line with more than one arrow went whole: ${w.text}`);
     result.links.push(...p.links.filter((l) => !gone.has(l.line)));
     if (out !== text) next.set(file, out);
   }

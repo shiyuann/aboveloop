@@ -11,7 +11,7 @@ aboveloop 的约定不在项目的仓库里。agent 不用知道它存在哪。�
   AGENTS.md          ← 约定的唯一真相，手写
   CLAUDE.md          ← 只有一行 `@AGENTS.md`
   Makefile           ← 常用命令
-  knowledge/         ← 知识库（knowledge-base.md）
+  knowledge/         ← 知识库（`knowledge` 的 knowledge-base.md）
   .agents/skills/    ← 本项目自己的 skill，真实的目录
   .claude/skills     → ../.agents/skills（符号链接）
 ```

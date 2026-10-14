@@ -7,7 +7,7 @@
 #
 # Inputs reach run.ts only as env, never inside the script text.
 name: aboveloop loop
-description: Launch Cursor cloud agents for builder-resolve (explore, implement).
+description: Launch Cursor cloud agents for builder (explore, implement).
 
 inputs:
   step:

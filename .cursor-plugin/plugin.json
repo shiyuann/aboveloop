@@ -1,7 +1,7 @@
 {
   "name": "aboveloop",
   "description": "跨项目共享的工程约定与技能。项目的 AGENTS.md 指名读 entry skill。",
-  "version": "20261013.2",
+  "version": "20261014.3",
   "author": {
     "name": "aboveloop contributors"
   },

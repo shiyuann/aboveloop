@@ -1,7 +1,7 @@
 /**
- * The decisions of builder-resolve that must not drift (L3-loop-builder §1): which
- * issues the explore step takes, which issue the implement step takes, and
- * whether a PR body carries its parts.
+ * The decisions of builder that must not drift (L3-loop-builder §1): which
+ * issues the explore run takes, which issue the implement run takes, where a
+ * session does the spec and implement steps of an issue, and whether a PR body carries its parts.
  * Pure functions: the CLIs (explore.ts, select.ts, recheck.ts, check-pr-body.ts) only read input and print.
  */
 
@@ -18,6 +18,8 @@ export const BRANCH_PREFIX = "issues/";
 /**
  * First line of each question comment. The comment can also come from the
  * owner's account, so only this line tells which issues wait for the owner.
+ * The marker names `builder-resolve`, not `builder`: a marker is a fixed string that
+ * scripts read, so it does not follow the name of the skill (L2-loop-builder §2.3).
  */
 export const QUESTION_MARKER = "<!-- builder-resolve:question -->";
 
@@ -59,7 +61,7 @@ export interface Issue {
 const labelNames = (i: Issue) => (i.labels ?? []).map((l) => (typeof l === "string" ? l : (l.name ?? "")));
 const isOpenIssue = (i: Issue) => !i.pull_request && i.state === "open";
 
-/** An open issue (not a PR) that carries READY_LABEL and EXPLORED_LABEL: the implement step may take it. */
+/** An open issue (not a PR) that carries READY_LABEL and EXPLORED_LABEL: the implement run may take it. */
 export function isReady(i: Issue): boolean {
   const names = labelNames(i);
   return isOpenIssue(i) && names.includes(READY_LABEL) && names.includes(EXPLORED_LABEL);
@@ -140,12 +142,52 @@ function linkedPrs(prs: Pr[]): Map<number, Pr[]> {
  */
 function take(n: number, linked: Pr[], branches: string[]): Choice | null {
   if (!linked.length) return { issue: n, branch: branchName(n, branches) };
-  const [p] = linked;
-  return linked.length === 1 && p.draft === true && branchIssue(p.head.ref) === n ? { issue: n, branch: p.head.ref, draft: p.number } : null;
+  const p = ownPr(n, linked);
+  return p?.draft === true ? { issue: n, branch: p.head.ref, draft: p.number } : null;
+}
+
+/** The only linked PR of issue `n`, when it is on the issue's own branch; else null. */
+function ownPr(n: number, linked: Pr[]): Pr | null {
+  return linked.length === 1 && branchIssue(linked[0].head.ref) === n ? linked[0] : null;
 }
 
 /**
- * The issue that the implement step takes, or why it stops. `issues` are the
+ * Where a session does the implement step of an issue (L3-loop-builder §1.3, row Input).
+ * It selects nothing and has no limit of 3. `stop`: `labelled` (CI has the issue:
+ * the label is the lock), `linked` (another PR holds it), `closed` (a closed issue,
+ * with the branch for a `Refs #N` PR; a PR number gets no branch). `draft` is the
+ * issue's own draft, `pr` its own ready PR, on `branch`.
+ */
+export type SessionChoice = { stop?: "labelled" | "linked" | "closed"; issue?: number; branch?: string; draft?: number; pr?: number };
+
+export function sessionCheck(input: { issue: Issue; prs: Pr[]; branches?: string[] }): SessionChoice {
+  const { issue } = input;
+  const n = issue.number;
+  if (issue.pull_request) return { stop: "closed" };
+  const closed = issue.state !== "open";
+  if (!closed && labelNames(issue).includes(READY_LABEL)) return { stop: "labelled" };
+  const linked = linkedPrs(input.prs).get(n) ?? [];
+  // A closed issue: its branch issues/<N> belongs to the PR that closed it, so a Refs #N PR takes issues/<N>-<k> from k = 2 (L2-loop-builder §5).
+  const taken = [...(input.branches ?? []), ...(closed ? [`${BRANCH_PREFIX}${n}`] : [])];
+  let at: SessionChoice;
+  if (!linked.length) at = { branch: branchName(n, taken) };
+  else {
+    const p = ownPr(n, linked);
+    if (!p) return { stop: "linked" };
+    at = p.draft === true ? { branch: p.head.ref, draft: p.number } : { branch: p.head.ref, pr: p.number };
+  }
+  return closed ? { stop: "closed", ...at } : { issue: n, ...at };
+}
+
+/** The lines that the session form of recheck.ts prints for a SessionChoice. */
+export function sessionLines(c: SessionChoice): string[] {
+  const where = c.branch === undefined ? [] : [`branch: ${c.branch}`, c.pr ? `pr: #${c.pr}` : `draft: ${c.draft ? `#${c.draft}` : ""}`];
+  if (c.stop) return [c.stop, ...(c.stop === "closed" ? where : [])];
+  return [String(c.issue), ...where];
+}
+
+/**
+ * The issue that the implement run takes, or why it stops. `issues` are the
  * repo's open issues with READY_LABEL (repo-scoped REST, so it runs in every
  * session); a row without both labels, a closed one or a PR is ignored.
  * `branches` are the repo's branches under BRANCH_PREFIX, for the name of a new
@@ -191,11 +233,16 @@ function section(body: string, name: RegExp): string | null {
 /**
  * Problems in a PR body; empty means it passes. The parts: `Fixes #<issue>`,
  * and under `## Evidence` the tests that ran and what was not verified.
+ * `refs`: the form for a closed issue (a node after a release, L2-loop-builder §5):
+ * `Refs #<issue>`, and no closing keyword for it.
  */
-export function checkPrBody(body: string, issue: number): string[] {
+export function checkPrBody(body: string, issue: number, opts: { refs?: boolean } = {}): string[] {
   const problems: string[] = [];
 
-  if (!closingRefs(body).includes(issue)) problems.push(`no "Fixes #${issue}"`);
+  if (opts.refs) {
+    if (!new RegExp(`\\brefs?\\s+#${issue}\\b`, "i").test(body)) problems.push(`no "Refs #${issue}"`);
+    if (closingRefs(body).includes(issue)) problems.push(`the body closes #${issue}; the issue is closed, so write "Refs #${issue}"`);
+  } else if (!closingRefs(body).includes(issue)) problems.push(`no "Fixes #${issue}"`);
 
   if (section(body, /^evidence\b/i) === null) problems.push('no "## Evidence" section');
   const tests = section(body, /^tests?\b/i);
@@ -204,4 +251,9 @@ export function checkPrBody(body: string, issue: number): string[] {
   if (!notVerified) problems.push('no "### Not verified" with what nobody ran or examined (write "Nothing" if so)');
 
   return problems;
+}
+
+/** checkPrBody for an issue as REST gives it: a closed issue takes the `refs` form. */
+export function checkPrBodyFor(body: string, issue: Issue): string[] {
+  return checkPrBody(body, issue.number, { refs: issue.state !== "open" });
 }

@@ -1,8 +1,8 @@
 /**
  * The workflow `loop.yml` of one project repo (L3-loop-workflow §1). No model. One run:
  *
- *   explore    the open issues without the label explored (builder-resolve's `toExplore`, at most 20); launch builder-resolve, step explore, for the batch
- *   implement  choose an open issue with the labels ready-for-auto-builder and explored (builder-resolve's `choose`); launch builder-resolve, step implement, for it
+ *   explore    the open issues without the label explored (builder's `toExplore`, at most 20); launch builder, step explore, for the batch
+ *   implement  choose an open issue with the labels ready-for-auto-builder and explored (builder's `choose`); launch builder, step implement, for it
  *
  *   node --experimental-strip-types --no-warnings services/loop/run.ts [--step all|explore|implement|<a,b>] [--dry-run]
  *
@@ -23,8 +23,8 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { choose, EXPLORED_LABEL, READY_LABEL, toExplore } from "../../skills/builder-resolve/scripts/loop.ts";
-import { holdBack, launch, launchBody, listAgents, SKILL } from "./cursor.ts";
+import { choose, EXPLORED_LABEL, READY_LABEL, toExplore } from "../../skills/builder/scripts/loop.ts";
+import { agentsCreatedSince, holdBack, launch, launchBody, listAgents, SKILL } from "./cursor.ts";
 import { type GitHub, gitHub } from "./github.ts";
 import { missing, payloadBytes, type StepName, stepsFor } from "./plan.ts";
 
@@ -35,7 +35,11 @@ export interface Options {
   fetch?: typeof fetch;
   now?: Date;
   log?: (line: string) => void;
+  sleep?: (ms: number) => Promise<void>;
 }
+
+/** After a launch timeout with no match, wait this long and read the list once more. */
+export const RELIST_WAIT_MS = 5_000;
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e)).split("\n")[0];
 
@@ -46,8 +50,11 @@ export async function runLoop(o: Options): Promise<boolean> {
   const fetchImpl = o.fetch ?? fetch;
   const gh: GitHub = gitHub(fetchImpl);
   const log = o.log ?? ((line: string) => console.log(line));
+  const sleep = o.sleep ?? ((ms: number) => new Promise<void>((done) => setTimeout(done, ms)));
   const dry = o.dryRun === true;
   const repo = env.REPO ?? "";
+  // One clock for the run. A launch timeout keeps an agent created at or after this instant.
+  const started = o.now ?? new Date();
   let failed = false;
   const fail = (line: string) => {
     failed = true;
@@ -94,13 +101,33 @@ export async function runLoop(o: Options): Promise<boolean> {
     if (agents === undefined) agents = await listAgents(env.CURSOR_API_KEY as string, fetchImpl);
     if (agents === null) log(`${step}: the list of agents cannot be read; launching with no check for a second agent`);
     else {
-      const hold = holdBack(agents, body.name, extra.since ?? null, o.now ?? new Date());
+      const hold = holdBack(agents, body.name, extra.since ?? null, started);
       if (hold?.fail) return fail(`${step}: launches nothing for ${what}: ${hold.why}; the owner looks at it`);
       if (hold) return log(`skip ${step}: ${what}: ${hold.why}`);
     }
+    const launched = (agent: string, url: string | null, run: string | null, also = "") =>
+      `${step}: launched ${skill} for ${what} (${size}): agent ${agent}${url ? ` ${url}` : ""} run ${run ?? "(none)"}${also}`;
     const r = await launch(env.CURSOR_API_KEY as string, body, fetchImpl);
-    if (r.ok) log(`${step}: launched ${skill} for ${what} (${size}): agent ${r.agent}${r.url ? ` ${r.url}` : ""} run ${r.run ?? "(none)"}`);
-    else fail(`${step}: launch ${skill} for ${what}: ${r.why}`);
+    if (r.ok) return log(launched(r.agent, r.url, r.run));
+    // A timeout can mean Cursor created the agent and our POST gave up. Do not POST again.
+    // The hold-back list was read before this POST, so it cannot contain the new agent.
+    // The new agent can show in the list a moment after the POST gives up (seen in a run: created
+    // 1 s before the step ended), so a read with no match waits and reads once more.
+    if (r.why === "network: TimeoutError") {
+      const since = () => agentsCreatedSince(env.CURSOR_API_KEY as string, body.name, started, fetchImpl);
+      let found = await since();
+      if (!found.ok || !found.matches.length) {
+        await sleep(RELIST_WAIT_MS);
+        found = await since();
+      }
+      if (!found.ok) return fail(`${step}: launch ${skill} for ${what}: network: TimeoutError; the list request failed`);
+      if (found.matches.length) {
+        const [newest, ...rest] = found.matches;
+        const also = rest.length ? ` also ${rest.map((a) => a.id).join(" ")}` : "";
+        return log(launched(newest.id, newest.url, newest.run, also));
+      }
+    }
+    fail(`${step}: launch ${skill} for ${what}: ${r.why}`);
   }
 
   async function explore() {

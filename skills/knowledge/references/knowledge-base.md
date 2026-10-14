@@ -1,6 +1,6 @@
 # 知识库
 
-> 读、写 `<项目根>/knowledge/` 时读。给新项目建知识库时读。改了一页、要核对别的页时读。两页说的不一样时读。词表在 [SKILL.md](../SKILL.md)。
+> 读、写 `<项目根>/knowledge/` 时读。给新项目建知识库时读。改了一页、要核对别的页时读。两页说的不一样时读。词表在 [entry 的 SKILL.md](../../entry/SKILL.md)。
 
 知识库在 `<项目根>/knowledge/`。下文的 `knowledge/…` 都指这里，不指 aboveloop 自己的目录。知识库是产品、架构、决策的真相。代码对不对，拿它判。
 
@@ -24,11 +24,11 @@ knowledge/
     L1-….md
     L2-….md
     L3-….md
-  plan/             ← 还要做什么、谁做、按什么顺序。index.md 是所有开着的活的依赖图。一个 issue 一份（42-export.md）：半自动从开工起在 main 上，全自动先在分支上；全部 ✅ 以后发版时删掉。不登记。不分层
+  plan/             ← 还要做什么、谁做、按什么顺序。index.md 是所有开着的活的依赖图，做完的打 ✅，发版时删。一个 issue 一份（42-export.md）：先在 issue 的分支上，merge 以后在 main 上；全部 ✅ 以后发版时删掉。不登记。不分层
   reference/        ← 实测、调研、原件。只追加，不改写成 spec。例外：deep-verify 的报告跟着它的 issue 的 plan 走，plan 全部 ✅ 以后发版时一起删掉，链接改成永久链接（L2-release §2.8）。不分层
 ```
 
-用户的反馈不进知识库：它开成 issue（[issue-template.md](issue-template.md)）。owner 的反馈当场记进 issue，或手上这个 issue 的 spec 和 plan（[feedback.md](feedback.md)）。
+用户的反馈不进知识库：它开成 issue（[issue-template.md](../../entry/references/issue-template.md)）。owner 的反馈当场记进 issue，或手上这个 issue 的 spec 和 plan（[feedback.md](../../entry/references/feedback.md)）。
 
 `index.md` 是唯一的入口。它列出这里有哪些页、每页写什么、建立在哪几页上。
 
@@ -48,7 +48,7 @@ knowledge/
 
 `L<层>-<组>[-<题目>].md`。
 
-- **同一组的页挨着排。** 组名放在层级后面的第一个词。比如 `L2-loops.md`（几个 loop 共有的）、`L2-loop-architecture.md`、`L2-loop-builder.md`；`L2-sync.md`、`L3-sync-checker.md`。
+- **同一组的页挨着排。** 组名放在层级后面的第一个词。比如 `L2-loops.md`（几个 loop 共有的）、`L2-loop-dev.md`（dev loop）、`L2-loop-builder.md`；`L2-sync.md`、`L3-sync-checker.md`。
 - **同一件事，各层用同一个名字。** 比如 `L2-loop-builder.md` 和 `L3-loop-builder.md`。
 - **没有更合适的组，就用领域当组名。** 领域只有两个：`prod`、`eng`。比如 `L1-prod-user-profile.md`、`L2-prod-positioning.md`。
 - 产品和工程分得清，才拆成两页。不为了填名字硬拆。
@@ -71,7 +71,7 @@ knowledge/
 | `spec/L2-loops.md` | … | L1-foundation（P1、P4） | <日期> |
 | `spec/L3-loop-builder.md` | … | L2-loop-builder、L2-loop-untrusted-text（R13–R15） | <日期> |
 
-- 每页一行。每份旧 plan 也有一行：spec 一改，plan 可能要跟着改。issue 的 plan 不登记：它建立在这个 issue 改过的页上（main 上以 `#<N>` 开头的 commit，或它的 PR 的 diff）。依赖图 `plan/index.md` 也不登记。reference 没有。
+- 每页一行。每份里程碑的 plan 也有一行：spec 一改，plan 可能要跟着改。issue 的 plan 不登记：它建立在这个 issue 改过的页上（它的 PR 的 diff）。依赖图 `plan/index.md` 也不登记。reference 没有。
 - 「建立在」写页名。引用上层的编号时，括号里写编号。
 - 一页只能建立在同层或上层的页上，不成环。两页互相要用到对方，定规矩的那页在上游，另一页只链过去。
 - 「核对过」是这页最后一次对着它建立在的页核对的日期。

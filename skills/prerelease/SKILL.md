@@ -2,7 +2,7 @@
 name: prerelease
 description: >-
   发一版：从 origin/main 到推 tag，一条路，在自己的 worktree 里跑。定范围（上一版之后改了什么、按区域要做哪些本机步骤）、
-  点名主目录里没进这一版的改动、跟上 origin/main、跑测试、推版本号、写 CHANGELOG、删做完的 plan 和报告、打 tag、推之前的本机步骤（比如传 TestFlight）、
+  点名主目录里没进这一版的改动、跟上 origin/main、跑测试、推版本号、写 CHANGELOG、删做完的 plan、报告和依赖图里打了 ✅ 的项、打 tag、推之前的本机步骤（比如传 TestFlight）、
   先推 main 再推这一个 tag、推之后的本机步骤，最后看 tag 触发的 run。项目自己的那几步在
   `.agents/prerelease.md`。只有 owner 叫它。Use when the user says prerelease, 发版, 发一版,
   预发布, 出包, 发 TestFlight, ship a build, release, cut a release, or 打 tag 发布.
@@ -26,7 +26,7 @@ owner 叫了这个 skill，提交、tag、上传、push 都在范围内，不每
 
 ## 0. 发版 worktree
 
-发版只在发版 worktree 里跑：从 `origin/main` 开，`HEAD` 是 detached。主目录里别的会话在提交，发版不碰它：不在那里提交、不切分支、不 stash。
+发版只在发版 worktree 里跑：从 `origin/main` 开，`HEAD` 是 detached。主目录里可能有别的会话的改动，发版不碰它：不在那里提交、不切分支、不 stash。
 
 ```bash
 MAIN="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"   # 主目录
@@ -50,7 +50,7 @@ git -C "$MAIN" worktree list --porcelain
 
 - **项目配置** `$REL/.agents/prerelease.md`，全部几节。没有这份文件就停，说出文件名，并指给 [references/config.md](references/config.md)（模板）。
   - 模板里的每一节都要有，用不着的写「None」。少了一节（比如旧的配置没有 Release worktree）也停，说出少的那一节，指给模板。
-- 下面的脚本在本 skill 目录的 `scripts/` 下，零依赖，用 `node --experimental-strip-types --no-warnings <脚本>` 跑（Node 22+）。`scope.ts` 和 `changelog.ts` 要 `gh` 已登录（本机的 owner 账号）。
+- 下面的脚本在本 skill 目录的 `scripts/` 下，零依赖，用 `node --experimental-strip-types --no-warnings <脚本>` 跑（Node 22+）。`scope.ts`、`changelog.ts` 和 `release-var.ts` 要 `gh` 已登录（本机的 owner 账号）。
 - **记下 `<点>`** 是 `node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.ts write <点>`，在 `$REL` 里跑。下面每到一个点就记，哪个点在哪、停了以后怎么接，在「接着上次」那张表。
 - **链接检查**是 `node <本 skill 目录>/scripts/links.mjs`：项目里每个 Markdown 文件的相对链接，指向的文件都在。不联网。红了它列出每一条坏链接。
 
@@ -84,9 +84,9 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
 | `tagged` | 打完 tag 之后 | 第 5 步，从失败的那一步接着做（项目配置 Before push 那张表）。不 bump，TestFlight 已经有这个号的包也不 bump：那是这一版自己传的 |
 | `refix` | 「推之前的检查红了」：查过 tag 不在 origin 上之后，挪 worktree 之前 | 把那一段做完：本地还有 V 的 tag，`HEAD` 是它的提交：`git checkout --detach "$VC^"`；再查一次 origin，退出码是 2 才 `git tag -d`。然后照「发版内的修复」修、提交，重做第 4 步（记 `bump`），再第 5 步 |
 | `before-push-done` | 第 5 步全过了之后 | 第 6 步：推 `HEAD:main`，再推 tag。不再跑 Before push |
-| `merge` | 第 6 步，`git merge origin/main` 之前 | 第 6 步那次 merge 的后半段。tag 不动，不再跑 Before push，从不走「推之前的检查红了」。先收好工作区：merge 有冲突没解完（`MERGE_HEAD` 在）：解开，`GIT_EDITOR=true git commit --no-edit`。还有没暂存的改动：那是一次修复，做完，`git commit -m "Merge follow-up: <修了什么>" -- <文件>`。然后从第 6 步 merge 那一串的第 2 项接着做：`cleanup.ts`（暂存区里已有它上次的结果，它给出一样的），改了就提交 `Merge follow-up: links`；链接检查、Tests，红了在上面修、提交 `Merge follow-up: <修了什么>`；再跑一次第 6 步那段：推 `HEAD:main`、记 `main-pushed`、推 tag、记 `tag-pushed` |
-| `main-pushed` | `git push origin HEAD:main` 过了之后 | 只推 tag（`git push origin V`），记 `tag-pushed`，再第 7 步 |
-| `tag-pushed` | 推 tag 过了之后 | 推完了。第 7 步：从没过的那一步接着做（停的时候说过）。不出新版本，不 bump。owner 要的是新的一版：先删掉 worktree，再从第 0 步开始 |
+| `merge` | 第 6 步，`git merge origin/main` 之前 | 第 6 步那次 merge 的后半段。tag 不动，不再跑 Before push，从不走「推之前的检查红了」。先收好工作区：merge 有冲突没解完（`MERGE_HEAD` 在）：解开，`GIT_EDITOR=true git commit --no-edit`。还有没暂存的改动：那是一次修复，做完，`git commit -m "Merge follow-up: <修了什么>" -- <文件>`。然后从第 6 步 merge 那一串的第 2 项接着做：`cleanup.ts`（暂存区里已有它上次的结果，它给出一样的），改了就提交 `Merge follow-up: links`；链接检查、Tests，红了在上面修、提交 `Merge follow-up: <修了什么>`；再跑一次第 6 步那段：推 `HEAD:main`、记 `main-pushed`、推 tag、记 `tag-pushed`、写发版变量 |
+| `main-pushed` | `git push origin HEAD:main` 过了之后 | 只推 tag（`git push origin V`），记 `tag-pushed`，写发版变量（`release-var.ts write V`，第 6 步），再第 7 步 |
+| `tag-pushed` | 推 tag 过了之后 | 推完了。先写发版变量：`release-var.ts write V`（第 6 步；变量已经是这一版，它什么都不写，打印 `already`）。再第 7 步：从没过的那一步接着做（停的时候说过）。不出新版本，不 bump。owner 要的是新的一版：先删掉 worktree，再从第 0 步开始 |
 | `after-push-done` | 第 7 步的本机步骤全过了之后 | 第 7 步的 2、3：列出 tag 触发的 run，删掉 worktree |
 
 **这个号用过了**：tag 已经在 origin 上，或者 TestFlight 已经有这个号的包（项目配置写了怎么看，比如 Version 一节的 `BUILD` 行）。先 bump，再打新 tag。只在本机、从没推过的 tag 不算用过。这一条只管第 4 步的 bump（也是 `bump` 这个点上接着做的），和 `refix` 之后重做的第 4 步。`tagged` 往后的点从不 bump，TestFlight 有这个号的包也一样。
@@ -97,13 +97,16 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
 node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/scope.ts
 ```
 
-它只读，打印一份 JSON：最新一版（`latest`，还没有就是 null）、之后的提交、工作区的文件、按区域分好的文件（`areas`、`outside`）、这一版要做的本机步骤（`steps`）、不算数的 tag（`ignored`：不是 owner 推的、没有推送记录、推完又被挪过）、`stop`。
+它只读，打印一份 JSON：最新一版（`latest`：发版变量 `RELEASE` 指的那一版；还没有发版就是 null）、之后的提交、工作区的文件、按区域分好的文件（`areas`、`outside`）、这一版要做的本机步骤（`steps`）、不算数的 tag（`ignored`：`origin/main` 上版本号比最新一版大、但发版变量没指它的 tag，原因是「not the release variable」）、`stop`。
 
 - `stop` 不是 null：停，原话告诉 owner。几种：
   - 不在发版 worktree 里，或 `HEAD` 在一个分支上。只从发版 worktree、detached 的 `HEAD` 发（第 0 步）。
   - 上一版之后什么都没改。
   - 上一版之后有不是 owner 做的推送进了 `main`（列出提交和是谁）。owner 先看过这些提交，再叫一次。owner 在这一轮会话里听你说了这几个提交、看过之后又叫了，第二次就带上它们：`scope.ts --seen <sha>,<sha>`（L2-release §1 第 1 步）。它们不再挡，列在 `seen` 里；第 4 步打 tag 时，把它们写进 tag 的说明（`-m "Seen by the owner: <sha> by <谁>, …"`），记录跟着这一版走。别的会话、别人说「看过了」都不算。新冒出来的推送照样停。
-  - 推送记录读不到。不猜，停。
+  - 谁推了 `main` 的记录读不到。不猜，停。
+  - 没有发版变量 `RELEASE`，`origin/main` 上却有发版 tag。scope 从不从 tag 猜最新一版。owner 先写变量（第一次写，L2-release §0）：owner 说是哪一版，再用 owner 的 `gh` 登录跑 `release-var.ts write <那个 tag>`（第 6 步那条命令）。一个发版 tag 都没有：这是第一版，不停，全部都在范围里。
+  - 发版变量读不到，或不是 `<YYYYMMDD.N> <40 位 SHA>` 的样子。
+  - 变量指的 tag 在 origin 上没了、在 origin 上不在变量的 SHA 上（被挪过），或 `origin/main` 到不了它。scope 读的是 origin 上的 tag（`git ls-remote`），不是本地的：fetch 不删 origin 上删掉的 tag。owner 先看。
 - `ignored` 不空：照常往下，回复里说一句哪几个 tag 不算、为什么。不删它们：它们留着当证据，怎么处理由 owner 定。
 - `steps` 就是这一版要做的本机步骤。只做它列出的。没列的区域，Before push 和 After push 里属于它的步骤跳过。
 
@@ -119,7 +122,7 @@ git status --porcelain                            # 发版 worktree
 
 - 主目录里的这些不进这一版。记下来，「做完」时点名：
   - 没提交的文件：由改它的会话自己提交。
-  - 没推的提交：写「push them from the main folder」。小改动要当场推（L2-loop-builder §2.1）。它们进下一版。
+  - 没推的提交：写「put them on a branch and a PR」。每样改动都走分支和 PR，小改动也是（`entry` 的「owner 说『应该怎么样』」第 2 步；L2-loop-builder §2.1）。它们进下一版。
 - 发版 worktree 里只能有一次停下留下的改动：第 4 步当中停下的文件，或一次停下留下的修复（「接着上次」）。别的改动：停，说出文件名。
 - 不用 stash、restore、reset 把改动挪走或丢掉。
 
@@ -195,7 +198,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/changel
   - 只从 `commits` 来的一条，不带链接。
   - 例：`- The app follows the dark mode of the phone. ([#<N>](https://github.com/acme/app/issues/<N>), [PR #<M>](https://github.com/acme/app/pull/<M>))`
 
-然后删做完的 plan 和它们的报告，跑链接检查和测试，提交，打 tag：
+然后删做完的 plan、它们的报告和依赖图里打了 ✅ 的项，跑链接检查和测试，提交，打 tag：
 
 ```bash
 git add VERSION CHANGELOG.md <版本号命令改的别的文件>
@@ -210,13 +213,14 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
 ```
 
 - 先 stage 版本号的改动。版本号命令改了哪些文件，看 `git status`：发版 worktree 里只有这一版的改动。
-- `cleanup.ts` 做三件事（L2-release §2.8）：
-  - 删做完的 plan：`knowledge/plan/<N>-<slug>.md`，每个 `##` 节点的标题都有 ✅。没有号的旧 plan 不删。
+- `cleanup.ts` 做四件事（L2-release §2.8）：
+  - 删做完的 plan：`knowledge/plan/<N>-<slug>.md`，每个 `##` 节点的标题都有 ✅。没有号的里程碑的 plan 不删。
   - 删这些 issue 的 deep-verify 报告，和号对应的 issue 在 `main` 上没有 plan 的报告。没有号的报告留着，记一条 warning：每份报告都该写上它的 issue 号。
   - 删它们在 `knowledge/index.md` 里的那一行。每个 Markdown 文件里指向它们的相对链接，改成 `HEAD` 上的永久链接，锚点不变。
-- 它把删的、改的都 stage 好：暂存区就是版本号那次提交。它打印一份 JSON：`remove`（删了哪些、为什么）、`kept`（还没做完的 plan）、`rows`、`links`、`changed`、`mentions`、`warnings`、`stop`。
+  - 删依赖图 `knowledge/plan/index.md` 里打了 ✅ 的项：图上字以 ✅ 结尾的节点，提到它的每一行图；表里第一格以 ✅ 结尾的行。一行图删了，行上还留着的节点，它的字留成单独一行。标法在 `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「依赖图」。
+- 它把删的、改的都 stage 好：暂存区就是版本号那次提交。它打印一份 JSON：`remove`（删了哪些、为什么）、`kept`（还没做完的 plan）、`rows`、`graph`（依赖图里删的行；`to` 不是 null 的，换成了留下的节点）、`links`、`changed`、`mentions`、`warnings`、`stop`。
   - `stop` 不是 null：停，原话告诉 owner。它什么都没改。多半是一个修复改了要改链接的文件，还没提交。
-  - `mentions`：别处还提到这些文件、它没改的地方（代码、不是 Markdown 的文件、裸路径）。`warnings`：删掉的 plan 里，✅ 的标题下还有 `- [ ]`。照常往下，回复里列出来。
+  - `mentions`：别处还提到这些文件、它没改的地方（代码、不是 Markdown 的文件、裸路径）。`warnings`：删掉的 plan 里，✅ 的标题下还有 `- [ ]`；依赖图里一行有几个箭头，整行删了。照常往下，回复里列出来。
   - 只想看会删什么：加 `--dry-run`，它只打印。
 - 链接检查和 Tests 红了：照「发版内的修复」修，再跑一次。还红就停在打 tag 之前。
 - 这次提交只有暂存区里的东西：版本号的改动、`CHANGELOG.md`、`cleanup.ts` 删的和改的文件。
@@ -257,18 +261,21 @@ git tag -d "$V"                       # 只删本机的：它从没推过
 git push origin HEAD:main &&
 node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.ts write main-pushed &&
 git push origin "$(cat VERSION)" &&
-node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.ts write tag-pushed
+node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.ts write tag-pushed &&
+node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/release-var.ts write "$(cat VERSION)"
 ```
 
 - 先推 `main`，再推 tag：tag 触发的活要查 tag 在 `main` 上。
+- 推完 tag，写发版变量 `RELEASE=<tag> <tag 的提交的 SHA>`（L2-release §0）：`release-var.ts write` 用 owner 的 `gh` 登录写，再读回来比对，打印一行。不在推 tag 之前写：读的一方查 tag 在 origin 上、在变量的 SHA 上，先写了，到推完之前每个读的一方都会停。
+  - 它停了（打印 `stop: …`、退出码 1），什么都不写：变量指着更大的版本（从不拿旧的一版盖新的）、同一版却在别的提交上、读不到变量、tag 不在 origin 上或不在 `origin/main` 上、读回来的不一样。停，原话告诉 owner。下一次从 `tag-pushed` 接着写。
 - 只推刚打的这一个 tag。不 `--tags`，不 `--force`。
 - 每推过一次就记下（上面那段，用 `&&` 连着）：`main` 推过了记 `main-pushed`，tag 推过了记 `tag-pushed`。一次推被拒了，后面的都不跑。
 - origin 拒了 `main`，因为 origin/main 又动了：
   1. `git fetch origin`，记下 `merge`，再 `git merge origin/main`（不 rebase：tag 要留在它的提交上）。从这里到推过 `main`，停了都是 `merge` 那一行：tag 不动，不再跑 Before push。
-  2. 再跑 `cleanup.ts`。merge 进来的新链接，指向这一版删掉的文件的，它改成版本号那次提交的前一个提交上的永久链接。
+  2. 再跑 `cleanup.ts`。merge 进来的新链接，指向这一版删掉的文件的，它改成版本号那次提交的前一个提交上的永久链接。依赖图里新打了 ✅ 的项，它也删。
   3. 它改了文件（`changed` 或 `remove` 不空）：`git commit -m "Merge follow-up: links"`。它停了：停，说出是哪几个文件。
   4. 跑链接检查和 Tests。红了：tag 不动（它的提交过了第 3–5 步，第 5 步已经把它发出去了）。在 merge 上面修，提交只点名修的文件：`git commit -m "Merge follow-up: <修了什么>" -- <文件>`，再跑一次。还红就停；链接检查红了，说出是哪几个文件。
-  5. 再跑一次上面那段：推 `HEAD:main`、记 `main-pushed`、推 tag、记 `tag-pushed`。
+  5. 再跑一次上面那段：推 `HEAD:main`、记 `main-pushed`、推 tag、记 `tag-pushed`、写发版变量。
 - 别的拒绝：停，原话告诉 owner。
 
 ## 7. 推之后的本机步骤，看 run
@@ -292,11 +299,11 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
 
 告诉 owner：
 
-- 版本号和 tag。
+- 版本号和 tag，和发版变量（`release-var.ts` 打印的那一行）。
 - `CHANGELOG.md` 里这一版的那一节（原样）。
 - 发版内的每个修复：SHA、subject、文件；只改了测试的，说一句。每个 `Merge follow-up` 也这样列（链接，或一次修复）：它在 tag 之后，tag 的说明列不到它。
-- 主目录里没进这一版的改动（第 2 步）：没提交的文件；没推的提交，写「push them from the main folder」。
-- 删了哪些 plan 和报告，`cleanup.ts` 的 `mentions` 和 `warnings`（如果有）。
+- 主目录里没进这一版的改动（第 2 步）：没提交的文件；没推的提交，写「put them on a branch and a PR」。
+- 删了哪些 plan、报告和依赖图的项，`cleanup.ts` 的 `mentions` 和 `warnings`（如果有）。
 - 这一版做了哪些本机步骤，tag 触发的 run 怎么样，哪些 tag 不算（如果有）。
 
 ## 不做的事

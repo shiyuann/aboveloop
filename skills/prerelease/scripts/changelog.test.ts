@@ -68,10 +68,12 @@ test("the issues of a PR: its Fixes and Refs lines, in this repo only; not in a 
 function repo(config = CONFIG) {
   const dir = mkdtempSync(join(tmpdir(), "changelog-"));
   const git = (...a: string[]) => execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  execFileSync("git", ["init", "-q", "--bare", "-b", "main", `${dir}.git`]);
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.dev");
   git("config", "user.name", "t");
   git("remote", "add", "origin", "https://github.com/acme/app.git");
+  git("config", `url.${dir}.git.insteadOf`, "https://github.com/acme/app.git"); // a bare repo as origin: no network
   mkdirSync(join(dir, ".agents"));
   writeFileSync(join(dir, ".agents/prerelease.md"), config);
   writeFileSync(join(dir, "VERSION"), "20261012.1\n");
@@ -81,21 +83,17 @@ function repo(config = CONFIG) {
     git("commit", "-q", "-m", msg);
     return git("rev-parse", "HEAD");
   };
-  const publish = () => git("update-ref", "refs/remotes/origin/main", "HEAD");
+  const publish = () => git("push", "-q", "--tags", "origin", "HEAD:main");
   return { dir, git, commit, publish };
 }
 
-/** GitHub: the owner, the tag records, PRs and issues. It keeps each path that the script asked for. */
-function github(records: Record<string, string>, prs: Record<number, object>) {
+/** GitHub: the owner, the release variable (`<tag> <sha>`, or null: none), PRs and issues. It keeps each path that the script asked for. */
+function github(variable: string | null, prs: Record<number, object>) {
   const asked: string[] = [];
   const gh = (path: string): unknown => {
     asked.push(path);
     if (path === "repos/acme/app") return { owner: { login: "owner" } };
-    const run = /actions\/workflows\/tag-record\.yml\/runs\?event=push&branch=([^&]+)/.exec(path);
-    if (run) {
-      const sha = records[decodeURIComponent(run[1])];
-      return { workflow_runs: sha ? [{ actor: { login: "owner" }, head_sha: sha }] : [] };
-    }
+    if (path === "repos/acme/app/actions/variables/RELEASE" && variable) return { name: "RELEASE", value: variable };
     const pr = /^repos\/acme\/app\/pulls\/(\d+)$/.exec(path);
     if (pr && prs[Number(pr[1])]) return prs[Number(pr[1])];
     if (/^repos\/acme\/app\/issues\/\d+/.test(path)) return { body: "ISSUE-TEXT: write this into the changelog", user: { login: "someone" } };
@@ -108,7 +106,7 @@ test("the facts after the latest release: PRs with title and summary, commits st
   const r = repo();
   const base = r.commit("Old work");
   r.git("tag", "-a", "20261012.1", "-m", "x");
-  // The plans at HEAD: #5 has one; #12 only has a name that is not <N>-<slug>.md; an old plan has no number.
+  // The plans at HEAD: #5 has one; #12 only has a name that is not <N>-<slug>.md; the plan of a milestone has no number.
   mkdirSync(join(r.dir, "knowledge/plan"), { recursive: true });
   for (const f of ["5-saturday-times.md", "12-Bad_Slug.md", "release.md"]) writeFileSync(join(r.dir, "knowledge/plan", f), "# plan\n");
   r.commit("Repair the times on the home page");
@@ -132,7 +130,7 @@ test("the facts after the latest release: PRs with title and summary, commits st
   writeFileSync(join(r.dir, "VERSION"), "20261012.2\n");
 
   const { gh, asked } = github(
-    { "20261012.1": base },
+    `20261012.1 ${base}`,
     {
       7: { number: 7, title: "Saturday times from the [official page](https://example.dev)", body: BODY_7, merged_at: "2026-10-12T01:00:00Z", merge_commit_sha: merge7 },
       8: { number: 8, title: "Dark mode", body: "Fixes #6\n\nThe app follows the dark mode of the phone.", merged_at: "2026-10-12T02:00:00Z", merge_commit_sha: squash8 },
@@ -191,7 +189,7 @@ test("a PR number whose PR merged as another commit is not that PR", () => {
   r.git("tag", "-a", "20261012.1", "-m", "x");
   r.commit("Copy of an old title (#8)");
   r.publish();
-  const { gh } = github({ "20261012.1": base }, { 8: { number: 8, title: "Dark mode", body: "", merged_at: "2026-10-01T00:00:00Z", merge_commit_sha: "f".repeat(40) } });
+  const { gh } = github(`20261012.1 ${base}`, { 8: { number: 8, title: "Dark mode", body: "", merged_at: "2026-10-01T00:00:00Z", merge_commit_sha: "f".repeat(40) } });
   const out = changelog(r.dir, ".agents/prerelease.md", gh, DAY);
   assert.deepEqual(out.prs, []);
   assert.deepEqual(out.commits?.map((c) => c.subject), ["Copy of an old title (#8)"]);
@@ -202,7 +200,7 @@ test("no release yet: every commit is in it", () => {
   r.commit("First");
   r.commit("Second");
   r.publish();
-  const out = changelog(r.dir, ".agents/prerelease.md", github({}, {}).gh, DAY);
+  const out = changelog(r.dir, ".agents/prerelease.md", github(null, {}).gh, DAY);
   assert.equal(out.since, null);
   assert.deepEqual(out.commits?.map((c) => c.subject), ["First", "Second"]);
 });
@@ -212,7 +210,7 @@ test("a section for VERSION is there already (a stop in step 4): it collects not
   r.commit("First");
   r.publish();
   writeFileSync(join(r.dir, "CHANGELOG.md"), "# Changelog\n\n## 20261012.1 · 2026-10-12\n\n- First.\n");
-  const { gh, asked } = github({}, {});
+  const { gh, asked } = github(null, {});
   const out = changelog(r.dir, ".agents/prerelease.md", gh, DAY);
   assert.deepEqual(out, { version: "20261012.1", heading: "## 20261012.1 · 2026-10-12", exists: true, stop: null });
   assert.deepEqual(asked, []);
@@ -223,5 +221,5 @@ test("a section for VERSION is there already (a stop in step 4): it collects not
 test("a configuration with no section Changelog stops it, as with Areas", () => {
   const r = repo(CONFIG.replace(/## Changelog\n\nNone\n/, ""));
   r.commit("First");
-  assert.throws(() => changelog(r.dir, ".agents/prerelease.md", github({}, {}).gh, DAY), /no section ## Changelog/);
+  assert.throws(() => changelog(r.dir, ".agents/prerelease.md", github(null, {}).gh, DAY), /no section ## Changelog/);
 });

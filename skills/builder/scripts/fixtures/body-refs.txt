@@ -1,0 +1,11 @@
+Refs #44
+
+After the release: the label that is no longer used is removed from each repo.
+
+## Evidence
+
+### Tests
+- `make skills-test`: 52 passed, 0 failed (baseline on `origin/main`: 52 passed).
+
+### Not verified
+- Nothing

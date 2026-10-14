@@ -11,7 +11,8 @@ main 是开发的历史。只有 tag 是正式的版本。一版就是一个 tag
 | 词 | 意思 |
 | --- | --- |
 | 一版 | 一个发版 tag 记下的那个提交。 |
-| 最新一版 | 从 origin/main 能到、而且是 owner 推的发版 tag 里，版本号最大的那个。owner 推的：tag 推送记录里这个 tag 名最新的一次运行是 owner，而且它的提交就是 tag 现在的提交；没有记录、记录读不到，都不算。别人推的 tag 到处都不认，所以不用删。按数字比日期和 patch，不按字符串排（`.10` 比 `.9` 新）。定义在 [L2-release §0](../../../knowledge/spec/L2-release.md#0-terms)。 |
+| 发版变量 | 项目仓库的 repository variable `RELEASE`（GitHub Actions 的 variables）。值是 `<tag> <sha>`：最新一版的名字、一个空格、它的 tag 的提交的完整 SHA（40 位）。只有 `prerelease` 写它：在 owner 的 Mac 上、用 owner 的 `gh` 登录、推完 tag 之后（第 6 步，`release-var.ts write <tag>`）。第一次写：有发版 tag、还没有变量（或变量丢了）的项目，owner 说是哪一版，用同一条命令写一次。loop 的 token 都写不了它。 |
+| 最新一版 | 发版变量指的那一版。只有这几样都成立才算：那个名字的 tag 在，它的提交就是变量的 SHA，`origin/main` 到得了这个提交。不然拿钥匙的活就停，从不退回一个旧的 tag。变量没有、读不到、不是 `YYYYMMDD.N <sha>` 的样子，也停。变量没指的发版 tag，版本号再大，也不是最新一版：到处都不认，所以不用删。按数字比日期和 patch，不按字符串排（`.10` 比 `.9` 新）。只有 `YYYYMMDD.N` 形式的名字是版本号。GitHub Actions 里的活先 fetch tag：`actions/checkout` 默认只拿一个提交，不拿 tag。定义在 [L2-release §0](../../../knowledge/spec/L2-release.md#0-terms)。 |
 | 发版 tag | 带注释的 tag，名字就是 `VERSION` 那一行，比如 `20261010.1`。 |
 | 发版的活 | 发版 tag 推上去时，GitHub Actions 跑的 job。比如部署网站、往桶里传文件、跑一轮数据。 |
 | 本机的步骤 | 只能在 owner 的机器上做的发版步骤。比如传 TestFlight、重装 plugin。 |
@@ -37,7 +38,10 @@ main 是开发的历史。只有 tag 是正式的版本。一版就是一个 tag
 - **推 tag 是发版唯一的触发。**
   - 发版的活写成 GitHub Actions 的 workflow，触发写 `on: push: tags`。
   - 推 main 不触发发版的活。merge 了的代码，等下一版才上线。
-  - 发版的活拿钥匙之前，先查这个 tag 的提交在 main 上。不在就停。拿钥匙的活还要查：这个 tag 是最新一版，tag 是 owner 推的（R15）。
+  - 发版的活拿钥匙之前，先查这个 tag 的提交在 main 上。不在就停。拿钥匙的活还要查：这个 tag 是最新一版，tag 是 owner 推的（R15）。用 `prerelease` 发版的项目，怎么查看是什么触发了它（[L2-release §2.3](../../../knowledge/spec/L2-release.md#23-each-release-job-examines-that-the-tag-is-on-main-)）：
+    - 定时的活、别的仓库的活：读发版变量，只跑它指的那一版。
+    - 推 tag 触发的活：查 `github.actor` 是 owner；再用 `vars.RELEASE` 查它的 tag 比变量那一版大，或者变量指的就是它的 tag、在 `GITHUB_SHA` 上（变量在推完几秒之后才写，等 runner 的活和每次重跑都可能看到自己的 tag）。没有变量（项目的第一版）就停；写了变量以后重跑就过。
+    - 只有 owner 的登录写发版变量。不给 loop 的任何 token Variables 写的权限。
 - **正式跑的东西，只读最新一版，不读 main。**
   - 定时跑的活跑最新一版的代码。比如数据管道：定时的那一轮跑最新一版。
   - **NOTE:** GitHub 定时触发时，用的总是 main 头上的那份 workflow 文件。只检出 tag，换的只是代码，job、步骤和钥匙还是 main 的。所以定时触发只做一件事：用 `workflow_dispatch` 在最新的发版 tag 上再跑一遍同一个 workflow，整轮都来自 tag。
@@ -47,7 +51,7 @@ main 是开发的历史。只有 tag 是正式的版本。一版就是一个 tag
   - 修好了、急着上线：发一版。不拿 main 的头手动跑。
 - **发版只走 `prerelease` skill。**不自己拼提交、rebase、tag、push。
   - owner 叫了 `prerelease`，里面的步骤都在范围内，不每步再问。只在 skill 写了「停」的地方停。
-- **项目不留自己的发版 skill。** 项目只写项目配置。`prerelease` 读它，和 `builder-resolve` 读 `.agents/builder-resolve.md` 一样。
+- **项目不留自己的发版 skill。** 项目只写项目配置。`prerelease` 读它，和 `builder` 读 `.agents/builder.md` 一样。
 - **只有 owner 发版。** owner 叫 `prerelease`，就是拍板。工作循环里的 agent 不发版。
 
 ## 为什么

@@ -28,7 +28,7 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { type Gh, ghApi, latestOf, parseVersion, repoOf, run } from "./scope.ts";
+import { type Gh, ghApi, latestOf, originRepo, parseVersion, run } from "./scope.ts";
 
 /** Text with no links: `[x](url)` → x; images, `<url>` and bare URLs go; the spaces are joined. */
 export function unlink(text: string): string {
@@ -128,7 +128,7 @@ export function changelog(cwd: string, configPath = ".agents/prerelease.md", gh:
   const same = new RegExp(`^## ${version.replace(".", "\\.")}(?:\\s|$)`, "m");
   if (existsSync(file) && same.test(readFileSync(file, "utf8"))) return { version, heading, exists: true, stop: null };
 
-  const repo = repoOf(git("remote", "get-url", "origin"));
+  const repo = originRepo(cwd);
   const latest = latestOf(cwd, gh, false);
   const commits = git("log", "--reverse", "--topo-order", "--format=%H %P%x09%s", latest ? `${latest.commit}..HEAD` : "HEAD")
     .split("\n")

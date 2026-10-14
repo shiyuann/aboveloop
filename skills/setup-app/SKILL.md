@@ -1,8 +1,8 @@
 ---
 name: setup-app
 description: >-
-  把一个 app（一个项目仓库）接上 aboveloop 的 builder loop：workflow `loop.yml`、label、钥匙、
-  `.agents/builder-resolve.md`，最后跑 `scripts/check.sh` 逐项确认都设好了。只设这个 app 自己的；
+  把一个 app（一个项目仓库）接上 aboveloop 的 builder loop 的自动模式：workflow `loop.yml`、label、钥匙、
+  `.agents/builder.md`，最后跑 `scripts/check.sh` 逐项确认都设好了。只设这个 app 自己的；
   aboveloop 全局的（composite action、GitHub App、各把钥匙）在 L3-loop-components §1。Use when the user says
   setup-app, setup-loop, 接工作循环, 接 loop, 新项目接进来, connect a project, or a repo has no loop workflow,
   or to check whether an app is set up.
@@ -14,7 +14,7 @@ description: >-
 
 | 部分 | 步骤 |
 | --- | --- |
-| loop | [references/loop.md](references/loop.md)：label、merge 后删分支、workflow `loop.yml`、变量、钥匙、`.agents/builder-resolve.md`、dry run |
+| loop | [references/loop.md](references/loop.md)：label、merge 后删分支、workflow `loop.yml`、变量、钥匙、`.agents/builder.md`、dry run、`.agents/dev.md`（可选：排序） |
 | 检查 | 最后，和以后随时：`scripts/check.sh <owner>/<repo>` |
 
 ## 先问清这几样
@@ -22,7 +22,7 @@ description: >-
 缺哪样问哪样，不要猜：
 
 - 项目仓库 `<owner>/<repo>`。必须在装了 loop 的 GitHub App 的那个账号下：loop 第 4 步把仓库加进这份安装。
-- 这个项目的 issue 分哪几类、哪几类可以不等 owner 就开工（写进 `.agents/builder-resolve.md`）。
+- 这个项目的 issue 分哪几类、哪几类可以不等 owner 就开工（写进 `.agents/builder.md`）。
 
 ## 前提
 

@@ -20,13 +20,16 @@ Other terms, and "cloud agent": [L2-loops §0](L2-loops.md#0-terms).
 
 - **The `AGENTS.md` of each project says one thing: read `aboveloop:entry` first.**
   - Why: one start for every project and every coding agent. A rule changes in one place (P3).
-- `entry` holds the rules that always apply: how to write and answer, when to stop and ask, which model to use, where automated work runs, how to keep the knowledge, and how to work on code.
+- `entry` holds the rules that always apply: how to write and answer, when to stop and ask, which model to use, where automated work runs, and how to work on code. How to keep the knowledge is in the skill `knowledge`.
 - `entry` also has one table. For each type of task, the table tells which reference to read and which skill to use.
-- All other skills are in that table: `setup-dev`, `setup-app`, `builder-resolve` and `prerelease`. `start`, the entry of the dev loop in a session, is a part of `entry`, not a skill ([L2-loops §2.2](L2-loops.md#22-start-the-entry-in-a-session)). When you add a skill, add its row in the same change.
+- All other skills are in that table: `setup-dev`, `setup-app`, `builder`, `dev`, `knowledge` and `prerelease`. `builder` is the skill of the builder loop. `dev` is the skill of the dev loop: its session entry ([L2-loop-dev §1](L2-loop-dev.md#1-the-dev-loop), [§3](L2-loop-dev.md#3-the-session-entry)). When you add a skill, add its row in the same change.
+- **`knowledge` is the skill of the knowledge loop** ([L2-loops §2.2](L2-loops.md#22-the-knowledge-loop)). It holds the knowledge base, the form of specs and plans, the deep-verify and the knowledge check. The terms and the rules of every session stay in `entry`, and `knowledge` links to them.
+  - Why: each job of the loops is a skill or a run of a skill ([L2-loops §5](L2-loops.md#5-the-jobs)). Its own description lets an agent find the rules by 知识库, 记一下, deep-verify or 核对, with no step through `entry`.
+  - Why: `entry` stays the rules for every session and the table of tasks. It then holds less text that only one kind of work uses.
 - At the start of each session, an agent does three things:
   1. Get the one-line status (`setup-dev`).
   2. Read the `knowledge/index.md` of the project and its L1 pages (`knowledge/spec/L1-*.md`).
-  3. Offer the owner the daily options, `start` first (`entry`; [L2-loops §2.2](L2-loops.md#22-start-the-entry-in-a-session)).
+  3. Offer the owner the daily options, `dev` first (`entry` offers them; the session entry is in `dev`; [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)).
 
 ## 3. How it is loaded
 
@@ -68,6 +71,17 @@ aboveloop/
 - **The repo root is the plugin root.** `knowledge/` also goes into the plugin copy. No agent reads it unless a task tells it to. Thus it uses no context.
 - **`knowledge/` is in English, in ASD-STE100.** Specs, plans, references and the index are in English, in ASD-STE100 Simplified Technical English. The rules are in `entry`. [L2-loops](L2-loops.md) is the example. Quotes stay in the language of the speaker. Skills are not part of this rule.
 - **No project names or project details in rules** (P5). Project details are in the `AGENTS.md`, `knowledge/` and `.agents/` configuration of each project.
+- **Each project configuration is `.agents/<skill>.md`, named after the skill that it customizes.** A skill reads only the file with its own name. The prompt of CI makes the path from the name of the skill ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)). The folder `.agents/skills/` of a project holds the project's own skills, not a configuration.
+  - Why: the name of the file tells which skill it customizes, and which file a skill reads.
+  - When a skill gets a new name, the release with the new name reads both names of its configuration. Then each project renames its file, one PR each, and a last PR removes the old name ([L3-loop-builder §1](L3-loop-builder.md#1-builder-)).
+  - The files:
+
+| Skill | The file |
+| --- | --- |
+| `builder` | `.agents/builder.md` |
+| `dev` | `.agents/dev.md`, only in a project that changes the rank ([L3-loop-dev §3](L3-loop-dev.md#3-the-project-configuration-agentsdevmd)) |
+| `prerelease` | `.agents/prerelease.md` |
+
 - **The todos of the owner are issues, not files.**
   - Why: files go into the plugin copy. Thus a change to a todo file would make a release necessary.
 - **The README tells only how to install and change the plugin.** The specs here are the source of truth for the design.

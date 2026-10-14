@@ -2,7 +2,7 @@
 
 > Who aboveloop is for, what it is, and the principles that all other pages build on. Only the owner changes this page: an agent proposes a change as an owner decision in the plan.
 
-Each principle has a number. Other pages cite it, for example (P3). The rules for levels, the dependency graph and conflicts are in `entry` (knowledge-base).
+Each principle has a number. Other pages cite it, for example (P3). The rules for levels, the dependency graph and conflicts are in `knowledge` (knowledge-base).
 
 ## 1. Who it is for
 
@@ -15,8 +15,8 @@ aboveloop holds how the owner works: the rules that agents obey, the loops that 
 
 | Part | What | Where | Read by |
 | --- | --- | --- | --- |
-| Rules and craft | How to write and answer, when to ask, how to write specs, testing discipline, `builder-resolve` | `skills/`, with `entry` as the start | Claude Code and Cursor on the machine of the owner; cloud agents |
-| Shared loops | One inner loop does the work: the builder loop (issue → PR, in a session or in CI). One outer loop, the dev loop, decides where the attention of the owner goes: `start` in a session, the graph of open work, the owner's decisions and the release. The briefing email of the dev loop is a design that aboveloop does not implement | The design is in [L2-loops](L2-loops.md) (the dev loop and what the loops share) and [L2-loop-builder](L2-loop-builder.md). The method is in the skills in `skills/`. | Cloud agents, agents in a session, the owner |
+| Rules and craft | How to write and answer, when to ask, how to write specs, testing discipline, `builder` | `skills/`, with `entry` as the start | Claude Code and Cursor on the machine of the owner; cloud agents |
+| Shared loops | Two inner loops do the work: the builder loop (issue → PR, in a session or in CI) and the knowledge loop (a change to `knowledge/`). Today the builder loop and the dev loop start the knowledge loop; it has no trigger of its own. One outer loop, the dev loop, decides where the attention of the owner goes: `dev` in a session, the graph of open work, the owner's decisions and the release. The briefing email of the dev loop is a design that aboveloop does not implement | The design is in [L2-loops](L2-loops.md) (the dev loop, the knowledge loop and what the loops share) and [L2-loop-builder](L2-loop-builder.md). The method is in the skills in `skills/`. | Cloud agents, agents in a session, the owner |
 | Todos of the owner | Small tasks, tasks outside the large projects, and tasks for this repo | The GitHub issues of this repo | The owner |
 | Design | Specs | `knowledge/` | The owner, agents that work on this repo |
 
@@ -28,16 +28,16 @@ aboveloop holds how the owner works: the rules that agents obey, the loops that 
 
 - Why: the attention of the owner is the most expensive resource.
 - Why: a review adds value only where the owner gives judgment that the system cannot give: a permanent change, or a new thing to accept. A review of each value only repeats the research of the agent.
-- The owner merges, decides, logs in, pays, and does actions that cannot be undone. Agents do all other work.
+- The owner merges the PRs of the loops, decides, logs in, pays, and does actions that cannot be undone. Agents do all other work.
 
 #### P2 The owner merges every PR of the loops
 
 - Why: the report of an agent is a claim, not evidence.
+- A small change that a session makes (with no issue, or only the plan of a closed issue) is not a PR of the loops. The agent merges it when its checks pass.
 - The merge is the gate by rule. GitHub Free does not enforce it: a private repo has no branch protection, so an agent with write access can push `main`. The owner accepts this, because:
   - implement works only on an issue that explore examined, and it refuses an issue that looks like it carries instructions;
   - each push is recorded, so a push that the owner did not make is found;
   - the loops run only a release tag that the owner pushed, so a push to `main` does not go live by itself.
-- ⬜ Part of the second reason is not true yet: `prerelease` stops on a push to `main` that the owner did not make, but the briefing that lists such a push is a design that aboveloop does not implement ([L2-loops](L2-loops.md)). The third reason is true: the loops run only the latest release of aboveloop that the owner pushed.
 
 #### P3 One copy of each thing
 
@@ -48,7 +48,7 @@ aboveloop holds how the owner works: the rules that agents obey, the loops that 
 #### P4 A fact has one record, where it occurred
 
 - Why: a second record goes stale.
-- Issues are the record. The briefing only shows them.
+- Issues are the record. The briefing shows each record only where it is kept. It is never a second record of a fact.
 
 #### P5 The rules and the design name no project
 

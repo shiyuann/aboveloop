@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { branchIssue, branchName, checkPrBody, choose, EXPLORE_MAX, type Issue, type Pr, recheck, toExplore } from "./loop.ts";
+import { branchIssue, branchName, checkPrBody, checkPrBodyFor, choose, EXPLORE_MAX, type Issue, type Pr, recheck, sessionCheck, sessionLines, toExplore } from "./loop.ts";
 
 const fx = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const issues: Issue[] = JSON.parse(fx("issues.json"));
@@ -132,4 +132,72 @@ test("the explore batch: open issues without explored, lowest first, PRs and clo
   const batch = toExplore(many);
   assert.equal(batch.length, EXPLORE_MAX);
   assert.equal(batch[0], 76);
+});
+
+// ---------- the session form of the script of implement.md §1 (L3-loop-builder §1.3, row Input) ----------
+
+const explored = (n: number, o: Partial<Issue> = {}): Issue => ({ number: n, state: "open", labels: [{ name: "explored" }], ...o });
+
+test("session: an issue with no label prints the issue, branch: and draft:; no selection, no limit of 3", () => {
+  const issue = explored(60);
+  const c = sessionCheck({ issue, prs: [] });
+  assert.deepEqual(c, { issue: 60, branch: "issues/60" });
+  assert.deepEqual(sessionLines(c), ["60", "branch: issues/60", "draft: "]);
+  // 3 PRs wait for the owner: a session is not held by the limit.
+  const own = [11, 12, 13].map((n) => pr(n, `issues/${n}`));
+  assert.deepEqual(sessionCheck({ issue, prs: own }), { issue: 60, branch: "issues/60" });
+  // A branch that exists already (a closed PR left it): the next free name.
+  assert.deepEqual(sessionCheck({ issue, prs: [], branches: ["issues/60"] }), { issue: 60, branch: "issues/60-2" });
+  // An issue with no explored label: a session can still do it (explore in the session comes first).
+  assert.deepEqual(sessionCheck({ issue: { number: 7, state: "open" }, prs: [] }), { issue: 7, branch: "issues/7" });
+});
+
+test("session: the issue's own draft gives draft:, its own ready PR gives pr:", () => {
+  const issue = explored(60);
+  const d = sessionCheck({ issue, prs: [pr(62, "issues/60", { body: "Fixes #60", draft: true })] });
+  assert.deepEqual(d, { issue: 60, branch: "issues/60", draft: 62 });
+  assert.deepEqual(sessionLines(d), ["60", "branch: issues/60", "draft: #62"]);
+  const r = sessionCheck({ issue, prs: [pr(62, "issues/60-2", { body: "Fixes #60" })] });
+  assert.deepEqual(r, { issue: 60, branch: "issues/60-2", pr: 62 });
+  assert.deepEqual(sessionLines(r), ["60", "branch: issues/60-2", "pr: #62"]);
+});
+
+test("session: another linked PR gives linked; the label gives labelled", () => {
+  const issue = explored(60);
+  assert.deepEqual(sessionCheck({ issue, prs: [pr(9, "owner/x", { body: "Fixes #60" })] }), { stop: "linked" });
+  assert.deepEqual(sessionCheck({ issue, prs: [pr(9, "issues/61", { body: "Fixes #60", draft: true })] }), { stop: "linked" });
+  assert.deepEqual(sessionCheck({ issue, prs: [pr(9, "issues/60", { draft: true }), pr(10, "a", { body: "Fixes #60" })] }), { stop: "linked" });
+  assert.deepEqual(sessionLines({ stop: "linked" }), ["linked"]);
+  // The label is the lock: CI has the issue, so the session stops and tells the owner.
+  const labelled = { ...issue, labels: ["explored", "ready-for-auto-builder"] };
+  assert.deepEqual(sessionCheck({ issue: labelled, prs: [] }), { stop: "labelled" });
+  assert.deepEqual(sessionLines({ stop: "labelled" }), ["labelled"]);
+});
+
+test("session: a closed issue prints closed and the next free issues/<N>-<k> for a Refs #N PR", () => {
+  const issue = explored(44, { state: "closed" });
+  const c = sessionCheck({ issue, prs: [] });
+  assert.deepEqual(c, { stop: "closed", branch: "issues/44-2" });
+  assert.deepEqual(sessionLines(c), ["closed", "branch: issues/44-2", "draft: "]);
+  assert.deepEqual(sessionCheck({ issue, prs: [], branches: ["issues/44", "issues/44-2"] }), { stop: "closed", branch: "issues/44-3" });
+  // Its own Refs draft continues on its branch.
+  assert.deepEqual(sessionCheck({ issue, prs: [pr(70, "issues/44-2", { body: "Refs #44", draft: true })], branches: ["issues/44-2"] }), {
+    stop: "closed",
+    branch: "issues/44-2",
+    draft: 70,
+  });
+  // A PR number is not an issue: closed, with no branch.
+  assert.deepEqual(sessionLines(sessionCheck({ issue: { number: 62, state: "open", pull_request: {} }, prs: [] })), ["closed"]);
+});
+
+test("check-pr-body: a Refs #N body with the evidence passes; it must not close the issue", () => {
+  const refs = fx("body-refs.txt");
+  assert.deepEqual(checkPrBody(refs, 44, { refs: true }), []);
+  assert.deepEqual(checkPrBodyFor(refs, { number: 44, state: "closed" }), []);
+  assert.match(checkPrBody(refs.replace("Refs #44", "Refs #45"), 44, { refs: true }).join(), /Refs #44/);
+  assert.match(checkPrBody(refs.replace("Refs #44", "Fixes #44"), 44, { refs: true }).join(), /closes/);
+  assert.match(checkPrBody(refs.replace(/### Tests\n[^#]*/, ""), 44, { refs: true }).join(), /Tests/);
+  // An open issue takes the Fixes form: a Refs body fails, a Fixes body passes.
+  assert.match(checkPrBodyFor(refs, { number: 44, state: "open" }).join(), /Fixes #44/);
+  assert.deepEqual(checkPrBodyFor(ok, { number: 5, state: "open" }), []);
 });

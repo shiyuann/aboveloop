@@ -8,8 +8,6 @@ import { KIT_REPO } from "../cursor.ts";
 import { APP_NAMES, missing, SCHEDULES, SECRETS, stepsFor, VARIABLES } from "../plan.ts";
 
 const REPO = "acme/app";
-/** The account that pushes the release tags of aboveloop: the owner of its repo. */
-const OWNER = KIT_REPO.split("/")[0];
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 /** The script of the step "The latest release of aboveloop" in the template. */
@@ -19,33 +17,31 @@ const releaseScript = (yml: string) => {
 };
 
 /**
- * Run that script with a fake `gh`: `tags` are the tags that exist now, [name, sha]; `records` name →
- * the runs of tag-record.yml for that name, newest first, as [actor, sha], or "error"; `onMain` the shas
- * that main reaches; `fail`: the list of the owner's runs, or each record of one tag name, cannot be read.
- * Returns the exit code, the log and the outputs.
+ * Run that script with a fake `gh`: `variable` is the value of aboveloop's release variable RELEASE,
+ * null when it is missing (404), or { error: true } when it cannot be read (HTTP 502); `tags` are the tags that
+ * exist now, [name, sha]; `onMain` the shas that main reaches. Returns the exit code, the log and the outputs.
  */
-function pick(tags: [string, string][], records: Record<string, [string, string][]>, onMain: string[], fail: "" | "list" | "record" = "") {
+function pick(variable: string | null | { error: true }, tags: [string, string][], onMain: string[]) {
   const dir = mkdtempSync(join(tmpdir(), "pick-"));
   const fixture = join(dir, "fixture.json");
-  writeFileSync(fixture, JSON.stringify({ tags: tags.map(([name, sha]) => ({ name, commit: { sha } })), records, onMain, fail }));
+  writeFileSync(fixture, JSON.stringify({ variable, tags: tags.map(([name, sha]) => ({ name, commit: { sha } })), onMain }));
   // gh api <path> [--paginate] --jq <filter>: the answer of the path, filtered by jq -r.
   writeFileSync(
     join(dir, "gh"),
     `#!/usr/bin/env bash
+set -o pipefail # an error of the path is the exit code of gh, as with the real gh
 path="$2"; while [ "$1" != "--jq" ]; do shift; done; filter="$2"
 f=${JSON.stringify(fixture)}
 case "$path" in
+  repos/${KIT_REPO}/actions/variables/RELEASE)
+    v="$(jq -c '.variable' "$f")"
+    [ "$v" = null ] && { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+    [ "$v" = '{"error":true}' ] && { echo "gh: Server Error (HTTP 502)" >&2; exit 1; }
+    jq '{name: "RELEASE", value: .variable}' "$f" ;;
   repos/${KIT_REPO}/tags*) jq '.tags' "$f" ;;
-  */tag-record.yml/runs*branch=*) t="\${path#*branch=}"; t="\${t%%&*}"
-    [ "$(jq -r '.fail' "$f")" = record ] && { echo "HTTP 502" >&2; exit 1; }
-    r="$(jq -c --arg t "$t" '.records[$t] // []' "$f")"
-    jq -n --argjson r "$r" '{workflow_runs: [$r[] | {actor: {login: .[0]}, head_sha: .[1]}]}' ;;
-  */tag-record.yml/runs*actor=*) a="\${path#*actor=}"; a="\${a%%&*}"
-    [ "$(jq -r '.fail' "$f")" = list ] && { echo "HTTP 502" >&2; exit 1; }
-    jq --arg a "$a" '{workflow_runs: [.records | to_entries[] | .key as $t | .value[] | select(.[0] == $a) | {head_branch: $t, actor: {login: .[0]}, head_sha: .[1]}]}' "$f" ;;
   */compare/*) s="\${path#*compare/}"; s="\${s%%...*}"
     jq -n --arg s "$s" --slurpfile x "$f" 'if ($x[0].onMain | index($s)) then {status: "ahead"} else {status: "diverged"} end' ;;
-  *) echo "HTTP 404" >&2; exit 1 ;;
+  *) echo "gh: Not Found (HTTP 404) $path" >&2; exit 1 ;;
 esac | jq -r "$filter"
 `,
   );
@@ -93,7 +89,10 @@ test("the template has both schedules, the dispatch inputs, and passes every var
   assert.ok(names.includes(`kit=${KIT_REPO}`), "the kit token is for the repo of aboveloop");
   const kit = yml.slice(yml.indexOf("- id: kit\n"), yml.indexOf("- id: release"));
   assert.ok(kit.includes("owner: ${{ steps.kitrepo.outputs.owner }}") && kit.includes("repositories: ${{ steps.kitrepo.outputs.name }}"));
-  assert.ok(kit.includes("permission-contents: read") && kit.includes("permission-actions: read"));
+  assert.ok(kit.includes("permission-contents: read"));
+  // Step 0 reads the release variable (Variables read, W14), not the runs of a workflow (Actions read).
+  assert.match(kit, /^          permission-actions-variables: read$/m, "the kit token reads the release variable");
+  assert.ok(!/permission-actions:/.test(kit), "the kit token reads no runs");
   assert.ok(!/permission-(issues|pull-requests|contents: write)/.test(kit), "the kit token writes nothing");
   assert.ok(releaseScript(yml).includes(`kit=${KIT_REPO}`));
   assert.ok(!/\$\{\{ *(github\.event|inputs)\./.test(releaseScript(yml)), "no event value inside the script text");
@@ -130,6 +129,7 @@ test("the action has an input for each value and hands each to run.ts as env, ne
   assert.ok(explorer.includes("permission-contents: read") && !explorer.includes("pull-requests"), "explore reads code, opens no PR");
   assert.equal(yml.match(/permission-contents: write/g)?.length, 1, "only implement's token can push");
   assert.ok(!/permission-(administration|workflows|secrets)/.test(yml), "no token changes settings, workflows or secrets");
+  assert.ok(!/permission-actions-variables: (write|admin)/.test(yml), "no token can write a variable (L2-release §2.3)");
   const script = yml.slice(yml.lastIndexOf("run: |"));
   assert.ok(!script.includes("${{"), "no expression inside the script");
   assert.ok(script.includes('"$GITHUB_ACTION_PATH/run.ts"'));
@@ -142,43 +142,39 @@ test("keys.sh knows exactly the contract's secrets", () => {
   assert.deepEqual(list("EVERY_REPO").sort(), [...SECRETS].sort());
 });
 
-test("the release that loop.yml runs: the largest tag that the owner pushed, on main; it fails closed", () => {
-  const A = "a".repeat(40), B = "b".repeat(40), C = "c".repeat(40), D = "d".repeat(40);
+test("the release that loop.yml runs: the one that the release variable names, on main; it fails closed", () => {
+  const A = "a".repeat(40), B = "b".repeat(40), C = "c".repeat(40);
   const stops = (r: ReturnType<typeof pick>, why: RegExp, msg: string) => {
     assert.notEqual(r.code, 0, `${msg}: ${r.log}`);
     assert.match(r.log, why, msg);
     assert.equal(r.outputs, "", `${msg}: no pick`);
   };
-  let r = pick([["20261012.9", A], ["20261012.10", B], ["main-ish", C]], { "20261012.9": [[OWNER, A]], "20261012.10": [[OWNER, B]] }, [A, B]);
+  let r = pick(`20261013.5 ${B}`, [["20261012.9", A], ["20261013.5", B]], [A, B]);
   assert.equal(r.code, 0, r.log);
-  assert.equal(r.outputs, `tag=20261012.10\nsha=${B}\n`, ".10 is newer than .9");
+  assert.equal(r.outputs, `tag=20261013.5\nsha=${B}\n`, "the variable names the release");
+  assert.match(r.log, new RegExp(`aboveloop 20261013\\.5 \\(${B}\\)`), "the log names the tag and the sha");
 
-  r = pick([["20261012.9", A], ["20261013.1", D]], { "20261012.9": [[OWNER, A]], "20261013.1": [["cursor[bot]", D]] }, [A, D]);
+  // A release tag that the variable does not name is never read, whatever its version (an implement run can push one).
+  r = pick(`20261012.9 ${A}`, [["20261012.9", A], ["20261012.10", B], ["20261013.1", C]], [A, B, C]);
   assert.equal(r.code, 0, r.log);
-  assert.equal(r.outputs, `tag=20261012.9\nsha=${A}\n`, "a tag that only another pushed is not a release");
+  assert.equal(r.outputs, `tag=20261012.9\nsha=${A}\n`, "a larger tag that the variable does not name is not the release");
 
-  r = pick([["20261012.9", A], ["20261013.1", B]], { "20261012.9": [[OWNER, A]], "20261013.1": [[OWNER, B], [OWNER, D]] }, [A, B]);
-  assert.equal(r.outputs, `tag=20261013.1\nsha=${B}\n`, "the owner may push a tag again: the newest record counts");
+  // L3-loop-workflow §1 step 0: each case stops, and never falls back to another tag.
+  r = pick(null, [["20261012.9", A]], [A]);
+  stops(r, /release variable RELEASE of aboveloop is missing or cannot be read.*HTTP 404/, "no variable (404)");
 
-  // The newest tag that the owner pushed is moved or deleted: stop, never the older 20261012.9.
-  r = pick([["20261012.9", A], ["20261013.1", D]], { "20261012.9": [[OWNER, A]], "20261013.1": [["cursor[bot]", D], [OWNER, C]] }, [A, C, D]);
-  stops(r, /latest release 20261013\.1 was moved after the owner pushed it \(newest record 'cursor\[bot\] d+'/, "a tag that another moved after the owner pushed it");
+  r = pick({ error: true }, [["20261012.9", A]], [A]);
+  stops(r, /release variable RELEASE of aboveloop is missing or cannot be read.*HTTP 502/, "a variable that cannot be read");
 
-  r = pick([["20261012.9", A], ["20261013.1", D]], { "20261012.9": [[OWNER, A]], "20261013.1": [[OWNER, C]] }, [A, C, D]);
-  stops(r, /latest release 20261013\.1 was moved/, "a tag moved with no record (its commit has no tag-record.yml)");
+  for (const bad of [`20261012.9 ${A.slice(0, 7)}`, `20261012.9  ${A}`, `v20261012.9 ${A}`, `20261012.9 ${A.toUpperCase()}`, `20261012.9 ${A} x`, "20261012.9", ""])
+    stops(pick(bad, [["20261012.9", A]], [A]), /release variable RELEASE of aboveloop is not '<YYYYMMDD\.N> <sha>'/, `a value of another form: '${bad}'`);
 
-  r = pick([["20261012.9", A]], { "20261012.9": [[OWNER, A]], "20261013.1": [[OWNER, C]] }, [A, C]);
+  r = pick(`20261013.1 ${C}`, [["20261012.9", A]], [A, C]);
   stops(r, /latest release 20261013\.1 is gone/, "a deleted tag is named");
 
-  r = pick([["20261012.9", A]], { "20261012.9": [[OWNER, A]] }, []);
-  stops(r, /not on main/, "a release that main does not reach");
+  r = pick(`20261013.1 ${C}`, [["20261012.9", A], ["20261013.1", B]], [A, B, C]);
+  stops(r, new RegExp(`latest release 20261013\\.1 was moved: the variable names ${C}, the tag is at ${B}`), "a moved tag is named");
 
-  r = pick([["20261012.9", A]], { "20261012.9": [[OWNER, A]] }, [A], "record");
-  stops(r, /HTTP 502/, "a record that cannot be read stops the run");
-
-  r = pick([["20261012.9", A]], { "20261012.9": [[OWNER, A]] }, [A], "list");
-  stops(r, /HTTP 502/, "a list of the owner's runs that cannot be read stops the run");
-
-  r = pick([["20261012.9", A]], { "20261012.9": [["cursor[bot]", A]] }, [A]);
-  stops(r, /no release of aboveloop that the owner pushed/, "no tag that the owner pushed");
+  r = pick(`20261012.9 ${A}`, [["20261012.9", A]], []);
+  stops(r, /latest release 20261012\.9 is not on main/, "a release that main does not reach");
 });

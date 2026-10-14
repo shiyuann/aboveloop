@@ -2,7 +2,7 @@
 # The skill setup-app copies this file, unchanged, to .github/workflows/loop.yml of each
 # project repo. Change it in aboveloop (skills/setup-app/references/loop.yml), never in a copy.
 # The work is the composite action services/loop of the latest release of aboveloop, checked
-# out at that tag. It launches a Cursor agent with builder-resolve, step explore, for the open
+# out at that tag. It launches a Cursor agent with builder, step explore, for the open
 # issues without the label explored, and step implement for the issue it chooses among those
 # with the labels ready-for-auto-builder and explored.
 # Variables: GH_APP_ID_DEV.
@@ -46,12 +46,13 @@ jobs:
           kit=shiyuann/aboveloop
           echo "owner=${kit%%/*}" >> "$GITHUB_OUTPUT"
           echo "name=${kit#*/}" >> "$GITHUB_OUTPUT"
-      # Run the latest release of aboveloop, not its main (L2-release §0, §2.3): of the tag names
-      # YYYYMMDD.N that the owner pushed (the owner's runs of tag-record.yml), the largest. A tag
-      # that only someone else pushed is not a release, so it is ignored. It fails closed and never
-      # falls back to an older tag: a record that cannot be read; no such tag; that tag gone
-      # (deleted), or moved (its newest record is not the owner's, or not its commit now); or not
-      # on main: each stops the run. The check is here, not in the action that it examines.
+      # Run the latest release of aboveloop, not its main (L2-release §0, §2.3; L3-loop-workflow §1
+      # step 0): the release that aboveloop's repository variable RELEASE names, "<tag> <sha>". Only
+      # the owner's prerelease writes it; no token of the loops can. A release tag that it does not
+      # name is never read, whatever its version. It fails closed and never falls back to an older
+      # tag: a variable that is missing (404), that cannot be read, or whose value has another form;
+      # that tag gone (deleted), or not at the SHA of the variable (moved); or a SHA that main does
+      # not reach: each stops the run. The check is here, not in the action that it examines.
       - id: kit
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -60,7 +61,9 @@ jobs:
           owner: ${{ steps.kitrepo.outputs.owner }}
           repositories: ${{ steps.kitrepo.outputs.name }}
           permission-contents: read
-          permission-actions: read
+          # Variables read, to read RELEASE (L3-loop-workflow W14). The action does not declare this
+          # input, so it warns "Unexpected input(s)", and still passes it on.
+          permission-actions-variables: read
       - id: release
         name: The latest release of aboveloop
         env:
@@ -68,16 +71,18 @@ jobs:
         run: |
           set -euo pipefail
           kit=shiyuann/aboveloop
-          owner="${kit%%/*}"
-          runs="repos/$kit/actions/workflows/tag-record.yml/runs?event=push"
-          # The largest tag name that the owner pushed, from the record. The tags that exist now do not
-          # choose it, so a deleted or moved tag cannot make the run take an older one.
-          name="$(gh api "$runs&actor=$owner&per_page=100" --paginate --jq ".workflow_runs[] | select(.actor.login == \"$owner\") | .head_branch // \"\"" | { grep -E '^[0-9]{8}\.[0-9]+$' || true; } | sort -t. -k1,1nr -k2,2nr | awk 'NR == 1')"
-          if [ -z "$name" ]; then echo "::error::no release of aboveloop that the owner pushed: the loop does not run"; exit 1; fi
-          sha="$(gh api "repos/$kit/tags?per_page=100" --paginate --jq ".[] | select(.name == \"$name\") | .commit.sha")"
-          if [ -z "$sha" ]; then echo "::error::the latest release $name is gone (deleted): the loop does not run, and it does not take an older tag"; exit 1; fi
-          rec="$(gh api "$runs&branch=$name&per_page=1" --jq '.workflow_runs[0] | "\(.actor.login // "") \(.head_sha // "")"')"
-          if [ "$rec" != "$owner $sha" ]; then echo "::error::the latest release $name was moved after the owner pushed it (newest record '$rec', tag now at $sha): the loop does not run, and it does not take an older tag"; exit 1; fi
+          err="$(mktemp)"
+          if ! value="$(gh api "repos/$kit/actions/variables/RELEASE" --jq .value 2>"$err")"; then
+            echo "::error::the release variable RELEASE of aboveloop is missing or cannot be read ($(tr '\n' ' ' < "$err")): the loop does not run"; exit 1
+          fi
+          if ! [[ "$value" =~ ^[0-9]{8}\.[0-9]+\ [0-9a-f]{40}$ ]]; then
+            echo "::error::the release variable RELEASE of aboveloop is not '<YYYYMMDD.N> <sha>' (a tag name, one space, a full SHA): the loop does not run"; exit 1
+          fi
+          name="${value% *}"
+          sha="${value#* }"
+          tag="$(gh api "repos/$kit/tags?per_page=100" --paginate --jq ".[] | select(.name == \"$name\") | .commit.sha")"
+          if [ -z "$tag" ]; then echo "::error::the latest release $name is gone (deleted): the loop does not run, and it does not take an older tag"; exit 1; fi
+          if [ "$tag" != "$sha" ]; then echo "::error::the latest release $name was moved: the variable names $sha, the tag is at $tag: the loop does not run, and it does not take an older tag"; exit 1; fi
           status="$(gh api "repos/$kit/compare/$sha...main" --jq .status)"
           case "$status" in
             identical|ahead) ;;
@@ -85,7 +90,7 @@ jobs:
           esac
           echo "tag=$name" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "aboveloop $name ($sha)"
+          echo "aboveloop $name ($sha), from the release variable RELEASE"
       - uses: actions/checkout@v4
         with:
           repository: shiyuann/aboveloop
