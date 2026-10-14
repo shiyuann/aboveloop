@@ -13,7 +13,7 @@ Marks: ✅ built · 🔶 partly built · ⬜ not built.
 - **The knowledge loop has a fast part and a slow part** ([§2.2](#22-the-knowledge-loop)). The cascade goes into the commit of the change, so the owner sees it at once. The deep-verify runs in the background before each spec review, and does not stop the owner.
 - **The owner acts only at the owner points** ([§4](#4-how-the-loops-talk-to-the-owner)). How to ask the owner is in `entry`; where the owner acts is in the page of each loop; which point comes first is the rank of the dev loop.
 - **The owner merges every PR of the loops** (P2). The agent merges a small change: [L2-loop-builder §2.1](L2-loop-builder.md#21-where-issues-come-from).
-- **The workflow `loop.yml` of each project is the only trigger of the loops in CI** (§5). It launches a cloud agent only when there is work. A product's own loop (for example a data loop) has its own workflow, under the same rules (`entry`: routines; [L2-loop-architecture §2](L2-loop-architecture.md#2-routines)).
+- **The workflow `loop.yml` of each project is the only trigger of the loops in CI** (§5). It launches a cloud agent only when there is work. A product's own loop (for example a data loop) has its own workflow, under the same rules (the general rules of a routine: [L2-loop-architecture §2](L2-loop-architecture.md#2-routines)).
 
 ## 0. Terms
 
@@ -135,7 +135,7 @@ Each row is one arrow between two loops. The page of each loop tells its own par
 | A change to `knowledge/` | Builder loop, mainly its spec step: the spec, the plan and other pages. The implement step removes the ⬜ marks of what it built ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | Knowledge loop: the cascade, in the same commit (§2.2) |
 | The deep-verify node before each spec review (O) | Builder loop: the spec step of a heavy spec | Knowledge loop: the slow work, in the background (§2.2) |
 | A direction-level finding of the deep-verify | Knowledge loop | Builder loop: a new D node of the plan of the issue |
-| The owner's feedback, "记一下", or the result of a design discussion | Dev loop, in a session (`entry`, 「owner 说『应该怎么样』」) | Knowledge loop: a small change in a PR that the agent merges at once; or an issue for the builder loop |
+| The owner's feedback, "记一下", or the result of a design discussion | Dev loop, in a session (`entry`, 「owner 说「应该怎么样」」; a design discussion: `entry`, 「还没定的设计，先做 spec 那一步」; an issue goes on by `builder`'s `issue-in-session.md`) | Knowledge loop: a small change in a PR that the agent merges at once; or an issue for the builder loop |
 | A release | `prerelease` (the dev loop) | Knowledge loop: the cleanup removes the finished plans, their deep-verify reports and the ✅ items of the graph of open work ([L2-release §2.8](L2-release.md#28-a-release-removes-finished-plans-and-deep-verify-reports-)) |
 | The owner points | Each inner loop (§4) | Dev loop: the one queue and its rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)) |
 
@@ -159,7 +159,7 @@ Each row is one arrow between two loops. The page of each loop tells its own par
 | Loop | Step | What the owner does | How the owner is told | Blocks |
 | --- | --- | --- | --- | --- |
 | Builder | Open, in a session | Choose: an issue, or a small change with no issue ([L2-loop-builder §2.1](L2-loop-builder.md#21-where-issues-come-from)) | A question in the session | That change |
-| Builder | Explore: a vague issue (no reading that the evidence holds). ⬜ | Answer; write the answer in a comment ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | A question comment on the issue | That issue |
+| Builder | Explore: a vague issue (no reading that the evidence holds). | Answer; write the answer in a comment ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)) | A question comment on the issue | That issue |
 | Builder | After explore | Choose for each explored issue: do it at once, start it, hand it to CI, close it, or wait ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) | `dev` in a session | That issue |
 | Builder | Spec: a D | Decide a direction-level question. Each change of L1 is a D | By mode (above) | The nodes after the D |
 | Builder | Spec, heavy, in a session: the spec review (an O) | Read the spec diff of the draft PR and the summary of the deep-verify. Accept, or say what to change ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)) | A question in the session, after the deep-verify node ends | The implement step waits for the last one |

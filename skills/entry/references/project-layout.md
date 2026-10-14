@@ -4,7 +4,7 @@
 
 每个项目用同一个骨架。这样 agent 找东西时，不用重新认路。
 
-aboveloop 的约定不在项目的仓库里。agent 不用知道它存在哪。要改它，就改 aboveloop 的规矩（[feedback.md](feedback.md)）。
+aboveloop 的约定不在项目的仓库里。agent 不用知道它存在哪。要改它，就改 aboveloop 的规矩（[SKILL.md](../SKILL.md) 的「owner 说「应该怎么样」」）。
 
 ```
 <项目根>/

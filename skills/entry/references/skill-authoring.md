@@ -11,6 +11,8 @@
 
 ## 按使用者的认知拆 skill，不按内部模块拆
 
+一条规矩放进哪个 skill、哪份 reference：照 `knowledge` 的 [placement.md](../../knowledge/references/placement.md) 第 1 节（它什么时候要用，就放在那时读得到的文字里）。
+
 **skill 是使用者入口，不是代码模块。**
 
 - 使用者会直接说出、调用或记住的一件事，才值得做成 skill。

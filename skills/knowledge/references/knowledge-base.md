@@ -28,7 +28,7 @@ knowledge/
   reference/        ← 实测、调研、原件。只追加，不改写成 spec。例外：deep-verify 的报告跟着它的 issue 的 plan 走，plan 全部 ✅ 以后发版时一起删掉，链接改成永久链接（L2-release §2.8）。不分层
 ```
 
-用户的反馈不进知识库：它开成 issue（[issue-template.md](../../entry/references/issue-template.md)）。owner 的反馈当场记进 issue，或手上这个 issue 的 spec 和 plan（[feedback.md](../../entry/references/feedback.md)）。
+用户的反馈不进知识库：它开成 issue（[issue-template.md](../../entry/references/issue-template.md)）。owner 的反馈当场记进 issue，或手上这个 issue 的 spec 和 plan（[entry 的 SKILL.md](../../entry/SKILL.md) 的「owner 说「应该怎么样」」；记在哪：[placement.md](placement.md)）。
 
 `index.md` 是唯一的入口。它列出这里有哪些页、每页写什么、建立在哪几页上。
 
@@ -127,7 +127,7 @@ flowchart TB
 | 要改代码 | 对应的 plan。plan 链回它实现的 spec |
 | owner 问「当初为什么这样定」 | L1、L2 的「为什么」。要具体的数字或原话，读 reference |
 | 写对外的文案、定位 | L1，和 `prod` 组的页 |
-| owner 说「记一下」「加进知识库」 | 照本页做，再更新 `index.md` |
+| owner 说「记一下」「加进知识库」 | 先照 [entry 的 SKILL.md](../../entry/SKILL.md) 的「owner 说「应该怎么样」」问开 issue 还是小改动；记在哪、写什么，照 [placement.md](placement.md)；定了，照本页做，再更新 `index.md` |
 
 会话开头不把整个知识库读进上下文。`index.md` 告诉 agent 要用哪一页，agent 再去读那一页。
 

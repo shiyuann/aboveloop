@@ -18,6 +18,8 @@
 | owner 的步骤 | 只有 owner 做得了的一步，比如登录后台建一把 token。 |
 | 检查 | 构建做完之后的线上验收。 |
 | 外部事件 | 不由 owner 或 agent 决定的事，比如一个源发布了新数据。 |
+| in the loop | 每一步都等 owner 批准。 |
+| on the loop | owner 定规则、审永久的改动、看结果，能随时叫停，不逐步批准。 |
 
 ---
 
@@ -53,6 +55,21 @@ spec 写应该怎么工作：理想中的样子。spec 分三层，文件名以�
 > - <日期>：状态页只给 owner 看
 ```
 
+## 自动化的 spec：owner 在环里还是环上
+
+设计里有自动化或 agent，先定 owner 在环里还是环上。用两条判据：
+
+- **owner 审这一步，能不能加上系统给不了的东西？** 永久的改动合不合理、新东西该不该收，要 owner 判断。逐个的数据值，owner 的依据只有 agent 的调研，审了也没用。
+- **错了能不能发现、能不能退回、代价有没有上限？** 做不到的，owner 留在环里：花钱、对外发布、删除、改线上状态。
+
+另外三条：
+
+- **存储按产出的人分。** owner 和写代码的 agent 写的东西，进 git，走 review。机器产出的是数据，进数据存储。「影响用户」不等于「要 owner 审」。
+- **搬一个安全关卡之前，先看出错的代价和已有的关卡。** 别处的「agent 提议、代码核对后执行」，防的是 agent 的产出直接到用户手里。这里前面已经有 owner 把关，就不再加一道代码关，也不为它加部件。
+- **owner 在环上时，spec 写清三件事：** owner 管哪几件事；owner 看什么（通知、抽查）；owner 怎么叫停。
+
+自动的活跑在哪（routine）：照 aboveloop 的 [L2-loop-architecture §2](../../../knowledge/spec/L2-loop-architecture.md#2-routines)。
+
 ---
 
 # plan 怎么写
@@ -69,7 +86,7 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - 半路发现的活属于别的事，就开一个新 issue，不塞进手上这份。
   - 共用的项目（比如 aboveloop）的 issue，可以给每个 app 一组节点，写这个 app 要做的活；app 自己的活，开在 app 自己的仓库里。
   - 为什么：一张图只画一个 issue，owner 拿图看得清它到哪了、等谁。代码一个 issue 一个分支，几个 agent 同时干活不撞。
-- **依赖图 `plan/index.md`**：所有开着的活一张图，上次发版以后做完的也在，打 ✅。dev loop 的一部分，在会话里用：给全局（`Now:`、图、谁在等什么）；先做哪件看 `dev` 的排序，它只看事实，不看这张图。只有会话里的 agent 改它，CI 不改。改它是小改动：一个分支、一个 PR，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「owner 说『应该怎么样』」第 2 步），不放在 issue 的分支上等 review。设计在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。格式：
+- **依赖图 `plan/index.md`**：所有开着的活一张图，上次发版以后做完的也在，打 ✅。dev loop 的一部分，在会话里用：给全局（`Now:`、图、谁在等什么）；先做哪件看 `dev` 的排序，它只看事实，不看这张图。只有会话里的 agent 改它，CI 不改。改它是小改动：一个分支、一个 PR，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」），不放在 issue 的分支上等 review。设计在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。格式：
   - 元信息里一行 `Now:`：下一步是什么、等谁。
   - 一张 mermaid 图：节点是 issue（`I<N>["#<N> …：agent"]`）、发版（`O`）、外部事件（`E`），或里程碑的 plan 的下一个节点（`alphaO15["alpha O15 …：owner"]`，带上 plan 的名字）；箭头是真的在等。节点标上谁做。里程碑的 plan 的节点链着开着的 issue，图上画那个 issue。
     - 节点一律写成 `ID["字"]`。
@@ -84,7 +101,7 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
     - 一行图有几个箭头，整行一起删：不碰它的箭头也没了。所以一行只写一个。
   - 图只存箭头、下一步和 `Now:`。issue 开着还是关了，每次从 GitHub 现读。
   - 谁改：`dev` 的会话里的入口每次对一遍 GitHub，新 issue 加进来，关了的打 ✅；agent 开工、owner 说等或关的时候，顺手改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。
-- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A、C 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「owner 说『应该怎么样』」第 2 步）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
+- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A、C 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
 
 ## 例子
 

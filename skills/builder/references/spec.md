@@ -47,7 +47,7 @@ CI：plan 写好，照 [implement.md](implement.md) 第 5 步第 5–6 条 commi
 
 ### 3.2 写完整的草稿
 
-写一份完整的 spec 改动和 plan 草稿。spec 照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「spec 怎么写」，plan 照它的「plan 怎么写」。
+写一份完整的 spec 改动和 plan 草稿。spec 照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「spec 怎么写」，plan 照它的「plan 怎么写」。一条规矩写进哪一份、记在哪、写什么，照 `knowledge` 的 [placement.md](../../knowledge/references/placement.md)。
 
 - plan 给这一步的每一部分一个节点：草稿一个 A 节点，deep-verify 一个 A 节点，每个方向问题一个 D 节点。
 - 不是方向问题的，当场自己定，写「Agent decided (日期)：…，because …」。deep-verify 也会查这些决定。
@@ -138,13 +138,13 @@ agent 节点前面的 D 和 O 都过了，这一步就结束，接着做 impleme
 
 owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#7-the-owners-part) 的「开工」），agent 就带 owner 做这一步。spec、plan、deep-verify 的报告和后面的代码，都在这个 issue 的分支和同一个 draft PR 里。
 
-**CAUTION:** 第一个 commit 之前，先读 `entry` 的「owner 说『应该怎么样』」第 1 步的 CAUTION：只在自己的 worktree 和分支上改，只 `git add` 自己改的文件。
+**CAUTION:** 第一个 commit 之前，先读 `entry` 的「会话里的每样改动都开 PR」那一条的 CAUTION：只在自己的 worktree 和分支上改，只 `git add` 自己改的文件。
 
 1. 开分支和 draft PR：先跑会话的脚本（[implement.md](implement.md) 第 0 步），再照 implement.md 第 5 步开分支 `issues/<N>` 和它的 worktree，记测试基线。issue 上有 `ready-for-auto-builder`，先去掉它（`gh api -X DELETE "repos/<owner>/<repo>/issues/<N>/labels/ready-for-auto-builder"`）：label 是和 CI 之间的锁。
-2. 在分支上写这个 issue 的 plan（`knowledge/plan/<N>-<几个词>.md`，`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)），头几行写深浅（第 1 节）和测试基线。commit（信息以 `#<N>` 开头），push，开 draft PR（implement.md 第 5 步第 5–6 条）。draft PR 就是认领；owner 说做，是 issue 的 sign-off。依赖图 `knowledge/plan/index.md` 里加上这个 issue：那是小改动（`entry` 的「owner 说『应该怎么样』」第 2 步），不放在这个分支上。owner 不做的，关掉 issue，在图里打 ✅（发版时删）。
+2. 在分支上写这个 issue 的 plan（`knowledge/plan/<N>-<几个词>.md`，`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)），头几行写深浅（第 1 节）和测试基线。commit（信息以 `#<N>` 开头），push，开 draft PR（implement.md 第 5 步第 5–6 条）。draft PR 就是认领；owner 说做，是 issue 的 sign-off。依赖图 `knowledge/plan/index.md` 里加上这个 issue：那是小改动（`entry` 的「小改动」），不放在这个分支上。owner 不做的，关掉 issue，在图里打 ✅（发版时删）。
    - 开了工又不做了：在 draft PR 下写一句为什么，关掉它。spec 和 plan 的改动跟着它走，main 上没有要撤回的。
 3. 轻的：短 plan 写好，这一步就结束（第 2 节）。接着在同一个分支上照 [implement.md](implement.md) 做。
-4. 重的：在分支上改 spec（第 3 节）。owner 每说一个想法，当场改 spec 的那一段，还没做到的标「⬜ #N」，commit，push。规矩（`skills/`）要改的，先在 spec 里写清应该怎样；`skills/` 的文字到写代码时改。牵连别的页的核对和改动（cascade）当场做，和这个改动放进同一个 commit，不记成节点：owner 马上看得到。
+4. 重的：在分支上改 spec（第 3 节；怎么改，见 [issue-in-session.md](issue-in-session.md) 第 2 节）。owner 每说一个想法，当场改 spec 的那一段，还没做到的标「⬜ #N」，commit，push。规矩（`skills/`）要改的，先在 spec 里写清应该怎样；`skills/` 的文字到写代码时改。牵连别的页的核对和改动（cascade）当场做，和这个改动放进同一个 commit，不记成节点：owner 马上看得到。
 5. 草稿写完，agent 在后台开 deep-verify（6.2），不问 owner，接着和 owner 谈、改 spec。deep-verify 修完，再带 owner 做 spec review（6.5 的「带 owner 做步骤」）：owner 在 draft PR 里读 spec 的 diff 和 deep-verify 的小结。owner 要改的，当场改，接下一次 spec review。
 6. owner 过了最后一次 spec review，这一步结束。最后一次之前一定跑过 deep-verify（6.2 第 1 条）。接着在同一个分支上照 [implement.md](implement.md) 做。
 

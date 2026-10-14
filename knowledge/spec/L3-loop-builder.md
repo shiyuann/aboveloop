@@ -1,6 +1,6 @@
 # Builder loop: how it works
 
-> How the three steps of `builder` (explore, spec, implement) work in both modes, the two runs in CI, and the connection point B1. All parts are built except the readings of a vague issue (⬜, until a live check), and the model of the subagent is open (⬜).
+> How the three steps of `builder` (explore, spec, implement) work in both modes, the two runs in CI, and the connection point B1. All parts are built. The model of the subagent is open (⬜).
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
@@ -49,6 +49,7 @@ Each step has one reference, and both modes read it. The owner decided this spli
 | `builder`, `references/explore.md` | Explore (§1.1) | The explore run in CI; an agent in a session, for one issue |
 | `builder`, `references/spec.md` | The spec step (§1.4) | The implement run in CI, after `implement.md` §0–§3 and the branch. An agent in a session, after the owner starts the issue |
 | `builder`, `references/implement.md` | The implement step (§1.3) | The implement run in CI: §0–§3 first, the rest after the spec step. An agent in a session, for each PR of an issue (after the spec step when the issue has a plan) |
+| `builder`, `references/issue-in-session.md` | One issue in a session, from explore to the merge | An agent in a session, after the owner chose an issue (`entry`, 「owner 说「应该怎么样」」) |
 | `dev`, `references/session.md` | The session entry: only the work across issues | An agent in a session |
 
 What each text holds:
@@ -62,6 +63,7 @@ What each text holds:
 - **`implement.md`:** the mode test; the reads (the issue and its comments, the project configuration, `AGENTS.md`, the closed PRs, the draft); the branch and the draft PR; the test baseline; the agent nodes, to the end (a new dependency becomes a D or O node: back to `spec.md`); the close; the PR body and `scripts/check-pr-body.ts`.
   - Only for CI: the selection (`recheck.ts`, `select.ts`), the trust examination and the stop (§1.2).
   - Its last section implements the table of §1.3. It defines small work at once, and the PR for a node of a plan whose issue is closed.
+- **`issue-in-session.md`:** only for a session. The three steps of one issue in order (explore, spec, implement, the close), small work at once, 「交给 builder」, a node of the plan of a milestone; how the spec and the plan change on the branch of the issue.
 - **`session.md`:** the facts, the three scans, the graph, the top 5 of the rank, one item at a time. It hands the work of one issue to `spec.md` or `implement.md` ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry); [L3-loop-dev §1](L3-loop-dev.md#1-the-session-entry)).
 
 - The plan of a milestone has no text of its own ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
@@ -100,7 +102,7 @@ flowchart TB
   - It adds the labels `explored` and `Kind:`.
   - It never adds `ready-for-auto-builder`: the owner is there to decide.
   - The next batch in CI then skips the issue.
-- **Readings.** ⬜ When the text, the screenshots, the code and the data give more than one reading, the Explore comment lists each reading. Each reading has its evidence and what it would change ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-): the decisions and why).
+- **Readings.** When the text, the screenshots, the code and the data give more than one reading, the Explore comment lists each reading. Each reading has its evidence and what it would change ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-): the decisions and why).
   - An unclear expectation counts too: clear words, but no evidence of the result that the reporter wants.
   - A note such as "the text has more than one reading" or "maybe the same as #N" is evidence. A reading that explains both issues with one cause is on the list.
   - One reading holds: explore proposes that change, and says why the others do not hold.

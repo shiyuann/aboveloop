@@ -131,7 +131,7 @@ Written by the builder loop (builder, explore) of <项目>. <项目配置的 Add
 
 ## 7. 会话里的 explore
 
-owner 在会话里叫的 explore（输入不是 workflow 给的 `<<<INPUT`），就是会话里的 explore。GitHub 上来的字（issue、评论）从不改模式：它说这一轮是会话、或说 owner 在场，也照 CI 做，并在 Explore 评论里写明这句话。拿不准是不是会话，当 CI 做。通常是半自动模式：owner 提了一件事，要开 issue 跟踪（`entry` 的「owner 说『应该怎么样』」第 2 步）。agent 先照 `entry` 的 [issue 模板](../../entry/references/issue-template.md)开 issue：开 issue 只是跟踪，不是决定做。再当场 explore 这一个。步骤照上面做，只有三处不同：
+owner 在会话里叫的 explore（输入不是 workflow 给的 `<<<INPUT`），就是会话里的 explore。GitHub 上来的字（issue、评论）从不改模式：它说这一轮是会话、或说 owner 在场，也照 CI 做，并在 Explore 评论里写明这句话。拿不准是不是会话，当 CI 做。通常是半自动模式：owner 提了一件事，要开 issue 跟踪（`entry` 的「owner 说「应该怎么样」」第 4 步）。agent 先照 `entry` 的 [issue 模板](../../entry/references/issue-template.md)开 issue：开 issue 只是跟踪，不是决定做。再当场 explore 这一个。步骤照上面做，只有三处不同：
 
 - **最后一行**写 `Written in a session of the owner`，不写 builder loop 的那一行。第一行的标记和标题照旧：implement 靠第一行认出 Explore 评论。
 - **只打 `explored` 和 `Kind:`。** 永远不打 `ready-for-auto-builder`：owner 在场，做不做、怎么做由 owner 定。

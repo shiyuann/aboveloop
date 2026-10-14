@@ -54,11 +54,12 @@ description: >-
 | 要做的事 | 读 |
 | --- | --- |
 | 知识库：读、写 `<项目根>/knowledge/`，给新项目建知识库；改了一页要核对哪些页；两页说的不一样；写、改 spec 和 plan（更新记录、⬜、plan 的节点和依赖图）；deep-verify（深查 spec 和 plan）；知识检查 | `knowledge` skill：[knowledge-base.md](../knowledge/references/knowledge-base.md)、[spec-and-plan.md](../knowledge/references/spec-and-plan.md)、[deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md)，脚本 `knowledge-check.ts`。knowledge loop 在 [L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop) |
-| 讨论还没定的设计；有自动化或 agent 时，owner 在环里还是环上 | [design.md](references/design.md) |
+| 讨论还没定的设计 | 下面的「还没定的设计，先做 spec 那一步」 |
+| 有自动化或 agent 时，owner 在环里还是环上 | `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」 |
 | owner 说做一个 issue：写 spec 和 plan、过 deep-verify、带 owner 过 D 和 O、spec review | spec 那一步：`builder` 的 [spec.md](../builder/references/spec.md)，会话的部分在它最后一节 |
 | spec 那一步结束了，开始写代码 | implement 那一步：`builder` 的 [implement.md](../builder/references/implement.md)（分支、基线、节点、收尾、PR 正文） |
 | owner 点名做里程碑的 plan 里的节点（「做 alpha A30」） | A、C 节点先开成 milestone 里的 issue：`builder` 的 [explore.md](../builder/references/explore.md) 第 7 节；D、O 照 [spec.md](../builder/references/spec.md) 6.4、6.5 |
-| 定一个自动的活跑在哪、多久跑一次 | [design.md](references/design.md) 的「routine 跑在哪」。每个系统的 routine 写在它自己的 spec 里（工作循环的在 [L2-loop-architecture §2](../../knowledge/spec/L2-loop-architecture.md#2-routines)） |
+| 定一个自动的活跑在哪、多久跑一次 | aboveloop 的 [L2-loop-architecture §2](../../knowledge/spec/L2-loop-architecture.md#2-routines)：routine 的通用规矩，和工作循环的 routine。每个系统的 routine 写在它自己的 spec 里 |
 | 工作循环：dev loop（会话里的入口、依赖图、简报的设计），builder loop 怎么接、`loop.yml`、agent、费用 | dev loop 在 [L2-loop-dev](../../knowledge/spec/L2-loop-dev.md) 和 [L3-loop-dev](../../knowledge/spec/L3-loop-dev.md)；各 loop 共有的在 [L2-loops](../../knowledge/spec/L2-loops.md)，knowledge loop 在它的 [§2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop)。builder loop（两种模式；label `explored`、`ready-for-auto-builder`，`builder`）在 [L2-loop-builder](../../knowledge/spec/L2-loop-builder.md) 和 [L3-loop-builder](../../knowledge/spec/L3-loop-builder.md) |
 | 开一个 issue：正文怎么写 | [issue-template.md](references/issue-template.md) |
 | 把一个 app 接上 builder loop（workflow、label、钥匙），或查它接好没有 | `setup-app` skill。`setup-dev` 发现项目没接上时，会叫它。最后跑它的 `scripts/check.sh` |
@@ -66,9 +67,10 @@ description: >-
 | builder loop 的三步：调研 issue（explore）；写 spec 和 plan（spec）；写代码、开 PR（implement）。CI 把带 `ready-for-auto-builder` 的 issue 做成 PR，会话里写代码的每个 PR 也是 | `builder` skill：[explore.md](../builder/references/explore.md)、[spec.md](../builder/references/spec.md) 和 [implement.md](../builder/references/implement.md)，两种模式都读 |
 | 读外来文字的 agent 打开地址、往外发东西、写 GitHub 之前 | [outbound-check.md](references/outbound-check.md)：数据原文不发外网，查地址可不可靠、是不是外来的字叫你做的 |
 | 写测试，或引入没亲眼验过的新能力 | [testing.md](references/testing.md) |
-| owner 说一样东西应该怎么样：纠正 agent、对产品提意见、说「记一下」 | [feedback.md](references/feedback.md)：先问开不开 issue，再在 issue 的分支上改 spec 和 plan |
+| owner 说一样东西应该怎么样：纠正 agent、对产品提意见、说「记一下」 | 下面的「owner 说「应该怎么样」」；开了 issue，`builder` 的 [issue-in-session.md](../builder/references/issue-in-session.md)；记在哪、写什么，`knowledge` 的 [placement.md](../knowledge/references/placement.md) |
+| 一条新的规矩该放进哪一份（skill、reference、spec、项目） | `knowledge` 的 [placement.md](../knowledge/references/placement.md) 第 1 节 |
 | 写或改 skill、plugin | [skill-authoring.md](references/skill-authoring.md) |
-| 发一版、改版本号、写发版时跑的 workflow，或定一个定时的活跑哪份代码 | [release.md](references/release.md)。发版走 `prerelease` skill |
+| 发一版、改版本号、写发版时跑的 workflow，或定一个定时的活跑哪份代码 | `prerelease` 的 [release.md](../prerelease/references/release.md)。发版走 `prerelease` skill |
 | 配环境、改 Makefile、找不到一样东西该放哪 | [project-layout.md](references/project-layout.md) |
 | 装、更新、修 aboveloop 本身 | `setup-dev` skill（同一个 plugin 里） |
 
@@ -113,48 +115,48 @@ description: >-
 
 已有的页不必整页重写。改到哪一段，那一段照这一节写。
 
-## owner 说「应该怎么样」：先开 issue，在 issue 的分支上改 spec 和 plan
+## owner 说「应该怎么样」：当场记下，先问开 issue 还是小改动
 
-owner 在会话里提一个想法、一个问题或一条意见。agent 带着 owner 走完这个 issue 的半自动模式：builder loop 的三步 explore、spec、implement，每步一份 `builder` 的文字，和 CI 读的是同一份（[L2-loop-builder](../../knowledge/spec/L2-loop-builder.md)）。每样改动都在一个分支上，走一个 PR。
+这一节在任何会话里都要用，修 aboveloop 本身的也是：对话里的这些事不带 skill 的词，所以写在这里（`knowledge` 的 [placement.md](../knowledge/references/placement.md) 第 1 节）。
 
-```mermaid
-flowchart TB
-  A["owner：想法、问题、意见"] --> B{"小改动？（问 owner）"}
-  B -->|是| C["分支、PR；检查过了，agent 当场 merge"]
-  B -->|否| D["explore：开 issue，当场 explore（explore.md 第 7 节）"]
-  D -->|owner 说做| E["spec：开分支 issues/N 和 draft PR，在分支上写 plan、改 spec；重的后台跑 deep-verify，再 spec review（spec.md）"]
-  E --> F["implement：同一个分支和 PR，做到打勾（implement.md）"]
-  F --> G["PR ready：owner merge"]
-```
+做错了，要留下记录。不留，同一个错会一直犯。下面这些都算 feedback：
 
-1. 问清 owner 要什么，收齐 context。
-   - **CAUTION:** 会话只在自己的 worktree 和分支上改，不在 main 上提交，不在项目的主目录里切分支。别的会话也在同一个仓库里提交：只 `git add` 自己改的文件。
-2. 问 owner：开 issue 跟踪，还是小改动。小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。小改动照这几步做，到这里为止：
-   1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。会话的 worktree 本来就在自己的分支上、还没有提交，就用它。
-   2. 改，commit，push，开一个 PR（[implement.md](../builder/references/implement.md) 第 5 步第 6 条的命令，去掉 `-F draft=true`），正文一两句：改了什么，为什么。不写 `Fixes`：小改动没有 issue。
-   3. 跑检查：改动碰到的部分的测试（项目配置的命令），和 PR 上 GitHub 的检查（仓库有的话）。都过了，agent 当场 merge（`gh pr merge <M> --merge`）。owner 不审它。没过，修好再跑；修不好，告诉 owner。
-3. explore：开 issue，当场 explore，照 `builder` 的 [explore.md](../builder/references/explore.md) 第 7 节。
-4. spec：owner 说做，照 `builder` 的 [spec.md](../builder/references/spec.md) 做，会话的部分在它最后一节（开分支 `issues/<N>` 和 draft PR，在分支上写 plan、改 spec，deep-verify，带 owner 过 D 和 O，spec review）。deep-verify 的形式（多人或单人）照 `knowledge` 的 [deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md) 的「两种形式」。牵连的页放进同一个 commit。deep-verify 是 spec review 前面的固定节点，在后台跑，不先问 owner（spec.md 6.2）。
-5. implement：spec 那一步结束（重的：最后一次 spec review；轻的：短 plan），照 [implement.md](../builder/references/implement.md) 在同一个分支上写代码，从它的第 0 步起，不再等 owner 叫执行。
-6. 做完，照 [implement.md](../builder/references/implement.md) 的第 7–8 步收尾、写 PR 正文、过检查、标成 ready，回复里链过去。owner merge，就是 code sign-off。
+- owner 纠正 agent（「不对，应该……」「你又……」「为什么总是……」）。
+- owner 明显不满意结果。
+- agent 自己发现做错了。不等 owner 开口。
+- owner 对产品提意见：画面、数据、想要的功能。
+- owner 说「记一下」「下次注意」。
 
-- 新功能、改画面、改数据、修 bug、改规矩，都这样做。例外：已经开了的、清楚的小 issue，owner 在场时当场做完，不写 plan、不跑 deep-verify：照 [implement.md](../builder/references/implement.md) 第 9 节「当场做完的小事」。
-- owner 说「交给 builder」：照 [implement.md](../builder/references/implement.md) 第 9 节的「交给 builder」。
-- 里程碑的 plan 里的节点，owner 点名做（「做 alpha A30」）：A、C 节点照 `builder` 的 [explore.md](../builder/references/explore.md) 第 7 节先开成 milestone 里的 issue，D、O 照 [spec.md](../builder/references/spec.md) 6.4、6.5。
-- 怎么写 spec 和 plan，在 `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)。
+会话里听到的 feedback，当场记下，不另记文件，不攒着以后消化。不留到「等下一起整理」，那样会丢。应该的样子最后写进 spec，要做的活写进 plan；在那之前，它记在 issue 里。
+
+1. 问清 owner 要什么，收齐 context。owner 这次说的，和一条记下的 owner 决定冲突，先问一句：改那条决定，还是只这一处例外（`knowledge` 的 knowledge-base「两页说的不一样」）。
+2. 定记在哪、写什么：照 `knowledge` 的 [placement.md](../knowledge/references/placement.md) 第 2、3 节（项目还是 aboveloop，issue 开在哪个仓库，先找已有的那一条）。
+3. 和手上这个 issue 有关：写进它的分支上的 spec 和 plan。
+4. 别的：问 owner 一个问题：开 issue 跟踪，还是小改动（「怎么问 owner」）。
+   - 小改动：照下面的「小改动」做，到那里为止。
+   - 开 issue：照 `builder` 的 [issue-in-session.md](../builder/references/issue-in-session.md) 做：explore、spec、implement。
+
+### 小改动
+
+小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。照这几步做：
+
+1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。会话的 worktree 本来就在自己的分支上、还没有提交，就用它。
+2. 改，commit，push，开一个 PR（`builder` 的 [implement.md](../builder/references/implement.md) 第 5 步第 6 条的命令，去掉 `-F draft=true`），正文一两句：改了什么，为什么。不写 `Fixes`：小改动没有 issue。
+3. 跑检查：改动碰到的部分的测试（项目配置的命令），和 PR 上 GitHub 的检查（仓库有的话）。都过了，agent 当场 merge（`gh pr merge <M> --merge`）。owner 不审它。没过，修好再跑；修不好，告诉 owner。
+4. 改的是 aboveloop 的规矩（小改动或 issue 的 PR 都一样）：merge 以后，下一版才到 owner 的会话里：告诉 owner，不替 owner 发版。
 
 为什么：会话在自己的 worktree 和分支上干活，没有停在 main 上的目录，所以每样改动都走一个分支和一个 PR。owner 先在 draft PR 里看定了的样子（spec 的 diff），再让 agent 写代码。小改动不等 owner：检查过了，agent 就 merge（owner 定的）。一个 issue 一个分支、一个 PR，几个 agent 同时干活也不撞。
 
 ## 什么时候问 owner，什么时候直接做
 
-**owner 在环上，不在环里。** owner 的注意力最贵。只把非 owner 不可的事交给 owner。
+**owner 在环上，不在环里**（L1 P1；in the loop、on the loop 的定义在 `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 的词表）。owner 的注意力最贵。只把非 owner 不可的事交给 owner。
 
 - agent 能查的，自己查。能定的，自己定。做完报结果。
 - **派给 owner 之前，agent 先自己做一遍。** 跑命令、触发 workflow、开浏览器看页面、读日志、调后台的 API，都是 agent 的事。检查也是。
 - **只有五种事交给 owner：** owner 本人的登录（agent 拿不到的账号）；owner 的设备（比如真机）；花钱；拍板；撤不回的动作。
 - **工具权限拦住了 agent，就请 owner 放开那一条权限。** 写清在哪个设置文件里加、加哪条规则。不把这件事转给 owner 做。放开以后，agent 自己做，同类的事也不再问。
 - **交给 owner 的事，一次交齐，写进 plan。**
-- 判据和设计自动化时一样：[design.md](references/design.md) 的「owner 在环里还是环上」。
+- 判据和设计自动化时一样：`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」。
 
 **拍板只问方向。** 交给 owner 拍板的，只有几个维度难以取舍的选择。维度比如产品意图、钱、能担多大的风险、改一条记下的 owner 原则。事实说明了哪个选项明显更好，agent 自己定。在 plan 或 spec 里写「agent 定的（日期）：…，因为…」，回复里说一句。只能是 owner 的理由（L2 的 Why），有合适的 owner 原话就用原话，写明出自哪天的哪句话。不为填一栏去问 owner。
 
@@ -187,7 +189,16 @@ flowchart TB
 **还没定的设计，先做 spec 那一步。** 下一步是还没定的产品、数据模型或架构，就先停下写代码，照 [spec.md](../builder/references/spec.md) 做 spec 那一步。不先做一版再问。谁定，照上面的「拍板只问方向」。
 
 - 要 owner 拍板：agent 先自己调研。写进 plan 的「owner 拍板」。还没有 plan，就写进 spec 的「待定」。给 2～4 个选项，每个一句理由，推荐的放第一个。
-- 要把设计谈清楚：照 [design.md](references/design.md) 的「设计还没定：先讨论」。
+- 要把设计谈清楚：先讨论，再写 spec 和 plan。改代码，等最后一次 spec review 过了。agent 是懂行、负责的资深工程师：
+  - agent 给判断，并说清有几成把握。
+  - agent 从基本概念讲起。owner 不一定知道业界最新的做法。
+  - 该查的，agent 自己查。agent 不等 owner 一步步带着问。
+- 讨论时，照这几步做：
+  1. 不把现在的实现当定论。它可能只是原型。
+  2. 把几条路放进一张表，比优缺点。查做成过的系统，查被认可的人怎么说。设计里有自动化或 agent，先定 owner 在环里还是环上（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」）。
+  3. 给一条推荐和理由。不只在 owner 给的方案里挑，也不照单全收 owner 的说法。改了 owner 方案的哪里，逐条说。
+  4. owner 纠正时，先对齐目标。问清 owner 要什么结果，owner 的审查在哪一步有用。然后再改设计。
+- owner 说可以写成 spec 了，就照 `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 的「spec 怎么写」写；有自动化或 agent 的，照它的「自动化的 spec」。一次完整的讨论在 `knowledge` 的 [case-study-design-discussion.md](../knowledge/references/case-study-design-discussion.md)，不用每次读。
 
 **下面这些直接做，不问：**
 
@@ -198,7 +209,7 @@ flowchart TB
 - spec 那一步结束了的 plan 里，一个 agent 的节点，指向它的节点都完成了：照 [implement.md](../builder/references/implement.md) 6.1「agent 的节点做到底」做到打勾。
 - agent 知道该照哪条规则做，或者有明确的推荐（上面的「拍板只问方向」）。回复里只报做了什么。不写成「你来定」，也不写成「我注意到」。
 
-**要问 owner 的只有这几种**（还没定的设计除外）：花钱；钥匙（权限、token）；账号；撤不回的动作（公开发帖、删东西）；开不开 issue、做不做一个 issue（「owner 说『应该怎么样』」）。攒到最后，一起写进 plan，回复里链过去。
+**要问 owner 的只有这几种**（还没定的设计除外）：花钱；钥匙（权限、token）；账号；撤不回的动作（公开发帖、删东西）；开不开 issue、做不做一个 issue（「owner 说「应该怎么样」」）。攒到最后，一起写进 plan，回复里链过去。
 
 owner 的话里有「它」「那个」，多半指上一轮在谈的东西。拿不准，就问一句。不猜着改。
 
@@ -220,20 +231,19 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 | 会话里：builder loop 的三步（explore、spec、implement） | 最新的 Opus（现在是 5.5），effort `xhigh` 或 `high` |
 | 会话里：builder loop 之外写、讨论、验证 spec（比如 deep-verify） | 最新的 Opus（现在是 5.5），effort `xhigh` |
 | 会话里：builder loop 之外已经规划好的确定任务，或简单的短任务 | 最新的 Grok（现在是 4.7），最高 effort（现在是 extra high） |
-| 后台 agent（工作循环的几个） | 最新的 Grok（现在是 4.7）。effort 照厂商的说明按活选：builder loop 的三步（explore、spec、implement）用 `xhigh` |
+
+后台 agent（工作循环的几个）的模型和 effort，和为什么，在工作循环的 spec 里：[L3-loop-workflow §2](../../knowledge/spec/L3-loop-workflow.md#2-the-agents) 的「Models」。
 
 **最低用最新的 Grok。** 不用比它低的模型。文档和开销估算里也不写别的低档模型。
 
 - 会话里的两行测过：spec 那一档不能降。
 - spec 那一档的 effort `xhigh` 是 owner 定的。
-- builder loop 的三步是 owner 定的：CI 里的自动的活用最新的 Grok 的最高档；半自动模式里，owner 用 Opus 的 `xhigh` 或 `high`。
-- 「spec 那一档不能降」有两个例外，都出自 owner 上面那一条：CI 里重的 spec 用 Grok；会话里的 spec 用 `high`。CI 里头三次重的 spec 以后，agent 拿它们和会话里重的 spec 比（deep-verify 的发现、owner 在 PR 里要改的、关掉的 PR），只在比出差距时问 owner。
-- 后台那一行，对照厂商的说明定。xAI 的 reasoning 文档：`xhigh` 是「Maximum reasoning depth」，用在质量比时间重要的时候；默认的 `high` 是「deeper thinking」；`medium` 给「less-latency sensitive applications」。Anthropic 的 effort 文档也不建议一律用最高档：最高档多花很多 token，提升小，还可能想过头。后台 agent 每次都花钱，所以按活选档。
-- 出了更新的模型，或 effort 换了名字，只改括号里的现值。要降档，先重测，再改这张表。后台 agent 拿最近几次真实运行的结果比。
+- builder loop 的三步在会话里用 `xhigh` 或 `high`，是 owner 定的。「spec 那一档不能降」的两个例外，在 [L2-loop-builder §1](../../knowledge/spec/L2-loop-builder.md#1-the-life-of-an-issue-) 的「The models of the three steps」。
+- 出了更新的模型，或 effort 换了名字，只改括号里的现值。要降档，先重测，再改这张表。
 
 这张表在开会话、开子 agent 时用。会话已经开了，模型或 effort 跟表上不一样，照常做，不为这个停下。
 
-活跑在 Cursor 还是 Claude，见 [design.md](references/design.md) 的「routine 跑在哪」。
+活跑在 Cursor 还是 Claude，见 aboveloop 的 [L2-loop-architecture §2](../../knowledge/spec/L2-loop-architecture.md#2-routines)。
 
 ---
 
@@ -284,9 +294,11 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 - **提交只带本轮相关的改动。** 本轮没碰的文件，不 `git add`。可以拆成几个 commit。
   - **CAUTION:** 不为了干净的 commit 改工作区。不用 stash、restore、checkout、reset 挪走或丢掉无关的改动。不为拆 hunk 改文件内容。
   - 无关的脏文件留在工作区。一个文件里混了本轮和别的改动，整个文件带上，或整个不带。
-- **会话里的每样改动都开 PR。** 代码、spec、plan、依赖图、deep-verify 的报告和小改动，都在分支上，走 PR。owner merge 一个 issue 的 PR；小改动的 PR，agent 跑过检查当场 merge（「owner 说『应该怎么样』」第 2 步）。直接推 main 的只有发版（下一条）。分支、worktree、draft PR、测试基线、收尾、PR 正文和它的检查，照 `builder` 的 [implement.md](../builder/references/implement.md) 第 5 步和第 7–8 步，和 CI 是同一份。一件事分几个 commit 没关系。
+- **会话里的每样改动都开 PR。** 代码、spec、plan、依赖图、deep-verify 的报告和小改动，都在分支上，走 PR。owner merge 一个 issue 的 PR；小改动的 PR，agent 跑过检查当场 merge（上面的「小改动」；为什么也在那里）。直接推 main 的只有发版（见下面发版那一条）。
+  - **CAUTION:** 会话只在自己的 worktree 和分支上改，不在 main 上提交，不在项目的主目录里切分支。别的会话也在同一个仓库里提交：只 `git add` 自己改的文件。
+  - 分支、worktree、draft PR、测试基线、收尾、PR 正文和它的检查，照 `builder` 的 [implement.md](../builder/references/implement.md) 第 5 步和第 7–8 步，和 CI 是同一份。一件事分几个 commit 没关系。
   - 发版（`prerelease`）不走 PR 推 main：版本号那次提交；发版内的修复，tag 的说明列出它；第 6 步 merge 之后的 `Merge follow-up`，发版的回复列出它（[L2-release §1](../../knowledge/spec/L2-release.md#1-the-order-)）。别的工作都走 PR。
-  - merge 不是发版。要上线，照 [release.md](references/release.md) 发一版。
+  - merge 不是发版。要上线，照 `prerelease` 的 [release.md](../prerelease/references/release.md) 发一版。
   - merge 之后的清理，照 [implement.md](../builder/references/implement.md) 第 7 步的最后一段。
 
 ## 界面文件不取数、不算业务

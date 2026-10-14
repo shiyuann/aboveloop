@@ -41,7 +41,7 @@ export interface Model {
  * The model of each job (GET /v1/models). Both take the latest Grok; the effort
  * follows xAI's reasoning guide: "xhigh" is "Maximum reasoning depth", for when
  * quality matters more than time: the three steps of the builder loop (explore,
- * spec, implement). entry's model table says the same.
+ * spec, implement). L3-loop-workflow §2 (Models) is the home of these models.
  * Each model is a full variant of GET /v1/models, with `fast` written out as "false"
  * (L3-loop-workflow §3: fast mode doubles the price, and the loops do not use it).
  * Measured: the API refuses a custom subagent whose model is not a full variant

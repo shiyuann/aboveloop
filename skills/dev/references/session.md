@@ -125,7 +125,7 @@ Written in a session of the owner
      - 为什么：和 issue 的 plan 是同一条规矩：做完的留到发版，由 `prerelease` 一次删掉。
    - 每个 issue 在表里写下一步和谁做。
    - 写 `Now:` 一行：下一步是什么、等谁。不写打了 ✅ 的项。
-3. 有改动，照小改动做（`entry` 的「owner 说『应该怎么样』」第 2 步）：从最新的 `origin/<默认分支>` 开一个分支，只提交这一个文件，信息写 `plan index: <改了什么>`，push，开 PR，检查过了当场 merge。不放在一个 issue 的分支上：下一个会话从默认分支上读它。
+3. 有改动，照小改动做（`entry` 的「小改动」）：从最新的 `origin/<默认分支>` 开一个分支，只提交这一个文件，信息写 `plan index: <改了什么>`，push，开 PR，检查过了当场 merge。不放在一个 issue 的分支上：下一个会话从默认分支上读它。
 4. 照 [SKILL.md](../SKILL.md) 的「排序」排，不按图排。去掉另一个会话在做的（第 2 步）。draft 分支上的 plan 和里程碑的 plan 的下一个节点（第 2 步 c 的输入二、三）排在 `started` 那一组的最后。
 
 先给 owner 看 `Now:` 一行和这张图，再给前 5 件。给 owner 看前 5 件，一件一行：`<序号>. <哪件事，带链接> — <为什么排在这>`。理由写事实（「blocks A3, A4」「open for 9 days」「light spec」），不写空话。

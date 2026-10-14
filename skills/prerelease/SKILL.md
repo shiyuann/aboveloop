@@ -4,7 +4,7 @@ description: >-
   发一版：从 origin/main 到推 tag，一条路，在自己的 worktree 里跑。定范围（上一版之后改了什么、按区域要做哪些本机步骤）、
   点名主目录里没进这一版的改动、跟上 origin/main、跑测试、推版本号、写 CHANGELOG、删做完的 plan、报告和依赖图里打了 ✅ 的项、打 tag、推之前的本机步骤（比如传 TestFlight）、
   先推 main 再推这一个 tag、推之后的本机步骤，最后看 tag 触发的 run。项目自己的那几步在
-  `.agents/prerelease.md`。只有 owner 叫它。Use when the user says prerelease, 发版, 发一版,
+  `.agents/prerelease.md`。只有 owner 叫它发版；发版的规矩（写发版时跑的 workflow、定时的活跑哪份代码）在 `references/release.md`，谁都可以读。Use when the user says prerelease, 发版, 发一版,
   预发布, 出包, 发 TestFlight, ship a build, release, cut a release, or 打 tag 发布.
 ---
 
@@ -22,7 +22,7 @@ owner 叫了这个 skill，提交、tag、上传、push 都在范围内，不每
 - 这一次锁上了发版 worktree（第 0 步的 `add --lock` 或 `lock` 成功了），才解开它的锁（`git -C "$MAIN" worktree unlock "$REL"`）。worktree 留着，下一次从「接着上次」开始。
 - 因为 worktree 已经锁着（或 `git worktree lock` 失败了）而停的，不解锁：那把锁是另一次发版的。
 
-为什么是这个顺序，在 aboveloop 的 [L2-release §1](../../knowledge/spec/L2-release.md#1-the-order-)；做事用不着读它。词（最新一版、发版 tag、本机的步骤）在 `entry` 的 `references/release.md`。
+为什么是这个顺序，在 aboveloop 的 [L2-release §1](../../knowledge/spec/L2-release.md#1-the-order-)；做事用不着读它。词（最新一版、发版 tag、本机的步骤）和发版的规矩在 [references/release.md](references/release.md)。
 
 ## 0. 发版 worktree
 
@@ -122,7 +122,7 @@ git status --porcelain                            # 发版 worktree
 
 - 主目录里的这些不进这一版。记下来，「做完」时点名：
   - 没提交的文件：由改它的会话自己提交。
-  - 没推的提交：写「put them on a branch and a PR」。每样改动都走分支和 PR，小改动也是（`entry` 的「owner 说『应该怎么样』」第 2 步；L2-loop-builder §2.1）。它们进下一版。
+  - 没推的提交：写「put them on a branch and a PR」。每样改动都走分支和 PR，小改动也是（`entry` 的「小改动」；L2-loop-builder §2.1）。它们进下一版。
 - 发版 worktree 里只能有一次停下留下的改动：第 4 步当中停下的文件，或一次停下留下的修复（「接着上次」）。别的改动：停，说出文件名。
 - 不用 stash、restore、reset 把改动挪走或丢掉。
 

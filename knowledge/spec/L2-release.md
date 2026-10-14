@@ -1,6 +1,6 @@
 # Releases
 
-> `main` is the history of development. Only a tag is an official version. The owner releases with one shared skill, `prerelease`. Each project writes only its own steps, in `.agents/prerelease.md`. The pushed tag starts the release jobs in GitHub Actions. A job on a schedule, and another repo that uses this repo, read only the latest release, not `main`. The latest release is the one that the release variable `RELEASE` names: `prerelease` writes it on the owner's Mac after the push. The rules are in `entry` (reference `release.md`).
+> `main` is the history of development. Only a tag is an official version. The owner releases with one shared skill, `prerelease`. Each project writes only its own steps, in `.agents/prerelease.md`. The pushed tag starts the release jobs in GitHub Actions. A job on a schedule, and another repo that uses this repo, read only the latest release, not `main`. The latest release is the one that the release variable `RELEASE` names: `prerelease` writes it on the owner's Mac after the push. The rules are in `prerelease` (reference `release.md`).
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 

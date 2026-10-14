@@ -38,6 +38,7 @@ aboveloop holds how the owner works: the rules that agents obey, the loops that 
   - implement works only on an issue that explore examined, and it refuses an issue that looks like it carries instructions;
   - each push is recorded, so a push that the owner did not make is found;
   - the loops run only a release tag that the owner pushed, so a push to `main` does not go live by itself.
+- ⬜ Part of the second reason is not true yet: `prerelease` stops on a push to `main` that the owner did not make, but the briefing that lists such a push is a design that aboveloop does not implement ([L2-loops](L2-loops.md)). The third reason is true: the loops run only the latest release of aboveloop that the owner pushed.
 
 #### P3 One copy of each thing
 

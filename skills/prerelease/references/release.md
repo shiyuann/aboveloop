@@ -1,6 +1,6 @@
 # 发版：VERSION、tag、prerelease
 
-> 改版本号、发一版、写发版时跑的 workflow，或定一个定时的活跑哪份代码时读。词表在 [SKILL.md](../SKILL.md)。
+> 改版本号、发一版、写发版时跑的 workflow，或定一个定时的活跑哪份代码时读。词表在 [entry 的 SKILL.md](../../entry/SKILL.md)。
 
 main 是开发的历史。只有 tag 是正式的版本。一版就是一个 tag，tag 推上 origin 就是发版。推 main 不是发版。
 

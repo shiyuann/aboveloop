@@ -4,9 +4,11 @@ description: >-
   knowledge loop 的 skill：让 `<项目根>/knowledge/` 一直是真的。知识库的规矩（三层 L1、L2、L3，文件名，
   `index.md` 的依赖图，改了一页之后核对哪些页、更新记录、核对过的日期，两页说的不一样），spec 怎么写、
   plan 怎么写（节点、条目、依赖图 `plan/index.md`），deep-verify（深查 spec 和 plan，多人或单人，页头的标记），
-  和知识检查的脚本 `knowledge-check.ts`。词和每次会话都守的规矩在 `entry`。
+  知识检查的脚本 `knowledge-check.ts`，一条规矩或 feedback 放进哪一份、记在哪、写什么，和自动化的 spec（owner 在环里
+  还是环上）。词和每次会话都守的规矩在 `entry`。
   Use when the user says 知识库, 记一下, 加进知识库, deep-verify, 深查, 核对, 核对过, spec 怎么写, plan 怎么写,
-  依赖图, 更新记录, 改了一页, 两页说的不一样, knowledge check, or reads or writes `knowledge/`.
+  依赖图, 更新记录, 改了一页, 两页说的不一样, knowledge check, 记在哪, 放在哪, 在环里还是环上,
+  in the loop, on the loop, or reads or writes `knowledge/`.
 ---
 
 # knowledge
@@ -17,7 +19,7 @@ knowledge loop 的 skill（[L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-
 
 ## 先分清是不是这里的活
 
-owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说「记一下」「加进知识库」），先照 `entry` 的「owner 说『应该怎么样』」：问开 issue，还是小改动。定了以后，改 `knowledge/` 的那一步照这里做。
+owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说「记一下」「加进知识库」），先照 `entry` 的「owner 说「应该怎么样」」：问开 issue，还是小改动。记在哪、写什么，照 [placement.md](references/placement.md) 第 2、3 节。定了以后，改 `knowledge/` 的那一步照这里做。
 
 ## knowledge loop 的四步
 
@@ -33,6 +35,7 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 | 读、写 `<项目根>/knowledge/`，给新项目建知识库，改成分层；改了一页要核对哪些页；两页说的不一样 | [knowledge-base.md](references/knowledge-base.md) |
 | 写、改 spec 和 plan：元信息和更新记录、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式 | [spec-and-plan.md](references/spec-and-plan.md) |
 | deep-verify：深查 plan 做完到不到得了 spec、spec 在现在的代码上做不做得出来、spec 有没有矛盾和大的设计问题 | [deep-verify-knowledge.md](references/deep-verify-knowledge.md) |
+| 一条规矩或 feedback 该放进哪一份（规矩什么时候要用，就放在那时读得到的文字里）；feedback 记在哪、写什么 | [placement.md](references/placement.md) |
+| 有自动化或 agent 的 spec：owner 在环里还是环上 | [spec-and-plan.md](references/spec-and-plan.md)「自动化的 spec」 |
+| 一次设计讨论怎么谈成 spec 的例子（不用每次读） | [case-study-design-discussion.md](references/case-study-design-discussion.md) |
 | 只查形式：锚点、⬜ 标记的 issue 还开不开、`index.md` 的「建立在」、plan 的格式 | 知识检查：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/knowledge-check.ts --cwd <项目根>`（不联网加 `--offline`）。deep-verify 的第 2 步也跑它 |
-
-设计还没定、在环里还是环上、routine 跑在哪，不在这里：见 `entry` 的 [design.md](../entry/references/design.md)。

@@ -1,6 +1,6 @@
 # case study：从原型谈到 spec，owner 从环里挪到环上
 
-> 想看一次完整的设计讨论怎么谈成 spec 时读。不用每次读。这是一次真实讨论的复盘，不是规则。规则在 [design.md](design.md) 的「设计还没定：先讨论」。词表在 [SKILL.md](../SKILL.md) 和 design.md。
+> 想看一次完整的设计讨论怎么谈成 spec 时读。不用每次读。这是一次真实讨论的复盘，不是规则。规则在 [entry 的 SKILL.md](../../entry/SKILL.md) 的「还没定的设计，先做 spec 那一步」。词表在 [entry 的 SKILL.md](../../entry/SKILL.md) 和 [spec-and-plan.md](spec-and-plan.md)（in the loop、on the loop）。
 
 来源：一个活动类 App 的数据管道设计讨论，前后两天。活动、数据源、R2、GitHub Actions、Cursor 都是那个项目的。换到别的项目，换成自己的对象。
 
@@ -40,7 +40,7 @@ flowchart TD
 - builder、PR 那一圈是代码循环，owner merge。
 - 虚线是 owner 在环上：看结果，觉得不对就反馈，不拦任何一步。
 
-这三个 agent 现在跑在哪，不是那两天定的。见 [design.md](design.md) 的「routine 跑在哪」。
+这三个 agent 现在跑在哪，不是那两天定的。见 aboveloop 的 [L2-loop-architecture §2](../../../knowledge/spec/L2-loop-architecture.md#2-routines)。
 
 ---
 

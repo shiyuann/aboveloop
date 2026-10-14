@@ -18,12 +18,30 @@ Other terms, and "cloud agent": [L2-loops §0](L2-loops.md#0-terms).
 
 ## 2. `entry`: the start for all rules and skills
 
-- **The `AGENTS.md` of each project says one thing: read `aboveloop:entry` first.**
+- **The `AGENTS.md` of each project says one thing: read `aboveloop:entry` first.** aboveloop has one too: a session that changes aboveloop obeys the same rules.
   - Why: one start for every project and every coding agent. A rule changes in one place (P3).
-- `entry` holds the rules that always apply: how to write and answer, when to stop and ask, which model to use, where automated work runs, and how to work on code. How to keep the knowledge is in the skill `knowledge`.
+- **Where a rule lives depends on when it must fire.** Four facts:
+  1. Each session reads all of `entry` (the `AGENTS.md` of each project, also of aboveloop, names it).
+  2. A skill loads only when the words of its description match.
+  3. A reference is read only when a loaded text points to it at that moment.
+  4. A conversation event occurs in any session, with no word of a skill. Examples: the owner corrects the agent, gives an opinion, says 「记一下」, or starts to talk about a design that is not decided. A session that changes aboveloop is not different.
+- Thus:
+  - A rule that a conversation event must start, or that each session obeys: the body of `entry`, short. `entry` holds these rules:
+    - how to write and answer, and when to stop and ask;
+    - what counts as feedback, and how to record it at once;
+    - the one question (an issue or a small change), and the small change;
+    - how to discuss a design that is not decided;
+    - which model to use in a session, and how to work on code.
+  - A rule of one kind of work: the skill of that work (`dev`: what comes next; `builder`: the flow of an issue, also `references/issue-in-session.md`; `knowledge`: how to write `knowledge/` and keep it true, also where a rule and a feedback go, `references/placement.md`, and the spec of an automation; `prerelease`: the rules of a release, `references/release.md`; …).
+  - A decision with its Why: the spec. For example the general rules of a routine ([L2-loop-architecture §2](L2-loop-architecture.md#2-routines)) and the models of the background agents ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)).
+  - A fact of one project: that project.
+  - A copy is only a pointer of one line. A rule in a reference has a text that is loaded at that moment and links to it.
+  - The procedure to place a new rule, and a worked example, are in `knowledge`'s `references/placement.md`. The deep-verify uses the same test.
+  - Why: when a rule moves out of `entry`, an agent must still find it at the moment it must fire. The split is written in one place, so that new feedback and a new design find their place, and the deep-verify can use it too.
+  - Why: each session reads all of `entry`, so a part that only one kind of work uses costs each session; a rule that a conversation event must start costs more when no session reads it.
 - `entry` also has one table. For each type of task, the table tells which reference to read and which skill to use.
 - All other skills are in that table: `setup-dev`, `setup-app`, `builder`, `dev`, `knowledge` and `prerelease`. `builder` is the skill of the builder loop. `dev` is the skill of the dev loop: its session entry ([L2-loop-dev §1](L2-loop-dev.md#1-the-dev-loop), [§3](L2-loop-dev.md#3-the-session-entry)). When you add a skill, add its row in the same change.
-- **`knowledge` is the skill of the knowledge loop** ([L2-loops §2.2](L2-loops.md#22-the-knowledge-loop)). It holds the knowledge base, the form of specs and plans, the deep-verify and the knowledge check. The terms and the rules of every session stay in `entry`, and `knowledge` links to them.
+- **`knowledge` is the skill of the knowledge loop** ([L2-loops §2.2](L2-loops.md#22-the-knowledge-loop)). It holds the knowledge base, the form of specs and plans (with the spec of an automation), where a rule and a feedback go, the deep-verify and the knowledge check. The terms and the rules of every session stay in `entry`, and `knowledge` links to them.
   - Why: each job of the loops is a skill or a run of a skill ([L2-loops §5](L2-loops.md#5-the-jobs)). Its own description lets an agent find the rules by 知识库, 记一下, deep-verify or 核对, with no step through `entry`.
   - Why: `entry` stays the rules for every session and the table of tasks. It then holds less text that only one kind of work uses.
 - At the start of each session, an agent does three things:
@@ -60,6 +78,7 @@ How far each way of loading is verified:
 ```text
 aboveloop/
   .claude-plugin/  .cursor-plugin/   plugin manifests for both tools
+  AGENTS.md  CLAUDE.md               read `aboveloop:entry` first, as in each project (§2)
   skills/<name>/SKILL.md             skills; scripts live with their skill
   knowledge/
     index.md                         the list of pages and the dependency graph
@@ -85,7 +104,7 @@ aboveloop/
 - **The todos of the owner are issues, not files.**
   - Why: files go into the plugin copy. Thus a change to a todo file would make a release necessary.
 - **The README tells only how to install and change the plugin.** The specs here are the source of truth for the design.
-- **Each system gives its own routines** in its own spec, for example [L2-loop-architecture §2](L2-loop-architecture.md#2-routines). The general rules for routines are in `entry`.
+- **Each system gives its own routines** in its own spec, for example [L2-loop-architecture §2](L2-loop-architecture.md#2-routines). The general rules for routines are there too.
 - `setup-app` copies the workflow `loop.yml` into each project from `skills/setup-app/references/loop.yml`. Its code is the composite action `services/loop`, which every `loop.yml` workflow uses.
 
 ## 5. Versions

@@ -75,10 +75,12 @@ Each run does these steps for its own repo. The rules that select the work are i
 - **The token** of a job lasts one hour (W13). **Money:** the spend limit of the Cursor account (§3).
 - Why these limits, and the stops: [L2-loop-untrusted-text](L2-loop-untrusted-text.md) R19.
 
-**Models.** They come from the model table in `entry`. Background agents use the latest Grok, with the effort that the official guide of xAI gives for the job:
+**Models.** This is the home of the models of the background agents (the agents of the loops). The model table of `entry` has only the rows for a session. Background agents use the latest Grok (Grok 4.7 at this time), with the effort that the official guide of xAI gives for the job:
 
-- `xhigh`, "Maximum reasoning depth", for the three steps of the builder loop (explore, spec, implement). The owner chose `xhigh` for the three steps. The reasons, and the exceptions to `entry`'s note on the spec model, are in [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-).
+- `xhigh`, "Maximum reasoning depth", for work where the quality is more important than the time: the three steps of the builder loop (explore, spec, implement). The owner chose `xhigh` for the three steps. The reasons, and the exceptions to `entry`'s note on the spec model, are in [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-).
 - In a session, the three steps use the latest Opus, at `xhigh` or `high` ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
+- Why the effort follows the job: each run of a background agent costs money. The effort guide of Anthropic also does not recommend the highest effort for all work: the highest effort uses many more tokens for a small gain, and it can think too much. These efforts follow the guides of the vendors.
+- A newer Grok, or a new name of an effort: change only the current name and the ids. To lower the effort of a background agent, test it again first: compare the results of its last real runs.
 - The ids are from `GET /v1/models`. The context is 256k.
 - Each launch writes out a full variant of `GET /v1/models` (`context`, `reasoning_effort`, `fast`), with `fast` `false`. The API refuses a subagent model that is not a full variant, and the default variant of `grok-4.7` is a fast one (measured).
 

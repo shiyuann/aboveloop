@@ -316,6 +316,6 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/check-p
 - **当场做完的小事**：开着的 issue，清楚、改动小、不碰 L1 和 L2 的内容，owner 在场（[L2-loop-builder §1](../../../knowledge/spec/L2-loop-builder.md#1-the-life-of-an-issue-)）。agent 当场做完：开 `issues/<N>` 分支和 worktree（第 5 步），改、跑测试，开一个 PR，标成 ready，owner merge。不写 plan，不跑 deep-verify。基线写进 PR 正文的 Tests。正文是 `Fixes #<N>`。给 owner 选的时候，它排在「交给 CI」前面推荐：CI 留给 owner 不在时做的活，或者要跑很久的活。
 - **交给 builder**（owner 说「交给 builder」）：agent push 完（plan、spec 和写了的代码都在分支上，draft PR 开着），打 `ready-for-auto-builder`，从此不再改这个 issue 的 plan 和分支。CI 的 implement 那一轮接着这个 draft 做；plan 在默认分支上、没有 draft 的 issue，它从 `origin/main` 开分支。要改 `skills/` 规矩的 issue，交之前在分支上写好规矩的文字，push：规矩算 L2，CI 碰到就停。
 - **`Refs #<N>` 的 PR**：issue 已经关了，它的 plan 还在 main 上，发版之后的节点在里面等（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。分支 `issues/<N>` 已经删了，不在它上面开 worktree。先 `git fetch origin`，再看这个节点要改什么：
-  - 只改 plan 这一个文件（记下 owner 拍的板、给做完的节点打 ✅）：这是小改动，照 `entry` 的「owner 说『应该怎么样』」第 2 步：一个分支（名字不以 `issues/` 开头）、一个 PR，正文第一行 `Refs #<N>`，检查过了 agent 当场 merge。
+  - 只改 plan 这一个文件（记下 owner 拍的板、给做完的节点打 ✅）：这是小改动，照 `entry` 的「小改动」：一个分支（名字不以 `issues/` 开头）、一个 PR，正文第一行 `Refs #<N>`，检查过了 agent 当场 merge。
   - 要改别的文件：一个 `Refs #<N>` 的 PR。会话的脚本打印 `closed` 和下一个空的 `issues/<N>-<k>`。开 worktree，plan 跟着分支带过来，基线写在这个节点下面，push 后开 draft PR。正文是 `Refs #<N>`，不写 `Fixes`；检查认这种形式。
   - 发版的 O（`release`）：owner 叫 `prerelease`。agent 做它后面的节点时，也给它打 ✅。

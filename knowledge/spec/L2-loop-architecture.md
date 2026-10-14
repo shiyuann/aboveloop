@@ -27,13 +27,24 @@ The owner's part of the setup (the keys, the GitHub App, the install on each rep
 
 ## 2. Routines
 
-A routine is one skill, the trigger that starts it, and the platform that runs it. The general rules are in `entry` (design, "routine 跑在哪"). In the loops in CI:
+A routine is one skill, the trigger that starts it, and the platform that runs it.
+
+**The general rules, for a routine of any system** (the loops of aboveloop, and a loop of a product, for example a data loop):
+
+- **Each system writes its routines in its own spec:** the skill, what starts it, the input, the model, the capabilities, the cost, and how far each connection point is verified. There is no separate spec of all routines. This section is the example.
+- **Only GitHub Actions starts a routine.** A schedule, a manual run, and a wake from another service (`workflow_dispatch`) are all in a workflow of the project. The workflow uses no model: it examines the state first, and starts an agent only when there is work. An empty run costs no model use (E3, P6).
+- **A Cursor cloud agent does the work.** The workflow starts it through the Cursor Cloud Agents API (`POST https://api.cursor.com/v1/agents`), one agent for each piece of work. No Claude routines and no Cursor automations.
+  - Why: the owner chose GitHub Actions as the trigger and Cursor cloud agents as the platform.
+  - The model: [L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents) "Models" (in a session: `entry`, 「用哪个模型」).
+- **The trigger does two things only:** it names the skill, and it gives the input. The input is in the prompt, marked as untrusted data. A skill names no platform and no frequency. The agent finds its work in the state, not in a time window.
+- **The keys stay in the workflow.** An agent gets only the key that its work needs, through `envVars`. The Cursor key never goes to an agent. The GitHub token of a Cursor agent cannot open an issue (measured: 403). When an agent must write an issue, the workflow mints a token for one hour from the GitHub App of the loops (`<your GitHub App>`), with only the permissions of that work. No long-lived personal token.
+- **The code of the workflow is in one copy.** `setup-app` installs the workflow of the loops into each project from its reference file. The code is a composite action of aboveloop. Another system that runs an agent on a schedule uses the same method.
+- **The step that makes a result writes it.** The step that opens an issue writes all of its context. The step that closes an issue writes why it closes it. No extra trigger only to write a result.
+
+In the loops in CI:
 
 - **The trigger is always the workflow `loop.yml`** of a project. The GitHub schedule starts it, and the owner can start it by hand.
-  - Why: it uses no model, so a run with no work costs nothing (E3, P6).
-- **The platform is always a Cursor cloud agent.** The workflow `loop.yml` launches it through the Cursor Cloud Agents API (`POST https://api.cursor.com/v1/agents`).
-- **No Claude routines and no Cursor automations.**
-  - Why: the owner chose GitHub Actions as the trigger and Cursor cloud agents as the platform.
+- **The agent is a Cursor cloud agent** that `loop.yml` launches (the general rules above).
 
 ### 2.1 How each job starts
 
