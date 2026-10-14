@@ -1,0 +1,111 @@
+[
+  {
+    "number": 2,
+    "state": "open",
+    "title": "A session works on it: a draft, no label",
+    "body": "",
+    "labels": [
+      {
+        "name": "explored"
+      }
+    ]
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Has an open PR from the owner",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ]
+  },
+  {
+    "number": 4,
+    "state": "open",
+    "title": "A draft on the branch of #10 fixes it too",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ]
+  },
+  {
+    "number": 5,
+    "state": "open",
+    "title": "Saturday times are wrong!",
+    "body": "## Problem\n\nSaturday times differ from the official page.",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ]
+  },
+  {
+    "number": 6,
+    "state": "open",
+    "title": "Labelled by the owner, not explored yet",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      }
+    ]
+  },
+  {
+    "number": 7,
+    "state": "open",
+    "title": "Its PR is ready",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ]
+  },
+  {
+    "number": 8,
+    "state": "open",
+    "title": "A PR with the label, not an issue",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ],
+    "pull_request": {
+      "url": "https://api.github.com/repos/example/example-app/pulls/8"
+    }
+  },
+  {
+    "number": 9,
+    "state": "open",
+    "title": "A higher number",
+    "body": "",
+    "labels": [
+      {
+        "name": "ready-for-auto-builder"
+      },
+      {
+        "name": "explored"
+      }
+    ]
+  }
+]

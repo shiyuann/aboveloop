@@ -1,0 +1,7 @@
+[
+  { "number": 20, "head": { "ref": "issues/10" }, "body": "Fixes #10\nFixes #4", "draft": true },
+  { "number": 21, "head": { "ref": "owner-hotfix" }, "body": "Closes #3 by hand.", "draft": false },
+  { "number": 22, "head": { "ref": "issues/2" }, "body": "Fixes #2", "draft": true },
+  { "number": 23, "head": { "ref": "issues/5" }, "body": "Fixes #5", "draft": true },
+  { "number": 24, "head": { "ref": "issues/7-2" }, "body": "Fixes #7", "draft": false }
+]

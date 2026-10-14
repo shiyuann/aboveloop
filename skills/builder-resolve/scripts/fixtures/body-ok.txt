@@ -1,0 +1,15 @@
+Fixes #5
+
+Saturday times now come from the official timetable page, not from the poster.
+
+## Evidence
+
+### Tests
+- `make test`: 212 passed, 0 failed.
+- New case `saturday-times`: failed before the change, passes now.
+
+### Data diff
+- 14 of 61 Saturday sets changed; each now matches the official page.
+
+### Not verified
+- The app on a simulator: this run has no Xcode.

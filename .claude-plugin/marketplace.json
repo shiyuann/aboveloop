@@ -1,0 +1,25 @@
+{
+  "name": "aboveloop",
+  "owner": {
+    "name": "aboveloop contributors"
+  },
+  "description": "跨项目共享的工程约定与技能：agent 驱动的开发循环",
+  "plugins": [
+    {
+      "name": "aboveloop",
+      "source": "./",
+      "description": "通用工程约定 + 跨项目 skill。项目的 AGENTS.md 指名读 entry skill；装 / 更新 / 排障看 setup-dev skill。",
+      "author": {
+        "name": "aboveloop contributors"
+      },
+      "homepage": "https://github.com/shiyuann/aboveloop",
+      "repository": "https://github.com/shiyuann/aboveloop",
+      "license": "MIT",
+      "keywords": [
+        "conventions",
+        "agent-loop"
+      ],
+      "version": "20261013.2"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+# acme #36 plan: one life for every issue
+
+The open work of issue #36: one life for every issue, in a semi-automatic and an automatic mode; the changelog; the move of the old plans into issues.
+
+Codes: A agent node, D owner decision, O owner step, C agent check.
+
+```mermaid
+flowchart TB
+  D1["D1 Owner decides: the label is the lock ✅"] --> O1["O1 Owner: spec review 1 ✅"]
+  O1 --> A1["A1 Agent: explore tells the spec levels ✅"]
+  O1 --> A8["A8 Agent: prerelease writes the changelog ✅"]
+  O1 --> A9["A9 Agent: the old plans become issues ✅"]
+  A1 --> O2["O2 Owner: release of the plugin"]
+  A8 --> O3["O3 Owner: release of the app"]
+  O2 --> A10["A10 Agent: remove the old label name"]
+  O3 --> A10
+  A10 --> C1["C1 Agent check: the first runs"]
+```
+
+## D1 Owner decides: the label is the lock ✅
+
+The owner decided: the label `ready-for-auto-builder` is the lock of an issue. Why: one sign that a person can see and remove.
+
+## O1 Owner: spec review 1 ✅
+
+- [x] The owner reads the summary of the change.
+- [ ] The owner reads the full change of the spec.
+
+## A1 Agent: explore tells the spec levels ✅
+
+- [x] **A1.1** `skills/builder-resolve/references/explore.md`: the Explore comment names the spec levels. Pass: the text matches the spec.
+
+```text
+## A1.2 Agent: in code ⬜
+```
+
+### A1.3 A sub-heading does not count ⬜
+
+## A8 Agent: prerelease writes the changelog ✅
+
+- [x] **A8.1** `skills/prerelease/`: step 4 writes the section of the version into `CHANGELOG.md`. Pass: the tests of the section.
+
+## A9 Agent: the old plans become issues ✅
+
+- [x] **A9.1** One issue for each open node of the old plans.
+  - [x] The table of the nodes and their issues.
+  - [ ] The grep finds no citation of an old plan node.
+
+## O2 Owner: release of the plugin ⬜
+
+- [ ] Run `prerelease`.
+
+## O3 Owner: release of the app ⬜
+
+- [ ] Run `prerelease` in the app.
+
+## A10 Agent: remove the old label name ⬜
+
+- [ ] **A10.1** Remove the old name from the code. Pass: the grep finds nothing.
+
+## C1 Agent check: the first runs ⬜
+
+- [ ] **C1.1** The first run of explore and implement on a test issue.

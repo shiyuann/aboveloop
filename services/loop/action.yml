@@ -1,0 +1,119 @@
+# The work of the GitHub Actions workflow loop.yml (knowledge/spec/L3-loop-workflow.md §1), as a
+# composite action. Each project's .github/workflows/loop.yml (a copy of
+# skills/setup-app/references/loop.yml) finds the latest release of aboveloop,
+# checks it out at that commit into .aboveloop, calls it with
+# `uses: ./.aboveloop/services/loop`, and passes every value through `with:`,
+# also kit_tag and kit_sha. run.ts finds the skills' scripts at $GITHUB_ACTION_PATH/../.. .
+#
+# Inputs reach run.ts only as env, never inside the script text.
+name: aboveloop loop
+description: Launch Cursor cloud agents for builder-resolve (explore, implement).
+
+inputs:
+  step:
+    description: "all, explore, implement, or a comma list; empty on a scheduled run"
+    required: false
+    default: ""
+  dry_run:
+    description: '"true" reads everything and launches nothing'
+    required: false
+    default: "false"
+  repo:
+    description: The project repo, owner/name
+    required: false
+    default: ${{ github.repository }}
+  kit_tag:
+    description: The release tag of aboveloop whose skills the agents read; empty means main
+    required: false
+    default: ""
+  kit_sha:
+    description: The commit of kit_tag (40 hex); given together with kit_tag
+    required: false
+    default: ""
+  github_token:
+    description: Reads the repo's open issues and labels, and its PRs
+    required: false
+    default: ${{ github.token }}
+  # Variables
+  gh_app_id_dev:
+    description: vars.GH_APP_ID_DEV, the ID of the GitHub App of the loop
+    required: false
+    default: ""
+  # Secrets
+  cursor_api_key:
+    description: secrets.CURSOR_API_KEY
+    required: false
+    default: ""
+  gh_app_key_dev:
+    description: secrets.GH_APP_KEY_DEV, the private key of the GitHub App of the loop; mints the run's GitHub tokens
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    # The owner and the name of the repo of aboveloop, for the kit token.
+    - id: kitrepo
+      shell: bash
+      run: |
+        kit=shiyuann/aboveloop
+        echo "owner=${kit%%/*}" >> "$GITHUB_OUTPUT"
+        echo "name=${kit#*/}" >> "$GITHUB_OUTPUT"
+    # The run's GitHub tokens come from the GitHub App of the loop (L3-loop-components §1), one hour each,
+    # each narrowed to one job. The agents start with no repos and clone with
+    # them. The agents work after this job ends, so the job must not revoke the tokens at its end.
+    # Every agent reads the skills of aboveloop with this one, and it can read nothing else.
+    - id: kit
+      if: inputs.gh_app_id_dev != '' && inputs.gh_app_key_dev != ''
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ inputs.gh_app_id_dev }}
+        private-key: ${{ inputs.gh_app_key_dev }}
+        owner: ${{ steps.kitrepo.outputs.owner }}
+        repositories: ${{ steps.kitrepo.outputs.name }}
+        skip-token-revoke: true
+        permission-contents: read
+    # explore reads the code and writes its findings into the issues; it opens no PR.
+    - id: explorer
+      if: inputs.gh_app_id_dev != '' && inputs.gh_app_key_dev != ''
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ inputs.gh_app_id_dev }}
+        private-key: ${{ inputs.gh_app_key_dev }}
+        skip-token-revoke: true
+        permission-contents: read
+        permission-issues: write
+    # implement pushes the branch of its issue, opens a draft PR, marks it ready (GraphQL), and
+    # removes the label ready-for-auto-builder when it stops. The App has no workflows permission, so
+    # GitHub refuses a push that changes a workflow file.
+    - id: dev
+      if: inputs.gh_app_id_dev != '' && inputs.gh_app_key_dev != ''
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ inputs.gh_app_id_dev }}
+        private-key: ${{ inputs.gh_app_key_dev }}
+        skip-token-revoke: true
+        permission-contents: write
+        permission-issues: write
+        permission-pull-requests: write
+    - name: Run the loop
+      shell: bash
+      env:
+        STEP: ${{ inputs.step }}
+        DRY_RUN: ${{ inputs.dry_run }}
+        REPO: ${{ inputs.repo }}
+        KIT_TAG: ${{ inputs.kit_tag }}
+        KIT_SHA: ${{ inputs.kit_sha }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        CURSOR_API_KEY: ${{ inputs.cursor_api_key }}
+        GH_TOKEN_KIT: ${{ steps.kit.outputs.token }}
+        GH_TOKEN_EXPLORER: ${{ steps.explorer.outputs.token }}
+        GH_TOKEN_BUILDER: ${{ steps.dev.outputs.token }}
+      run: |
+        args=()
+        if [ -n "$STEP" ]; then args+=(--step "$STEP"); fi
+        if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+        node --experimental-strip-types --no-warnings "$GITHUB_ACTION_PATH/run.ts" "${args[@]}"
