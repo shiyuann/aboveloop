@@ -53,6 +53,7 @@ CI：plan 写好，照 [implement.md](implement.md) 第 5 步第 5–6 条 commi
 - 不是方向问题的，当场自己定，写「Agent decided (日期)：…，because …」。deep-verify 也会查这些决定。
 - 方向问题写成 D 节点：2～4 个选项，推荐的放第一个（`entry` 的「拍板只问方向」和 `knowledge` 的 spec-and-plan.md）。
 - 花钱、钥匙、账号、撤不回的动作，一律是 D 或 O。
+- 云端会话跑不了真实使用（模拟器、真机、要 owner 的设备）：plan 里加一个 O，owner 在合并前跑项目写明的那一遍。命令写在项目的 `.agents/builder.md`。PR 的 Not verified 写上没跑。做法在 [implement.md](implement.md) 第 8 步。
 - spec 能改到哪：会话哪一层都可以，`skills/` 的规矩也可以，L1 只有 owner 改。CI 只改 L3 和 L2 的字（[L2-loop-builder §6](../../../knowledge/spec/L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)）：要改 L1 或 L2 的内容，照 implement.md 第 4 步停（第 2 种）。改到 `knowledge/spec/` 的一页，照 `knowledge` 的 knowledge-base 核对建立在它上面的页。项目还没分层：不改 `knowledge/` 的任何页，只写 plan。
 
 ### 3.3 deep-verify：第二个 agent
@@ -181,7 +182,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 
 1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」写。顺序在那一节，这里不另写。只有方向问题是 D（`entry` 的「拍板只问方向」）。
 2. 背景里用白话写：它改的是什么，它挡着什么。plan 那一节的链接和节点的代号，跟在白话后面。
-3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec，加一条更新记录。
+3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec 的正文。不改页头。
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。
 5. owner 说以后再定：留着 ⬜，接着做不被它挡的节点。
 

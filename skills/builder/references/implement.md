@@ -115,7 +115,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/select.
 - push 被 GitHub 拒了（第 5 步第 5 条之外，比如 token 过期）：先跑一次 `scripts/token.ts`，再试一次。还是被拒，label 留着，结束。
 
 1. **要 owner 拍板或做一步。** 一个 D：方向问题（`entry` 的「拍板只问方向」），spec 那一步碰到的，或 plan 里开着的 D、O 挡住了下一个节点。花钱、钥匙和账号、撤不回的动作，一律算。也包括：explore 问过的问题没人回答；测试红了又修不好。
-2. **要改 L1，或改 L2 的内容**（[L2-loop-builder §6](../../../knowledge/spec/L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)）。L2 只能改字：措辞、错字、链接，不能改 owner 的原话；要在那一页加更新记录的，就是改内容。规矩也算 L2：`AGENTS.md`、`.agents/*.md`、`skills/` 里的规矩。项目还没分层，就不改 `knowledge/` 的任何页，只写 issue 的 plan。
+2. **要改 L1，或改 L2 的内容**（[L2-loop-builder §6](../../../knowledge/spec/L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)）。L2 只能改字：措辞、错字、链接，不能改 owner 的原话；正文的 diff 改了意思的，就是改内容。规矩也算 L2：`AGENTS.md`、`.agents/*.md`、`skills/` 里的规矩。项目还没分层，就不改 `knowledge/` 的任何页，只写 issue 的 plan。
 3. **不能信这个 issue**（第 3 步）。
 
 停的时候照这个顺序做：
@@ -284,6 +284,8 @@ Fixes #<N>
 - <没跑、没看过的东西，和为什么。都验过就写 Nothing>
 ```
 
+- **云端跑不了真实使用**（模拟器、真机、要 owner 的设备）：Not verified 写上没跑哪一遍。plan 里有一个 O：owner 在合并前跑项目 `.agents/builder.md` 写明的那一条命令。云端不把这个 O 打勾。没有这条命令，问 owner 用哪一条，写进 plan。
+  - 为什么：云端经常没办法完全验证真实使用，所以合并前在本地测一遍。
 - **Tests 写上基线**：plan 里的那一份；没有 plan 的活，就是第 5 步跑的那一次。
 - **agent 自己定的**：plan 里这一轮的每一条「Agent decided」，在正文里列一行，带链接（到 plan 那一节）。owner merge 之前看得到。
 - **重的 spec 在 CI 里的 deep-verify**：每个 subagent 一行（角色、id、几条发现、结果），再链到 plan 里的记录。完整的报告留在 plan 里：PR 正文最多 65,536 个字符。没有 subagent 跑（下一轮也开不了，或 [spec.md](spec.md) 3.5 的第二遍）：Not verified 写明缺了什么，和「review, rebuttal and second look by one agent」。

@@ -76,6 +76,8 @@ explore 过、在等 owner 的 issue，owner 有五个选择（[L2-loop-builder 
 4. 关掉。
 5. 等：会话以 owner 的名义写一条评论，开头是 `The owner looked at it: wait.`，后面写理由。
 
+owner 的评论写在 issue 上、这个 issue 有开着的 PR：同一条原话也写在 PR 上。做法在 [references/session.md](references/session.md) 第 5 节。
+
 ready 的 PR，先有一次 review，给三个结论之一：merge、modify、reject（[L2-loop-dev §5](../../knowledge/spec/L2-loop-dev.md#5-when-the-owner-acts)）。怎么审、怎么记、owner 选了以后做什么，在 [references/session.md](references/session.md)。
 
 ## 排序

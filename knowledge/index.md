@@ -11,7 +11,7 @@ This folder holds the design of aboveloop. All pages are in ASD-STE100 Simplifie
 
 ## Pages and what they build on
 
-This table is the only dependency graph. "Builds on" names the pages that a page comes from, and the L1 items that it cites. A page builds only on pages of its own level or a higher level, with no loops. When you change a page, examine each page whose "Builds on" names it. A change of words only (a typo, a link) does not count.
+This table is the only dependency graph. "Builds on" names the pages that a page comes from, and the L1 items that it cites. A page builds only on pages of its own level or a higher level, with no loops. "Checked" is a date that a release writes. A change of a page examines the body of each page whose "Builds on" names it. Change a body that no longer holds. Do not change a header or a Checked date. A review reads the git diff of the body. A change of words only (a typo, a link) does not count.
 
 | Page | What it holds | Builds on |
 | --- | --- | --- |

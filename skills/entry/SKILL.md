@@ -53,7 +53,7 @@ description: >-
 
 | 要做的事 | 读 |
 | --- | --- |
-| 知识库：读、写 `<项目根>/knowledge/`，给新项目建知识库；改了一页要核对哪些页；两页说的不一样；写、改 spec 和 plan（更新记录、⬜、plan 的节点和依赖图）；deep-verify（深查 spec 和 plan）；知识检查 | `knowledge` skill：[knowledge-base.md](../knowledge/references/knowledge-base.md)、[spec-and-plan.md](../knowledge/references/spec-and-plan.md)、[deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md)，脚本 `knowledge-check.ts`。knowledge loop 在 [L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop) |
+| 知识库：读、写 `<项目根>/knowledge/`，给新项目建知识库；改了一页要核对哪些页；两页说的不一样；写、改 spec 和 plan（正文、⬜、plan 的节点和依赖图；页头在发版时写）；deep-verify（深查 spec 和 plan）；知识检查 | `knowledge` skill：[knowledge-base.md](../knowledge/references/knowledge-base.md)、[spec-and-plan.md](../knowledge/references/spec-and-plan.md)、[deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md)，脚本 `knowledge-check.ts`。knowledge loop 在 [L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop) |
 | 讨论还没定的设计 | 下面的「还没定的设计，先做 spec 那一步」 |
 | 有自动化或 agent 时，owner 在环里还是环上 | `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」 |
 | owner 说做一个 issue：写 spec 和 plan、过 deep-verify、带 owner 过 D 和 O、spec review | spec 那一步：`builder` 的 [spec.md](../builder/references/spec.md)，会话的部分在它最后一节 |

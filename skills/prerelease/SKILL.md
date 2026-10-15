@@ -79,7 +79,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
 | 记下的点 | 什么时候记 | 接着做什么 |
 | --- | --- | --- |
 | 没有文件 | — | 停在第 4 步之前，或 worktree 刚建好。从不当成推完了。`state.ts read` 先查：`origin/main..HEAD` 里有 `version:` 提交，或者本地有一个版本号的 tag 不在 origin 上：文件丢了，但这一次已经过了第 4 步。是 `problems`，停，说出那个提交或 tag（上面的两条路）。从不把它 rebase 进第 3 步。都没有：工作区干净、`origin/main..HEAD` 是空的：`git checkout --detach origin/main`，再跑一次「Release worktree」一节，从第 1 步开始。`origin/main..HEAD` 里有修复的提交，或工作区里有没提交完的修复（「发版内的修复」，然后停了）：留着。先把没提交的修复做完、提交，再从第 1 步走到第 3 步：第 3 步把它们 rebase 到最新的 `origin/main` 上（已经在上游的修复会丢掉），跑测试。这里从不 `git checkout --detach origin/main`：修复的活不能丢 |
-| `bump` | 第 4 步，跑版本号命令之前 | 停在第 4 步当中。不 bump 第二次，不写第二节。`VERSION` 还是 V：版本号命令没跑完（它最后才改 `VERSION`），再跑一次；不是 V 了：它跑完了，不再跑。再查这个号用过没有。`HEAD` 已经是 `version: $(cat VERSION)`、工作区干净：提交做完了，记 `version-commit`，接着下一行。不然：版本号文件、`CHANGELOG.md`、暂存区里 `cleanup.ts` 的结果是这一版的；别的改动是一个没提交完的修复，做完，只提交它的文件。再从第 4 步的 Changelog 命令那一行接着做：项目配置 Changelog 一节的命令、`changelog.ts`；`exists` 是 false 才写这一节（true：上次已经写了，不写第二节）。然后 `git add` 那一行往下：stage、`cleanup.ts`、链接检查、Tests、提交、tag |
+| `bump` | 第 4 步，跑版本号命令之前 | 停在第 4 步当中。不 bump 第二次，不写第二节。`VERSION` 还是 V：版本号命令没跑完（它最后才改 `VERSION`），再跑一次；不是 V 了：它跑完了，不再跑。再查这个号用过没有。`HEAD` 已经是 `version: $(cat VERSION)`、工作区干净：提交做完了，记 `version-commit`，接着下一行。不然：版本号文件、`CHANGELOG.md`、页头、「核对过」、暂存区里 `cleanup.ts` 的结果是这一版的；别的改动是一个没提交完的修复，做完，只提交它的文件。再从第 4 步的 Changelog 命令那一行接着做：项目配置 Changelog 一节的命令、`changelog.ts`；`exists` 是 false 才写这一节（true：上次已经写了，不写第二节）。页头上已经有这一版日期的那一条，就不再写第二条。然后 `git add` 那一行往下：stage、`cleanup.ts`、链接检查、Tests、提交、tag |
 | `version-commit` | 版本号那次提交之后 | 只补 tag（第 4 步那一行，带上修复的列表），记 `tagged`。本地已经有 V 的 tag、在 `HEAD` 上：只记 `tagged`。再第 5 步。本地已经有 V 的 tag、却在别的提交上（比如一次没删 tag 的「从头来」留下的）：`git tag -a` 会失败，所以 `state.ts read` 报 `problems`，说出两个提交，停（上面的两条路；补回：`git ls-remote --exit-code` 退出码 2 才 `git tag -d V`，再叫一次） |
 | `tagged` | 打完 tag 之后 | 第 5 步，从失败的那一步接着做（项目配置 Before push 那张表）。不 bump，TestFlight 已经有这个号的包也不 bump：那是这一版自己传的 |
 | `refix` | 「推之前的检查红了」：查过 tag 不在 origin 上之后，挪 worktree 之前 | 把那一段做完：本地还有 V 的 tag，`HEAD` 是它的提交：`git checkout --detach "$VC^"`；再查一次 origin，退出码是 2 才 `git tag -d`。然后照「发版内的修复」修、提交，重做第 4 步（记 `bump`），再第 5 步 |
@@ -198,10 +198,19 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/changel
   - 只从 `commits` 来的一条，不带链接。
   - 例：`- The app follows the dark mode of the phone. ([#<N>](https://github.com/acme/app/issues/<N>), [PR #<M>](https://github.com/acme/app/pull/<M>))`
 
+然后写页头。对每个自上次发版 tag 以来正文有 diff 的 Markdown 文件：
+
+1. 看正文的 diff，不看页头。只改了措辞、错字、链接的，跳过。
+2. 页头加一条，概括这段 diff 改了什么。日期用这一版的日期。这一版的日期已经在那一条上，就不再写第二条。新的在上，留 5 条左右。
+3. L1 的那一条写清改了哪几条。
+4. `index.md` 里，上游正文有这种 diff 的页，「核对过」写成这一版的日期。新行留空的，也写成这个日期。
+5. 版本号命令改的文件，这里不手改。
+6. 依赖图的 `Now:` 不在这一步改。会话改图时已经写过。
+
 然后删做完的 plan、它们的报告和依赖图里打了 ✅ 的项，跑链接检查和测试，提交，打 tag：
 
 ```bash
-git add VERSION CHANGELOG.md <版本号命令改的别的文件>
+git add VERSION CHANGELOG.md <版本号命令改的别的文件> <写了页头或「核对过」的文件>
 node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/cleanup.ts
 node <本 skill 目录>/scripts/links.mjs
 <项目配置 Tests 一节的全部命令>
@@ -223,7 +232,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/state.t
   - `mentions`：别处还提到这些文件、它没改的地方（代码、不是 Markdown 的文件、裸路径）。`warnings`：删掉的 plan 里，✅ 的标题下还有 `- [ ]`；依赖图里一行有几个箭头，整行删了。照常往下，回复里列出来。
   - 只想看会删什么：加 `--dry-run`，它只打印。
 - 链接检查和 Tests 红了：照「发版内的修复」修，再跑一次。还红就停在打 tag 之前。
-- 这次提交只有暂存区里的东西：版本号的改动、`CHANGELOG.md`、`cleanup.ts` 删的和改的文件。
+- 这次提交还有页头和「核对过」：版本号的改动、`CHANGELOG.md`、页头、`index.md` 的「核对过」、`cleanup.ts` 删的和改的文件。
 - tag 的说明：有 `seen` 就加那一行；`origin/main..HEAD^` 不空就加修复那一行，每个修复写 SHA 和 subject。
 - `CHANGELOG.md` 里这一版的那一节，原样放进给 owner 的回复（「做完」）。不为它停。
 

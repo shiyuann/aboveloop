@@ -98,7 +98,7 @@ Written by the builder loop (builder, explore) of <项目>. <项目配置的 Add
 **Spec levels** 写这个改动要改的 spec 的层，照项目 `knowledge/spec/` 里页名的开头：
 
 - **L1**：改 `L1-` 开头的页。只有 owner 改 L1。
-- **L2 content**：改 `L2-` 开头的页的意思。只改措辞、错字、链接不算：判据是要不要在那一页加一条更新记录（`knowledge` 的 [knowledge-base.md](../../knowledge/references/knowledge-base.md) 的「改了一页之后」），要加就是改内容。规矩也算 L2：`AGENTS.md`、`.agents/*.md`、`skills/` 里的规矩（各 skill 的 `SKILL.md` 和 `references/`），改它们的意思就写 L2 content。
+- **L2 content**：改 `L2-` 开头的页的意思。只改措辞、错字、链接不算：判据是正文的 diff 改了意思没有（`knowledge` 的 [knowledge-base.md](../../knowledge/references/knowledge-base.md) 的「改了一页之后」），改了就是改内容。规矩也算 L2：`AGENTS.md`、`.agents/*.md`、`skills/` 里的规矩（各 skill 的 `SKILL.md` 和 `references/`），改它们的意思就写 L2 content。
 - **L3**：改 `L3-` 开头的页。
 - **none**：不改 spec 的页，只改代码或数据。项目还没分层（`knowledge/spec/` 里没有 `L1-`、`L2-`、`L3-` 开头的页），也写 none；这时改动要改 `knowledge/` 的哪一页，在下面那一行写明。
 

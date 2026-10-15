@@ -98,7 +98,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   S["a start: the spec step of the builder loop (mainly),<br/>or the dev loop in a session"] --> W["write the change"]
-  W --> F["FAST, the same commit:<br/>the cascade and the update records"]
+  W --> F["FAST, the same commit:<br/>the cascade of the page body"]
   F --> P["the PR diff:<br/>the owner sees it at once"]
   P -.->|"the owner talks;<br/>the spec changes"| W
   F --> H{"a heavy spec?"}
@@ -118,9 +118,11 @@ flowchart TB
   - Write the change in the form that the skill `knowledge` gives.
   - Then examine each page that builds on a changed page (the column "Builds on" of `knowledge/index.md`).
   - Change each page that no longer holds, then examine the pages below it.
-  - Set the "Checked" date of each examined page, and write an update record on each changed page.
   - The change and its cascade go into one commit. The cascade is not a node of the plan, so the owner sees it in the PR diff at once.
+  - A content commit does not change a page header: the date, the change lines, or the deep-verify mark. It does not change a Checked date. The release writes those.
+  - A review reads the git diff of the page body. It does not read the header to decide that the meaning changed.
   - Why: the owner sees the fast work at once, in the same diff as the change. The slow work does not stop the owner.
+  - Why: the date, the change lines, the deep-verify mark and the Checked dates are metadata. Only a release writes them, and a review uses the git diff of the body.
 - **Slow: the deep-verify, a fixed agent node before each spec review (O), for a heavy spec.** It runs in the background, and the owner does not wait for it. Its rules (the start times, the fixed commit, the repairs, a new D node, the forms and the cost) and their Why: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). In CI: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
 - **The owner acts only at a D, at the last spec review and at the merge:** [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). All the owner's points: §4.
 - **It is an inner loop.** It does work: it writes the change, examines the pages that build on it, and runs the deep-verify. Its level comes from the work that it does (§0), not from what starts it.

@@ -29,7 +29,7 @@ flowchart TB
 owner 说做（第 1 节第 2 步），就照 [spec.md](spec.md) 做 spec 那一步：开 issue 的分支和 draft PR，在分支上改 spec 和 plan，带 owner 做 spec review。这一节只写 spec 和 plan 怎么改。写之前，记在哪、写什么，照 `knowledge` 的 [placement.md](../../knowledge/references/placement.md) 第 2、3 节。
 
 1. 在 `index.md` 里找要改的 spec 页。没有合适的页，就新写一页，登记进 `index.md`（[knowledge-base.md](../../knowledge/references/knowledge-base.md)）。
-2. 改 spec，写应该的样子。L1、L2 的决定写「为什么」。页头加一条更新记录，写上 issue 号。
+2. 改 spec，写应该的样子。L1、L2 的决定写「为什么」。不改页头。
 3. 还没做到的那一段，标 ⬜ 和 issue 号，比如「⬜ #N」。
 4. 照 [knowledge-base.md](../../knowledge/references/knowledge-base.md) 的「改了一页之后」，核对下游的页。核对和跟着改的页（cascade）放进这个改动的同一个 commit，不记成节点。
 5. 写这个 issue 的 plan（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md) 的「plan 怎么写」）。spec 和代码之间差的每一样，都写成一个节点或条目。

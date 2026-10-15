@@ -330,7 +330,7 @@ The labels of this section tell what an issue is. They do not control the work: 
 | Level | Automatic mode | Why |
 | --- | --- | --- |
 | L1 | Nothing | Only the owner changes L1 ([knowledge-base](../../skills/knowledge/references/knowledge-base.md)). |
-| L2 | Only a change of words, as [knowledge-base](../../skills/knowledge/references/knowledge-base.md) defines it (wording, a typo, a link), never the owner's words. A change that needs a line in the update record of the page is a change of content, and is not permitted | L2 holds the owner's decisions. An agent does not invent a decision. |
+| L2 | Only a change of words, as [knowledge-base](../../skills/knowledge/references/knowledge-base.md) defines it (wording, a typo, a link), never the owner's words. A change of the page body that changes the meaning is a change of content, and is not permitted | L2 holds the owner's decisions. An agent does not invent a decision. |
 | L3 | Any change that the issue needs | The PR shows it, and the owner merges it. |
 
 - Explore tells in the Explore comment which levels the change touches. A change of L1, or of the content of L2, is in the semi-automatic mode: explore does not add the label (§3).

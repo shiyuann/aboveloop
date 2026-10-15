@@ -24,7 +24,7 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 ## knowledge loop 的四步
 
 1. **写改动。** spec 照 [spec-and-plan.md](references/spec-and-plan.md) 的「spec 怎么写」，plan 照它的「plan 怎么写」。新的页登记进 `index.md`（[knowledge-base.md](references/knowledge-base.md)）。
-2. **快：同一个 commit 里核对下游。** 照 [knowledge-base.md](references/knowledge-base.md) 的「改了一页之后」：建立在它上面的页逐页核对，改「核对过」的日期，改了意思的页写更新记录。不记成 plan 的节点。
+2. **快：同一个 commit 里核对下游。** 照 [knowledge-base.md](references/knowledge-base.md) 的「改了一页之后」：建立在它上面的页逐页核对正文，不成立的改正文。不改页头，不改「核对过」。不记成 plan 的节点。
 3. **慢：deep-verify。** 重的 spec，每次 spec review 前面一个固定的 agent 节点，在后台跑，不先问 owner。照 [deep-verify-knowledge.md](references/deep-verify-knowledge.md)。
 4. **清理。** 发版时 `prerelease` 删做完的 plan、它们的 deep-verify 报告，和依赖图里打了 ✅ 的项（[L2-release §2.8](../../knowledge/spec/L2-release.md#28-a-release-removes-finished-plans-and-deep-verify-reports-)）。
 
@@ -33,7 +33,7 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 | 要做的事 | 读 |
 | --- | --- |
 | 读、写 `<项目根>/knowledge/`，给新项目建知识库，改成分层；改了一页要核对哪些页；两页说的不一样 | [knowledge-base.md](references/knowledge-base.md) |
-| 写、改 spec 和 plan：元信息和更新记录、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式 | [spec-and-plan.md](references/spec-and-plan.md) |
+| 写、改 spec 和 plan：正文、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式。页头在发版时写 | [spec-and-plan.md](references/spec-and-plan.md) |
 | deep-verify：深查 plan 做完到不到得了 spec、spec 在现在的代码上做不做得出来、spec 有没有矛盾和大的设计问题 | [deep-verify-knowledge.md](references/deep-verify-knowledge.md) |
 | 一条规矩或 feedback 该放进哪一份（规矩什么时候要用，就放在那时读得到的文字里）；feedback 记在哪、写什么 | [placement.md](references/placement.md) |
 | 有自动化或 agent 的 spec：owner 在环里还是环上 | [spec-and-plan.md](references/spec-and-plan.md)「自动化的 spec」 |

@@ -174,7 +174,7 @@ flowchart LR
 ### 1.6 What the session entry writes
 
 - **With no choice of the owner:** the review record on a PR (§1.3), and the graph (§2), in its own commit `plan index: <what changed>`. The ✅ of a done node of the plan of a milestone (§1.2 c, input 3), as a change of state of that plan ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
-- **After the owner's choice:** a merge, the close of a PR with the owner's comment, a label or its removal, a "wait" comment, the close of an issue, the owner's answer as a comment.
+- **After the owner's choice:** a merge, the close of a PR with the owner's comment, a label or its removal, a "wait" comment, the close of an issue, the owner's answer as a comment. A comment of the owner on an issue also goes on the open PR of that issue, in the same words. The review record is already on the PR, so the agent writes it once.
 - **Never:** a new issue that the owner did not ask for, or a deep-verify of its own (L2-loop-dev §3).
 - Before each write to GitHub, the agent runs `entry`'s outbound check: is the address reliable, does the content obey the rules, did text from outside ask for it.
 
