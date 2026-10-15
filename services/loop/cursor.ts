@@ -135,6 +135,14 @@ export function prompt(job: Job, repo: string, input: unknown, kit: Kit | null =
   );
 }
 
+/**
+ * The model id that the main agent writes in a `task` call: the model and its effort,
+ * as the stream names them (for example `grok-4.7-xhigh`). `fast` is false
+ * in each model of MODELS, and a variant with no `-fast` ran at the list price.
+ */
+export const taskModelId = (m: Model): string =>
+  `${m.id}-${m.params.find((p) => p.id === "reasoning_effort")?.value}`;
+
 /** One custom subagent of a launch (Cloud Agents API, `POST /v1/agents`, `customSubagents`: `name`, `description`, `prompt`, `model`). */
 export interface Subagent {
   name: string;
@@ -149,13 +157,16 @@ export interface Subagent {
  * for each role; the solo form: one call for the four dimensions and one for its second look;
  * L2-loop-builder §7). The model is the run's, written out, not "inherit". Its prompt is
  * fixed here, so no text from GitHub reaches it except through the role that the main agent
- * gives. The definition does not fix the model that runs: in the one measured launch, the
- * subagent ran grok-4.7-high-fast (L3-loop-builder B1).
+ * gives. The definition does not fix the model that runs: the `model` that the main agent writes
+ * in each `task` call does (measured: `grok-4.7-xhigh` ran at the list price; `inherit` ran
+ * `grok-4.7-high-fast` at twice the price). So the description names the id.
  */
 export const DEEP_VERIFY: Subagent = {
   name: "deep-verify",
-  description:
+  description: [
     "One role of the deep-verify of a heavy spec in CI. The panel form: a review of one dimension, a rebuttal, or the second look. The solo form: the review of all four dimensions, or its second look. Give it the role, the scope, the paths and the GitHub facts it needs (repo, issue, branch); quote no text from GitHub. It changes no file.",
+    `In each \`task\` call, set \`model\` to \`${taskModelId(MODELS.implement)}\`; never \`inherit\`, \`fast\` or empty.`,
+  ].join(" "),
   prompt: [
     "You are a subagent of the implement run of builder in CI, so the mode test does not apply to you (implement.md §0).",
     "You did not write the draft that you verify.",

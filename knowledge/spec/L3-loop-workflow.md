@@ -1,6 +1,6 @@
 # The workflow `loop.yml`
 
-> What each run of the workflow `loop.yml` does, the agents that it launches with their limits, cost, and the connection points W4–W14. Built and running in each connected project; why GitHub Actions and Cursor: [L2-loop-architecture](L2-loop-architecture.md).
+> What each run of the workflow `loop.yml` does, the agents that it launches with their limits, cost, and the connection points W4–W15. Built and running in each connected project; why GitHub Actions and Cursor: [L2-loop-architecture](L2-loop-architecture.md).
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
@@ -14,7 +14,7 @@ Terms: [L2-loops §0](L2-loops.md#0-terms).
 - **The workflow writes no code, no comments and no labels.** It launches two kinds of cloud agents, each with its own input, repos, model and tokens (§2).
 - **The limits and the models of each job** are in §2: 3 ready PRs, 20 issues in each explore batch, one agent for each piece of work, 2 tries.
 - **Cost** is measured for the first runs of each agent, in three cases (§3). The owner's setup is in [L3-loop-components](L3-loop-components.md) (§4).
-- **W4–W14** tell how far each connection point of the workflow and the cloud agents is verified (§5).
+- **W4–W15** tell how far each connection point of the workflow and the cloud agents is verified (§5).
 
 ```mermaid
 flowchart TB
@@ -60,19 +60,20 @@ Each run does these steps for its own repo. The rules that select the work are i
 | Agent | Input | Repos in the workspace | Model | Environment variables |
 | --- | --- | --- | --- | --- |
 | `builder`, explore | `{"repo", "step", "issues"}` | The project and aboveloop | `grok-4.7`, effort `xhigh` | `GH_TOKEN` and `GH_TOKEN_KIT` |
-| `builder`, implement (the spec step, then the implement step) | `{"repo", "step", "issue"}`; `customSubagents`: `deep-verify` | The project and aboveloop | `grok-4.7`, effort `xhigh`; the subagent: below | `GH_TOKEN` and `GH_TOKEN_KIT` |
+| `builder`, implement (the spec step, then the implement step) | `{"repo", "step", "issue"}`; `customSubagents`: `deep-verify` | The project and aboveloop | `grok-4.7`, effort `xhigh`; the subagent: below | `GH_APP_ID_DEV`, `GH_APP_KEY_DEV` and `GH_TOKEN_KIT`; no `GH_TOKEN` (⬜) |
 
 - `GH_TOKEN` is a one-hour token of the GitHub App of the loop, for this repo. `GH_TOKEN_KIT` reads only aboveloop (the tokens: "GitHub" below).
+- Implement gets `GH_APP_ID_DEV`, `GH_APP_KEY_DEV` and `GH_TOKEN_KIT`, and no `GH_TOKEN` (⬜). It mints its own tokens ("GitHub" below; [L2-loop-untrusted-text](L2-loop-untrusted-text.md#3-design-requirements) A6). Explore keeps `GH_TOKEN` and `GH_TOKEN_KIT`.
 - **The subagent `deep-verify`.** Its definition gives the same model and effort as the implement run, written out, not `"inherit"`.
-  - In the measured launches, the subagent ran `grok-4.7-high-fast` in two and `grok-4.7-xhigh` in one ([L3-loop-builder B1](L3-loop-builder.md#2-connection-points); ⬜).
-  - No prompt of a role named a model. Thus the definition does not make the subagent run that model.
+  - The subagent runs the `model` of each `task` call, not the model of its definition. A call with `inherit`, or no model, ran `grok-4.7-high-fast` at twice the price ([L3-loop-builder B1](L3-loop-builder.md#2-connection-points)).
+  - The description tells the main agent to write the id of the run's model (`grok-4.7-xhigh`) in each call, never `inherit`, `fast` or empty. A live run after that release is still open (⬜).
 
 **The limits:**
 
 - **Implement:** if 3 PRs wait for the owner, `loop.yml` launches no new implement run. Which PRs wait, and what a linked PR is: [L3-loop-builder §1.2](L3-loop-builder.md#12-implement).
 - **Explore:** one agent for each batch of up to 20 issues, plus its subagents.
 - **One agent for each piece of work, and 2 tries** ("The next run tries again", below).
-- **The token** of a job lasts one hour (W13). **Money:** the spend limit of the Cursor account (§3).
+- **The token** of a job lasts one hour (W13). Implement mints a new one when its hour runs out, for 3 hours from the launch (⬜). **Money:** the spend limit of the Cursor account (§3).
 - Why these limits, and the stops: [L2-loop-untrusted-text](L2-loop-untrusted-text.md) R19.
 
 **Models.** This is the home of the models of the background agents (the agents of the loops). The model table of `entry` has only the rows for a session. Background agents use the latest Grok (Grok 4.7 at this time), with the effort that the official guide of xAI gives for the job:
@@ -97,9 +98,16 @@ Each run does these steps for its own repo. The rules that select the work are i
 - Issues, comments and PRs go through REST with `GH_TOKEN`. The one exception: implement marks its draft PR ready with GraphQL (W11).
 - Explore's token reads the code and writes issues. Implement's also writes code and PRs, with no `workflows`.
 - The workflow signs every token with the GitHub App of the loop, also the read token for aboveloop.
-- The agent cannot make a new token: the workflow makes it, and the App key never reaches the agent.
+- Explore cannot make a new token: the workflow makes it, and the App key never reaches explore.
+- **Implement mints its own tokens** (⬜). The launch gives it the App key. The token script of `builder` mints a token for its repo only, with Contents, Issues and Pull requests write, for one hour ([L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes) step 3, "The token").
+  - The script mints only until 3 hours after the launch. This guards against a stuck run; it is not a stop, because the agent holds the key ([L2-loop-untrusted-text](L2-loop-untrusted-text.md#3-design-requirements) A6).
+  - Why: the job of the workflow ends at the launch, so the workflow cannot give a running agent a new token, and a heavy spec works longer than one hour (W13).
+- **The token of implement has one store** (⬜): the `gh` login of the agent, outside the clones.
+  - The token script logs `gh` in (`gh auth login --with-token`) and runs `gh auth setup-git`. Git and `gh` read the same token. Each new token replaces the old one in one place.
+  - The clone URL has no token. The prompt rule: never put a token or the key in a clone, a commit, a comment, or a log.
+  - Why no `GH_TOKEN` for implement: `gh` uses `GH_TOKEN` before its stored login, and the environment of a launch cannot change. Explore keeps `GH_TOKEN` because explore ends inside the hour (W13).
 - An implement run took 8 minutes (measured), well inside the hour of the token. From the mint of the token to the last GitHub write took 17.6 to 30.8 minutes in three implement runs (measured, W13).
-- One implement run drafts a heavy spec, gets its deep-verify from subagents, and implements it, under one token. A token that expires in the deep-verify: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes). Whether the run ends its GitHub writes inside the hour is W13.
+- One implement run drafts a heavy spec, gets its deep-verify from subagents, and implements it. It still uses one token until this is built (⬜). A token that expires in the deep-verify: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes). Whether the run ends its GitHub writes inside the hour is W13.
 - Implement's token can still push `main` or a tag of its project, and merge: GitHub Free has no branch protection (L2-loop-untrusted-text R4, R15).
 - One token has one set of permissions for all of its repos. So each job gets two: the kit's read token and its own.
 
@@ -156,7 +164,8 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 - Grok 4.7 at `xhigh` uses the most reasoning tokens. At most 3 PRs wait at one time (§2).
 - A heavy spec does its deep-verify in subagents of the same run: no extra run. Each subagent reads the draft and the pages, so the run uses more tokens.
-- In the one measured launch, the subagent ran in fast mode at `high` (L3-loop-builder B1), which costs more for each token.
+- A subagent call that names no model, or `inherit`, runs in fast mode at `high`, at twice the price. The description of the subagent names the run's model (§2; L3-loop-builder B1).
+- The cost of the subagents is `totalUsage` of the main agent minus its runs. `totalUsage` also counts the Task subagents. The id of a subagent gives zero.
 - The subagent calls of one deep-verify. Which form each deep-verify takes: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part) and [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
   - The panel form: about 9 to 11 calls: 4 dimensions, up to 4 rebuttals, and 1 or 2 second looks.
   - The solo form: 1 or 2 calls: one for the four dimensions, and one for its second look, only after a repair that changed a meaning.
@@ -164,7 +173,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 - Each D adds one more run after the owner's answer.
 - The worst case for one heavy spec is 3 runs: the first run, which writes the short comment, and 2 tries that leave no mark. Then the workflow fails.
 - The spend limit of the Cursor account is the only hard cap.
-- Measured: two heavy specs of one L3 line each, with the solo form: $8.42 in 27.5 minutes (one subagent call), and $5.72 in 30.9 minutes (two calls: the review and a second look).
+- Measured: two heavy specs of one L3 line each, with the solo form: $8.42 in 27.5 minutes (one subagent call; the subagent $3.57, in fast mode), and $5.72 in 30.9 minutes (two calls: the review and a second look; the subagents $1.90).
 - On another project, an implement with no spec change took $16.26 in 18.5 minutes (measured).
 - Not measured: the panel form, the run with no subagent and the worst case.
 
@@ -184,7 +193,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 - Grok 4.7 is in the Cursor Models pool, which includes "significantly more" usage than the pool for third-party models. Thus the prices above are the cost only after the included usage is used up.
 - A spend limit on the Cursor account stops runaway cost.
-- Grok 4.7 costs $2 for each million input tokens, $0.5 cached, and $6 output. Fast mode doubles the price. The launches of the loops do not ask for it, but a subagent ran in it in two of three measured launches (L3-loop-builder B1; ⬜).
+- Grok 4.7 costs $2 for each million input tokens, $0.5 cached, and $6 output. Fast mode doubles the price. The launches of the loops do not ask for it. A subagent call that names no model, or `inherit`, runs in it (§2; L3-loop-builder B1).
 
 ## 4. The owner's part
 
@@ -209,9 +218,10 @@ The table gives each point and its level. The list under the table gives, for ea
 | W9 | The workflow `loop.yml` of another private repo uses the action of aboveloop from a checkout at the latest release | All `loop.yml` workflows | **Measured** |
 | W10 | GitHub starts the scheduled runs of `loop.yml` | All steps | **Measured** |
 | W11 | Implement marks its draft PR ready with GraphQL `markPullRequestReadyForReview` and the `GH_TOKEN` of the GitHub App, in a Cursor cloud agent | `builder` implement | **Docs**; **measured** |
-| W12 | The workflow reads the agents of the account with `GET /v1/agents` (`limit=100`), to hold back a second agent on the same work and to count tries. A launch timeout reads the list again (once more after 5 seconds when it has no match or fails) and keeps an agent of the same name created since the run started | All agents | The hold-back read: **measured**. The read after a timeout: **docs, not measured live** |
+| W12 | The workflow reads the agents of the account with `GET /v1/agents` (`limit=100`), to hold back a second agent on the same work (implement is held back for 4 hours from its start, ⬜) and to count tries. A launch timeout reads the list again (once more after 5 seconds when it has no match or fails) and keeps an agent of the same name created since the run started | All agents | The hold-back read: **measured**. The read after a timeout: **docs, not measured live** |
 | W13 | An implement run ends its GitHub writes (the pushes, the comments, the removal of the label) inside the hour of its GitHub token. This includes one run that drafts a heavy spec, gives the deep-verify to subagents and implements it. It also includes the next run of the fallback with no subagent, which does the roles one after the other. Also an explore batch of 20 issues at `xhigh` | `builder` | **Measured**; some cases are not measured (below) |
 | W14 | Step 0 of `loop.yml` reads the release variable of aboveloop with a token of the GitHub App of the loop. The token of step 0 is narrowed to aboveloop, Contents read and Variables read ([L2-release §0](L2-release.md#0-terms)) | Step 0 of every `loop.yml` | **Docs**; **measured** |
+| W15 | The implement run mints a token of the App with the key in its environment, logs `gh` in with it, and git and `gh` use each new token, in a Cursor cloud agent with no repos (⬜) | `builder` implement | **Not verified** |
 
 **W4**
 
@@ -274,6 +284,7 @@ The table gives each point and its level. The list under the table gives, for ea
   - From the mint of the token: the first push at 6.2 to 9.9 minutes, the PR ready at 18.3 (no spec change), 27.4 and 30.8 minutes.
   - Both heavy specs used the solo form. The deep-verify of one started at minute 10.8 of the run and took 10.7 minutes. That of the other started at minute 7.8 and took 16.6 minutes, with its second look.
   - The first explore batch at `xhigh` (2 issues) took 5.0 minutes.
+- **Measured:** one heavy spec in CI passed the hour. Its draft PR came at minute 14. Its deep-verify took 37.2 minutes. At minute 64.4, `gh api` got 401; at minute 65.5, `git push` got 401. The record of the later minute stayed on the machine.
 - **Not measured:** a batch of 20 issues at `xhigh`, the panel form, and the run with no subagent (none occurred).
 - The token expires after one hour (GitHub docs, "Generating an installation access token for a GitHub App").
 - Cursor documents no limit on the length of a run. `GET` of a run gives its wall-clock duration (Cursor docs, Cloud Agents API).
@@ -288,7 +299,7 @@ The table gives each point and its level. The list under the table gives, for ea
   - While the workflow fails on this issue, `choose` selects it again, so no other issue of the repo gets an implement run. The owner removes `ready-for-auto-builder`, or answers in a comment, which gives 2 more tries.
   - The run pushes the draft before the deep-verify, so the next run continues from the first open node.
   - The roles of the deep-verify end inside its budget, from its start (L3-loop-builder §1.4 step 3). Thus the time of the draft, the budget, the repairs and the implement step decide the hour.
-  - If a measurement shows heavy specs that still pass the hour, the agent writes a D for the owner. The options: a lower budget of the deep-verify, a token that the workflow renews (a key), or a second run for the deep-verify (the design that the subagents replaced).
+  - This occurred. The owner chose to give implement the App key: the run mints a new token (W15) and pushes after each step ([L3-loop-builder §1.2](L3-loop-builder.md#12-implement)).
 
 **W14**
 
@@ -305,3 +316,15 @@ The table gives each point and its level. The list under the table gives, for ea
   - So the input of `actions/create-github-app-token` is `permission-actions-variables: read`.
 - **Experiment:** none: measured.
 - **If it fails:** stop: no `loop.yml` reads the variable until it passes. Ask the owner, with these options: a token of the App that is not narrowed, only in step 0, or another way to read it.
+
+**W15** (⬜)
+
+- **Docs:** an installation token expires after one hour and narrows only by repositories and permissions (GitHub docs, "Generating an installation access token for a GitHub App"). `gh` uses `GH_TOKEN` before its stored login (`gh help environment`). `gh auth setup-git` makes git use the login of `gh`.
+- `gh auth login --with-token` is documented for a classic token, and the login reads the user with GraphQL, so an installation token may be refused.
+- With no credential store, `gh` writes the token in its own config, outside the clones.
+- **Measured:** the agents of the loops have `gh` (`gh api` ran and got 401).
+- **Not verified:** the mint, `gh auth login --with-token` with an installation token, a push through `gh auth setup-git`, a second login that replaces the token, and no `GITHUB_TOKEN` or other helper that wins.
+- **Experiment,** before the code depends on it: a launch on a test issue, by hand, with the key in its environment.
+  - Pass: push and comment work with the first token; after the token is revoked, a push gets 401; after a second mint, push and comment work.
+  - Also: `gh auth status` names the stored login; the git credential helper is the helper of `gh`; `.git/config` has no token.
+- **If it fails:** the token script writes each new token into the remote URL of the clone, and the agent gives `GH_TOKEN` from the script to each `gh` call.

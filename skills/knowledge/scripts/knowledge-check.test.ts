@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { checkBuildsOn, checkPlan, format, type IssueState, knowledgeCheck, marksOf } from "./knowledge-check.ts";
+import { checkBuildsOn, checkPlan, checkReport, format, type IssueState, knowledgeCheck, marksOf, notCounts } from "./knowledge-check.ts";
 
 const REPO = "shiyuann/aboveloop";
 const URL_OF = (n: number) => `https://github.com/${REPO}/issues/${n}`;
@@ -167,6 +167,139 @@ test("plans: a ✅ heading with - [ ] fails; a label with ✅ and a heading with
   const onlyQuestion = checkPlan(plan.replace("  - [ ] a sub-item left open\n", "").replace('A2["A2 Agent: two ✅"]', 'A2["A2 Agent: two"]'), "p.md");
   assert.deepEqual(problems(onlyQuestion), []);
   assert.match(format(onlyQuestion).at(-1)!, /^0 problem\(s\), 1 question\(s\)\.$/);
+});
+
+/** Lines of a correct report; each small part has only counts and IDs. */
+const CORRECT = [
+  "# deep-verify 2026-10-14: counts and IDs",
+  "",
+  "## Summary",
+  "",
+  "- 33 findings, 27 distinct. 0 blocking, 11 important, 16 small.",
+  "- Small: 16; 14 repaired; B-3 does not hold; C-15 goes to the owner.",
+  "- Small findings: 11, all repaired (A8, A9, A10, B8, B11, C9, C10, C11, C12, C13, D13).",
+  "- 16 findings, 13 distinct. 0 blocking. 3 important, all repaired. 10 small, all repaired. No owner decision. No rule, owner quote or decision vanished (role b).",
+  "",
+  "| Kind | Count |",
+  "| --- | --- |",
+  "| Small | 18 |",
+  "| Second look: new problems from the repair | 1 important, 9 small; all repaired in round 2 (§6) |",
+  "",
+  "## Small findings",
+  "",
+  "16: A-2 (in part), A-3 (in part), A-5/C-7, A-6/C-10, B-3, B-4, B-5/D-3b, C-4, C-5, C-8, C-9, C-11, C-13, C-14, C-15, D-6. 14 repaired; B-3 does not hold; C-15 goes to the owner (above).",
+  "",
+  "小发现 18 条只给数：修了 17 条，1 条修了一半（见上面「数」）。",
+  "",
+  "## Second look",
+  "",
+  "- The first second look: 8 problems. 1 blocking, 2 important, 5 small. All repaired.",
+  "  - **S-1 (blocking):** the repair of D-5 broke the rule of one writer (L2-loop-builder §4). Repaired: one writer.",
+  "  - **S-2 (important):** a late line stops the close, and the next run starts again. Repaired: the batch does not skip the issue.",
+  "  - Small: S-4 to S-8.",
+  "- The second look found 9 problems in the repairs: 3 important, 6 small.",
+].join("\n");
+
+/** Lines whose small parts give the problem of each finding. */
+const WRONG_111 = [
+  "## The small findings",
+  "",
+  "Repaired: C-4 and D-2 (`entry` sends the model of a section to another section), C-5 and D-3 (two lists of what `knowledge` holds in L2-plugin §2), C-6, A/B-2 and D-4 (the pointer of the L2-loops §3 row), C-8 (`knowledge-base.md` 「记一下」 row skips the issue question), C-9 (two passive sentences), C-10 (in the loop and on the loop are defined only in `knowledge`), D-6 (`prerelease`'s description), A/B-3 (the plan form), A/B-4 (update records that tell the story of the move), E-3 and E-4 (two section gaps), the second look's cross-reference.",
+  "",
+  "Not repaired: C-11. The session models of the three steps are written in `entry` (the table and a note), in L2-loop-builder §1 and in L3-loop-workflow §2. This was so at `f922a07`; this change does not move these rows. It is not a contradiction.",
+  "",
+  "## Second round (before O2): solo, changes since `9670c94`, read at `2088561`",
+  "",
+  "- The small findings, repaired: a-2 (the discussion steps of `entry` point to 「自动化的 spec」), a-3 and solo-6 (the worked example names `entry` step 2 as the pointer that fires), b-3 (the O1 quotes have one home, L2-plugin §2; `placement.md` links), b-4 (three section rows name the dropped words), solo-3 (the step \"where to record\" comes before the write), solo-4 (the terms are in the word table of spec-and-plan.md), solo-5 (L2-loop-architecture §2: one copy of each routine rule), solo-7 (the row of `entry`: a section name goes to L1 by an owner decision), solo-8 (the L2-loops §3 row names the design discussion), solo-9 (two long sentences of L2-plugin §2).",
+  "- The second look (only the repairs that change meaning, `2088561` → `806a29a`): all right; 3 important and 1 small new problems, all repaired: two stale step numbers after the reorder (the plan, the section), no fallback in `AGENTS.md` when the plugin is not installed (now: read `skills/entry/SKILL.md` of this repo), and one unclear 「它」.",
+].join("\n");
+
+test("reports: a correct report passes; counts, IDs and the words of a count are not a description", () => {
+  assert.deepEqual(checkReport(CORRECT, "r.md").findings, []);
+  assert.deepEqual(notCounts("12 distinct small: 11 repaired, 1 not repaired (C-11, below)."), []);
+  assert.deepEqual(notCounts("修了 17 条；1 条没修（C-11，写在 plan 里）。"), []);
+  assert.deepEqual(notCounts("C-8 (the plan form)"), ["form"]);
+});
+
+test("reports: lines that give a small finding with its problem fail", () => {
+  const r = checkReport(WRONG_111, "knowledge/reference/deep-verify-2026-10-14-111.md");
+  assert.deepEqual(
+    problems(r).map((f) => f.where),
+    [3, 5, 9, 10].map((n) => `knowledge/reference/deep-verify-2026-10-14-111.md:${n}`),
+  );
+  assert.match(problems(r)[3].text, /two stale step numbers/);
+});
+
+test("reports: a small item gives its lines under it; a sentence that counts important ones keeps their lines", () => {
+  const report = [
+    "## Second look",
+    "",
+    "- The second second look: all repairs answer their findings; 3 small problems, not repaired (no third round, step 6). They are words only:",
+    "  - T-1: L3-loop-builder §1.1 does not name the exception of case 1.",
+    "- The repair brought in 1 important and 9 small new problems:",
+    "  - **Important:** the reason of A5.3 (C-F5, D-F1).",
+    "  - Small:",
+    "    1. Only A3 opened the branch.",
+    "- **P2 (small).** The size tier is used for the band.",
+    "- **小的 4 条：** L3 §8.1 的「或」读成哪个条件都能关（改成一类一句）。",
+    "| Small | 18 (the plan form) |",
+    "",
+    "The last second look found the repairs correct, and left 3 small points. The plan names them:",
+    "",
+    "- **P1.** The A6.1 grep also hits an update record.",
+    "",
+    "The rest of the report.",
+    "",
+    "- **S-1 (blocking):** a problem.",
+  ].join("\n");
+  assert.deepEqual(
+    problems(checkReport(report, "r.md")).map((f) => f.where),
+    ["r.md:4", "r.md:8", "r.md:9", "r.md:10", "r.md:11", "r.md:15"],
+  );
+});
+
+test("reports: a heading that names important findings is not a small part, also when it names small ones", () => {
+  const report = ["## Blocking, important and small findings", "", "| IDs | Problem | Result |", "| --- | --- | --- |", "| C-1 | The page says two things | Repaired |", "", "## 重要和小的发现", "", "- C-2：两页说的不一样，修了。"].join("\n");
+  assert.deepEqual(checkReport(report, "r.md").findings, []);
+  assert.deepEqual(problems(checkReport("## Small and other findings\n\nC-3 (the plan form).\n", "r.md")).map((f) => f.where), ["r.md:3"]);
+});
+
+test("reports: the count words take a commit, next, fixed and listed, and no word of a problem", () => {
+  assert.deepEqual(notCounts("5 small problems, repaired in the next commit."), []);
+  assert.deepEqual(notCounts("2 small, fixed; 1 not listed."), []);
+  assert.deepEqual(notCounts("5 small problems, repaired in the next commit: the Summary bullet."), ["Summary", "bullet"]);
+});
+
+test("reports: only the sentence that ends with \":\" decides whether the list after it is small", () => {
+  const report = [
+    "- 10 small, all repaired. The important ones:",
+    "  - **I-1:** the page says two things. Repaired.",
+    "",
+    "10 small, all repaired. The important ones:",
+    "",
+    "- **I-2:** the plan misses a node. Repaired.",
+    "",
+    "- The second second look: 3 small problems, not repaired. They are words only:",
+    "  - T-1: the chart node does not name the exception.",
+  ].join("\n");
+  assert.deepEqual(problems(checkReport(report, "r.md")).map((f) => f.where), ["r.md:9"]);
+});
+
+test("reports: the check reads knowledge/reference/deep-verify-*.md from 2026-10-14; an older report is counted, not examined", () => {
+  const root = repo({
+    "knowledge/reference/deep-verify-2026-10-13-66.md": WRONG_111,
+    "knowledge/reference/deep-verify-2026-10-14-111.md": WRONG_111,
+    "knowledge/reference/deep-verify-2026-10-14-80.md": CORRECT,
+    "knowledge/reference/other-note.md": WRONG_111,
+    "knowledge/reference/deep-verify-notes.md": WRONG_111,
+  });
+  const r = knowledgeCheck(root, { state: null, repo: REPO });
+  assert.deepEqual(
+    [...new Set(problems(r).map((f) => f.where.split(":")[0]))],
+    ["knowledge/reference/deep-verify-2026-10-14-111.md", "knowledge/reference/deep-verify-notes.md"],
+    "a report with no date in its file name is examined",
+  );
+  assert.ok(r.notes.includes("Reports: 3 deep-verify report(s) examined; 1 dated before 2026-10-14, not examined."));
 });
 
 test("the command: exit 1 on a problem, exit 0 on questions only", () => {

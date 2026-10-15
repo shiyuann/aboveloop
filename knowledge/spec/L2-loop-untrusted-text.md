@@ -1,6 +1,6 @@
 # Untrusted text
 
-> A risk analysis of text that a person other than the owner can write: the inputs (I codes), a chart for each harm (H codes) with its stops, the design requirements (R codes) with their status, and the accepted risks (A1–A4). It applies E1 and E2; the owner accepted the risk of H5 (A1).
+> A risk analysis of text that a person other than the owner can write: the inputs (I codes), a chart for each harm (H codes) with its stops, the design requirements (R codes) with their status, and the accepted risks (A1–A4 and A6). It applies E1 and E2; the owner accepted the risk of H5 (A1), and the App key in the implement run (A6).
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
@@ -11,7 +11,7 @@ Marks: ✅ built · 🔶 partly built · ⬜ not built.
 - **The worst harm is H5: the keys of a repo leak.** On the path from an issue, explore (R13), the owner (when the project's Auto-ready rules do not include the issue) and implement (R14) can stop it. No agent of the loops can push a workflow file (R5). The owner accepted the risk that is left (A1).
 - **Each agent gets the least access, and each skill examines what goes out** (§3: R5–R7, R21). The network stays open (A3).
 - **The merge of the owner is the gate** (R15, P2). It is a rule of the skill: GitHub Free has no branch protection, and each project examines who pushed before its keys.
-- **Limits on volume and money stop the cost** (R19). The owner accepts four risks (A1–A4, at the end of §3).
+- **Limits on volume and money stop the cost** (R19). The owner accepts five risks (A1–A4 and A6, at the end of §3).
 
 ```mermaid
 flowchart TB
@@ -132,6 +132,7 @@ flowchart TB
 - **Two paths reach implement.** A third path needs no workflow file: see H4 (a push of `main` or a tag starts a workflow that already holds keys).
   - From an issue: explore is the first stop (R13). Explore's rule not to add `ready-for-auto-builder` is in the skill, not in code: the workflow does not examine who added the label (A2). The dotted arrow is this case. When the project's Auto-ready rules do not include the issue, the owner is a stop too.
   - From a web page, on an issue that the project makes Auto-ready (for example a pipeline incident): the owner is not on this path. The stops are explore and implement (R13, R14). The attacker must control a page that the project's pipeline reads.
+- **A path with no workflow file (⬜, A6).** The implement run in CI holds the App key in its environment. A misled implement run can send the key out (A3), with no workflow and no push. The worst case below is the same for the App key.
 - **Worst case:** all secrets of the repo leave. So the secrets of one repo open all repos:
   - `GH_APP_KEY_DEV`, the private key of the App. It mints tokens on every repo where the App is installed.
   - The Cursor key. It starts agents that can push to every repo.
@@ -173,13 +174,14 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
   - Every agent also gets a token that reads only aboveloop, for the skills.
 - **R6** ✅ Each key has the smallest scope that the platform permits, and a short life where it can (E2).
   - The tokens of the loops: one-hour tokens of the GitHub App of the loops, each narrowed to its job ([L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once)).
-  - The App's private key, which mints them, has a limit that the owner accepted: it is a secret of every repo, with no expiry (A1).
+  - The App's private key, which mints them, has a limit that the owner accepted: it is a secret of every repo, with no expiry (A1), and it is also in the environment of each implement run in CI (A6; ⬜).
   - A project's own keys are the project's task.
   - For Cloudflare, each project keeps these tokens:
     - One token for the owner's work on the Mac (`.env.local`).
     - For CI and the loops (`.env.ci`): one R2 token (its S3 keys; R2 makes it apart) and, when CI deploys, one deploy token.
     - They are not narrowed to each job. Each name says its use, for example `example-app-ci-deploy`.
 - **R7** ✅ The other secrets stay in the workflow. Each agent gets only the environment variables in [L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents).
+  - One exception: the implement run gets the App key (A6; ⬜). The Cursor key stays in the workflow.
 
 **Recognise attacks**
 
@@ -240,8 +242,16 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
   - The stop is R21, in each skill. The model's judgment is the stop.
   - Worst case: a misled agent sends what it holds to any address:
     - For explore and implement: private code and their one-hour token.
-    - For implement: also a one-hour token that can push `main` and tags of its project and merge.
+    - For implement: also a one-hour token that can push `main` and tags of its project and merge, and the App key, with no expiry (A6; ⬜).
 - **A4 A session continues a branch that the implement run wrote** (I3, H5). The agent of the session examines that work as data before it runs anything from it (R23). The owner does not read it first.
   - Why: the builder agents use the latest models, and damage control limits the rest; the owner does not review all code.
   - The stops before it: explore does not hand such an issue to CI (R13), implement refuses it (R14), and the agent of the session examines the diff (R23).
   - Worst case: a change that all three miss runs on the owner's Mac with the owner's GitHub login and local keys.
+- **A6 The implement run in CI holds the private key of the App** (⬜; H5).
+  - What it holds: `GH_APP_KEY_DEV` and the App ID, in the environment of the run and of its subagents. Its token script mints a token narrowed to its repo and the permissions of implement, for one hour, when the current one runs out ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)). The script narrows each token, but the agent holds the key, so the narrowing is not a stop.
+  - What a leak gives: tokens with every permission of the App on every repo where it is installed, until the owner makes a new key and deletes the old one (R20). The App has Contents write (push any branch, `main` and tags; merge), Issues and Pull requests write, and Variables read ([L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once)). So the private code and the issues of every installed repo can leave.
+  - What a leak does not give: the App has no permission for workflows, administration or secrets. So no workflow file, no repo setting and no secret changes. A merge cannot be removed at the level of the App: GitHub puts the merge under Contents write, the same permission as a push. So "only the owner merges" stays a rule (R15, P2).
+  - Why: a heavy spec in CI works longer than the hour of a token, and loses its work at the hour (L3-loop-workflow W13). The owner accepts the risk. The builder already has wide access on the owner's machine, and a fully automatic run has more risk; no known measure guarantees absolute safety, because the work needs the internet to write code. The examination of an issue before the work is the stop.
+  - The stops: the examination of an issue before the work (explore R13, implement R14, and the owner when the project's Auto-ready rules do not include the issue), the network check of each skill (R21), and the limits of the App above.
+  - The owner marks it as a known risk, to look for a better way later.
+  - Not chosen: a long-lived personal token (it acts as a person, and a fine-grained one cannot act on another person's repo); a paid plan of GitHub (it needs the repos in an organization).

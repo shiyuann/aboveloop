@@ -28,6 +28,10 @@
  * - Plans in `knowledge/plan/` (not `index.md`): a `##` heading with ✅ has no `- [ ]` under it; a `##`
  *   heading with ⬜ whose items are all `- [x]` is a question; the mermaid label of each node has ✅ when its
  *   heading has ✅, and only then.
+ * - Deep-verify reports `knowledge/reference/deep-verify-<date>*.md` (the owner's choice): the small
+ *   part (a heading, an item or a table row that names the small findings, and each sentence that counts small
+ *   ones) holds only counts and IDs, no problem and no repair of each (`checkReport`). A report whose file
+ *   name gives a date before `SMALL_RULE_FROM` is counted, not examined; a report with no date is examined.
  *
  * It exits 1 when it prints a problem. A question does not make it fail.
  */
@@ -260,6 +264,147 @@ export function checkPlan(text: string, file: string): Result {
   return { findings, notes: [] };
 }
 
+/**
+ * The first day of the rule on the small findings of a report. A report with an older date in its
+ * file name was written by older rules, and the check does not examine it.
+ */
+export const SMALL_RULE_FROM = "2026-10-14";
+
+/** A word that names the small findings: "small", 「小发现」「小的」「小问题」. */
+const namesSmall = (s: string) => /\bsmall\b/i.test(s) || /小(?:发现|的|问题)/.test(s);
+/** A count of small findings or problems: "12 distinct small", "Small: 16", 「4 条小」, 「小的 18 条」. */
+const SMALL_COUNT = [/\b\d+\s+(?:(?:distinct|new|more|raw|other)\s+)*small\b/i, /\bsmall(?:\s+(?:findings?|problems?|points?|ones))?\s*[:：(（]?\s*\d/i, /\d+\s*条(?:新的?)?小/, /小(?:的|发现|问题)\s*[:：]?\s*\d/];
+const IMPORTANT = /important|blocking|重要|挡路/i;
+const countsSmall = (s: string) => SMALL_COUNT.some((r) => r.test(s));
+/** The part of a sentence from its count of small ones to its end: "6 small." of "The second look found 9 problems: 3 important, 6 small." */
+const fromCount = (s: string) => s.slice(Math.min(...SMALL_COUNT.map((r) => r.exec(s)?.index ?? s.length)));
+/** An item that gives one finding and calls it small: "**P2 (small).** …". */
+const SMALL_ITEM = /^\s*\**\s*[A-Za-z][\w/-]*\d[\w/-]*\s*\**\s*[(（]\s*(?:small|小)\s*[)）]/i;
+
+/** The words that a count may have: what it counts, the result, and a pointer. Anything else is a description. */
+const COUNT_WORDS = new Set(
+  (
+    "small findings finding problems problem points point ones id ids distinct raw new more other repaired repair needed all both each every " +
+    "not none no only in part partly hold holds held does do is are was were of the a an second look looks round rounds first third last " +
+    "left stay stays open came step commit next fixed listed and or with also to from by for at plan node under below above see owner decision decisions count counts " +
+    "important blocking except solo panel goes go deep-verify issue total zero one two three four five six seven eight nine ten"
+  ).split(" "),
+);
+/** The same in Chinese, longest first: a text with no spaces is cut out piece by piece. */
+const COUNT_WORDS_ZH = (
+  "小发现 小问题 小的 都修了 修好了 修了 没修 未修 不修 不成立 成立 部分 一半 只给数 复查 第二轮 第一轮 其中 还剩 剩下 写在 进了 拍板 重要 挡路 " +
+  "新的 全部 上面 下面 不用 发现 问题 小 条 个 处 修 只 给 数 轮 第 和 与 及 另 剩 留 进 里 下 新 的 都 全 共 见 一 两 也 了"
+).split(" ");
+
+/** The words of a text that are not a count, an ID, a commit or a separator; none for "11 repaired, 1 not repaired (C-11)". */
+export function notCounts(text: string): string[] {
+  let t = text
+    .replace(/!?\[((?:[^[\]]|\[[^[\]]*\])*)\]\([^)]*\)/g, " $1 ")
+    .replace(/`[0-9a-f]{7,40}`/g, " ")
+    .replace(/\*\*|__|\*|~~/g, " ");
+  for (const w of COUNT_WORDS_ZH) t = t.split(w).join(" ");
+  const out: string[] = [];
+  for (const raw of t.split(/[\s,;:.()（）、，；：。=+&→–—|「」“”"]+/)) {
+    const tok = raw.replace(/^-+|-+$/g, "");
+    if (!tok || /^[/~]+$/.test(tok)) continue;
+    if (/^[#§]?\d+%?$/.test(tok)) continue; // a count, an issue, a section
+    if (/^#?[A-Za-z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)*$/.test(tok) && /\d/.test(tok)) continue; // an ID: C-4, A/B-2, solo-6, S1, E2b-1
+    if (COUNT_WORDS.has(tok.toLowerCase())) continue;
+    out.push(raw);
+  }
+  return out;
+}
+
+/** The sentences of a text, split at `.`, `;` and their Chinese forms outside parentheses. */
+function clauses(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if ("(（[「“".includes(c)) depth++;
+    else if (")）]」”".includes(c)) depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (";；。".includes(c) || (c === "." && (i + 1 === text.length || /\s/.test(text[i + 1]))))) {
+      out.push(text.slice(start, i + 1));
+      start = i + 1;
+    }
+  }
+  if (text.slice(start).trim()) out.push(text.slice(start));
+  return out;
+}
+
+/** The text before the first `:` outside parentheses, when it is short: "Small findings" of "Small findings: 6 (…)". */
+function labelOf(text: string): string | null {
+  let depth = 0;
+  for (let i = 0; i < text.length && i <= 60; i++) {
+    const c = text[i];
+    if ("(（".includes(c)) depth++;
+    else if (")）".includes(c)) depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (c === ":" || c === "：")) return text.slice(0, i).replace(/[*_]/g, "");
+  }
+  return null;
+}
+
+/**
+ * The form of the small findings in a deep-verify report (deep-verify-knowledge.md, section 7, items 4 and 5).
+ * The small part is a section under a heading that names the small findings ("## Small findings", 「## 小发现」),
+ * an item or a table row whose label names them ("Small: 16; …", "- The small findings, repaired: …", 「小的 4 条：」),
+ * with the lines under the item, and each sentence elsewhere that counts small ones ("10 small, all repaired.",
+ * "3 important and 1 small new problems, all repaired: …"). The small part holds only counts, IDs, commits and
+ * the words of a count (`COUNT_WORDS`): no problem and no repair of each.
+ */
+export function checkReport(text: string, file: string): Result {
+  const findings: Finding[] = [];
+  const lines = text.split("\n");
+  const code = fenced(lines);
+  let section: number | null = null; // the level of a heading that names the small findings
+  let under: number | null = null; // the indent of a small item: the lines under it are small too (-1: the list after a paragraph)
+  const fail = (i: number, part: string, bad: string[]) => {
+    const shown = part.trim().length > 90 ? `${part.trim().slice(0, 90)}…` : part.trim();
+    findings.push({ kind: "problem", where: `${file}:${i + 1}`, text: `the small findings of a deep-verify report give more than counts and IDs (${bad.slice(0, 4).join(" ")}): "${shown}"` });
+  };
+  const whole = (i: number, part: string) => {
+    const bad = notCounts(part);
+    if (bad.length) fail(i, part, bad);
+  };
+  lines.forEach((line, i) => {
+    if (code[i] || !line.trim() || /^\s*>/.test(line)) return;
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) {
+      under = null;
+      if (namesSmall(h[2]) && !IMPORTANT.test(h[2])) section = h[1].length;
+      else if (section !== null && h[1].length <= section) section = null;
+      return;
+    }
+    const indent = /^\s*/.exec(line)![0].length;
+    const item = /^\s*(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (under !== null && (under < 0 ? !item : indent <= under)) under = null;
+    const body = item ? item[1] : line.trim();
+    if (/^\|/.test(line.trim())) {
+      const row = cells(line);
+      if (row.every((c) => /^:?-+:?$/.test(c))) return;
+      if (section !== null) return row.forEach((c) => whole(i, c));
+      if (namesSmall(row[0] ?? "") && (row[0] ?? "").length <= 30) return row.slice(1).forEach((c) => whole(i, c));
+      for (const c of row) for (const s of clauses(c)) if (countsSmall(s)) whole(i, fromCount(s));
+      return;
+    }
+    if (section !== null || under !== null) return whole(i, body);
+    const label = labelOf(body);
+    if ((label !== null && namesSmall(label) && !IMPORTANT.test(label)) || SMALL_ITEM.test(body)) {
+      whole(i, body);
+      if (item) under = indent;
+      return;
+    }
+    const parts = clauses(body);
+    for (const s of parts) if (countsSmall(s)) whole(i, fromCount(s));
+    // The list after ":" is small when the sentence that ends with ":" counts small ones, or counts nothing and the
+    // text before it counts only small ones. "10 small, all repaired. The important ones:" introduces important ones.
+    const last = parts.at(-1)?.trim() ?? "";
+    if (last.endsWith(":") && !IMPORTANT.test(last) && (countsSmall(last) || (!IMPORTANT.test(body) && parts.some(countsSmall)))) under = item ? indent : -1;
+  });
+  return { findings, notes: [] };
+}
+
 /** The Markdown files under a folder of the repo (paths from the root), sorted. */
 function mdUnder(root: string, dir: string): string[] {
   const full = join(root, dir);
@@ -399,6 +544,14 @@ export function knowledgeCheck(root: string, opts: { state: IssueState | null; r
     }
   add(checkMarks(root, repo, opts.state));
   for (const file of mdUnder(root, "knowledge/plan").filter((f) => basename(f) !== "index.md")) add(checkPlan(readFileSync(join(root, file), "utf8"), file));
+  const reports = mdUnder(root, "knowledge/reference").filter((f) => /^deep-verify-/.test(basename(f)));
+  // Only a date that the file name gives skips a report; a report with no date in its name is examined.
+  const older = reports.filter((f) => {
+    const date = /^deep-verify-(\d{4}-\d{2}-\d{2})/.exec(basename(f))?.[1];
+    return date !== undefined && date < SMALL_RULE_FROM;
+  });
+  for (const file of reports.filter((f) => !older.includes(f))) add(checkReport(readFileSync(join(root, file), "utf8"), file));
+  notes.push(`Reports: ${reports.length - older.length} deep-verify report(s) examined${older.length ? `; ${older.length} dated before ${SMALL_RULE_FROM}, not examined` : ""}.`);
   return { findings, notes };
 }
 

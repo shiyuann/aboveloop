@@ -64,7 +64,7 @@ CI：plan 写好，照 [implement.md](implement.md) 第 5 步第 5–6 条 commi
 - **预算：** 每一次 deep-verify，两种模式都一样，从开始起 30 分钟，照 deep-verify-knowledge.md 第 0 步（预算）做。这里不另写一份。
 - **形式：** 多人或单人，哪一种照 deep-verify-knowledge.md 的「两种形式」。这里不另写一份。
 - **会话：** 多人是每个维度一个子 agent（C 只开一个）；单人是一个子 agent 查四个维度。没有开子 agent 的工具，照 deep-verify-knowledge.md 第 3 节一个维度一个维度地查，记录里写明。
-- **CI：** 每个角色是本轮自定义 subagent `deep-verify` 的一次新调用。一次调用从不接着以前的调用（不 resume）。启动本轮时 workflow 定义了这个 subagent，模型和本轮一样。CI 里 deep-verify 怎么做（哪种形式、每种形式的调用、范围、记录、没有 subagent 时），照 deep-verify-knowledge.md 的「CI 里的 deep-verify」一节，这里不另写一份。
+- **CI：** 每个角色是本轮自定义 subagent `deep-verify` 的一次新调用。一次调用从不接着以前的调用（不 resume）。启动本轮时 workflow 定义了这个 subagent，模型和本轮一样。每次 `task` 调用都把 `model` 写成这个 subagent 的说明里给的模型 id（本轮的模型和 effort），从不写 `inherit`、`fast`，也不空着：跑的是调用里写的模型，不是定义里的。CI 里 deep-verify 怎么做（哪种形式、每种形式的调用、范围、记录、没有 subagent 时），照 deep-verify-knowledge.md 的「CI 里的 deep-verify」一节，这里不另写一份。
 - **CI，开始 deep-verify 之前：**
   1. 把 spec 和 plan 的草稿 commit、push，开 draft PR（implement.md 第 5 步第 5–6 条）。
   2. 只有第一次 push 草稿的那一轮，在 issue 下写一条短评论（下面的格式）。接着一个 draft 做的轮次，deep-verify 之前不写评论。

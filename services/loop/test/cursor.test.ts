@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agentsCreatedSince, ENV_VARS, holdBack, INPUT_END, INPUT_START, type Job, KIT_REPO, kitOf, launch, launchBody, MODELS } from "../cursor.ts";
+import { agentsCreatedSince, ENV_VARS, holdBack, INPUT_END, INPUT_START, type Job, KIT_REPO, kitOf, launch, launchBody, MODELS, taskModelId } from "../cursor.ts";
 
 const ENV = {
   GH_TOKEN_KIT: "kit-tok",
@@ -46,7 +46,7 @@ test("builder, step implement: Grok at xhigh, no repos, its write token and the 
   assert.deepEqual(inputOf(b.prompt.text), { repo: "acme/app", step: "implement", issue: 12 });
 });
 
-test("the implement launch defines the custom subagent deep-verify, with the model of the run written out; explore has none", () => {
+test("the implement launch defines the custom subagent deep-verify, with the model of the run written out and the model id of each task call in its description; explore has none", () => {
   const b = launchBody("implement", { repo: "acme/app", issue: 12, input: { repo: "acme/app", step: "implement", issue: 12 }, env: ENV });
   assert.equal(b.customSubagents?.length, 1);
   const [sub] = b.customSubagents ?? [];
@@ -63,6 +63,12 @@ test("the implement launch defines the custom subagent deep-verify, with the mod
     MODELS.implement.params.map((p) => p.id),
     ["context", "reasoning_effort", "fast"],
   );
+  // The `model` of each `task` call runs, not the definition's model; `inherit` ran `grok-4.7-high-fast`.
+  // So the description names the id of MODELS.implement, and offers inherit and fast only as what never to write.
+  assert.equal(taskModelId(MODELS.implement), "grok-4.7-xhigh");
+  const never = "never `inherit`, `fast` or empty.";
+  assert.ok(sub.description.includes(`In each \`task\` call, set \`model\` to \`${taskModelId(MODELS.implement)}\`; ${never}`));
+  assert.ok(!/inherit|fast/.test(sub.description.replace(never, "")));
   for (const part of [
     "kit/skills/knowledge/references/deep-verify-knowledge.md",
     "did not write the draft",

@@ -58,7 +58,7 @@ flowchart TB
     - For explore: the repo, with Contents read and Issues write.
     - For implement: the repo, with Contents, Issues and PRs write, and no `workflows` (R5).
   - Where: `GitHub › account › Developer settings › GitHub Apps › <your GitHub App>`
-  - Where its private key is: the App's key file in `Local › ~/.config/aboveloop/`, and the repo secret `GH_APP_KEY_DEV` of each repo. The key has no expiry and every permission of the App on every installed repo. The owner accepts this (A1 in [L2-loop-untrusted-text §3](L2-loop-untrusted-text.md#3-design-requirements)).
+  - Where its private key is: the App's key file in `Local › ~/.config/aboveloop/`, the repo secret `GH_APP_KEY_DEV` of each repo, and the environment of each implement run in CI (⬜; [L2-loop-untrusted-text](L2-loop-untrusted-text.md#3-design-requirements) A6). The key has no expiry and every permission of the App on every installed repo. The owner accepts this (A1 in [L2-loop-untrusted-text §3](L2-loop-untrusted-text.md#3-design-requirements)).
   - Where its ID is: the repo variable `GH_APP_ID_DEV`
 - **Cursor GitHub App.** Not used by the loops: their agents start with no repos and clone with tokens of the GitHub App of the loop. It stays on the repos for the owner's own Cursor cloud agents. It has no Variables permission (`GET /apps/cursor`), so it cannot write the release variable; `check.sh` examines this.
   - Where: `GitHub › account › Applications › Cursor` (installed on aboveloop; each app adds its repo, if the App is not on all repositories)
