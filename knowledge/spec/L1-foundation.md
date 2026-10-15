@@ -69,7 +69,7 @@ aboveloop holds how the owner works: the rules that agents obey, the loops that 
 #### E2 Each key has the smallest scope that the platform permits, and a short life where it can
 
 - Why: a leaked key then opens as few doors as possible, for a short time.
-- The GitHub tokens are narrowed to one job and live one hour. The Cursor key opens the whole account however many there are, so the loops share one.
+- The GitHub tokens are narrowed to one job and live one hour. One exception: the implement run in CI holds the private key of the GitHub App of the loop. It mints a new token when its hour runs out. The key has every permission of the App on every repo where it is installed. The key has no expiry. The App has no permission for workflows, administration or secrets. The owner accepts this risk ([L2-loop-untrusted-text §3](L2-loop-untrusted-text.md#3-design-requirements) A6). The builder must work longer than one hour. No known stop makes an agent on an open network fully safe. The examination of an issue before the work is the stop. The Cursor key opens the whole account however many there are, so the loops share one.
 - The spend limit of the Cursor account caps only money. A leaked Cursor key lets a person start agents with repos, and push to the repos that the Cursor GitHub App can reach. The key is a secret of each repo; the owner accepts this risk.
 
 #### E3 A script decides when to work. An agent only does the work.

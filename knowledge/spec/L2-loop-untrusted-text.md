@@ -8,7 +8,7 @@ Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
 - **Untrusted text is text that a person other than the owner can write.** It comes from two inputs: web pages (I2), and text on GitHub that quotes them (I3). The code and the files on `main` are trusted by rule, with two exceptions (§1).
 - **Four harms can occur** (§2): noise on GitHub (H3), a bad change that reaches the users (H4), a leak of the keys of a repo (H5), and cost (H7). Each has a chart from the input to the harm, with the stops on its path, and a worst case.
-- **The worst harm is H5: the keys of a repo leak.** On the path from an issue, explore (R13), the owner (when the project's Auto-ready rules do not include the issue) and implement (R14) can stop it. No agent of the loops can push a workflow file (R5). The owner accepted the risk that is left (A1).
+- **The worst harm is H5: the keys of a repo leak.** On the path from an issue, explore (R13), the owner (when the project's Auto-ready rules do not include the issue) and implement (R14) can stop it. No agent of the loops can push a workflow file (R5). The token of implement writes only its own project. The App key in that run is not that limit (A6). The owner accepted the risk that is left (A1, A6).
 - **Each agent gets the least access, and each skill examines what goes out** (§3: R5–R7, R21). The network stays open (A3).
 - **The merge of the owner is the gate** (R15, P2). It is a rule of the skill: GitHub Free has no branch protection, and each project examines who pushed before its keys.
 - **Limits on volume and money stop the cost** (R19). The owner accepts five risks (A1–A4 and A6, at the end of §3).
@@ -169,6 +169,7 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
 **Give each agent the least access**
 
 - **R5** ✅ Only implement's token can write, and only its own project, with no `workflows` permission.
+  - The token is that limit. The App key in the implement run is not: the agent holds the key, so it can mint a token for every installed repo (A6; ⬜).
   - Implement's token can also merge through REST; only the owner merges, by rule (P2, A2).
   - Explore has Contents read and Issues write. Implement has Contents, Issues and Pull requests write.
   - Every agent also gets a token that reads only aboveloop, for the skills.
@@ -217,6 +218,9 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
 - **R20** ✅ Each key has a procedure to change it:
   - For the loops: `make loop-key`, then `make loop-secrets`.
   - For the App key: a new key in the settings of the App, the App's key file in `~/.config/aboveloop/`, then `make loop-secrets`.
+    - A minted token keeps working for at most one hour (GitHub docs, "Create an installation access token for an app").
+    - `DELETE /installation/token` revokes only the token that authenticates the call (GitHub docs, "Revoke an installation access token"). The owner cannot revoke the run's token from the Mac by that call.
+    - Suspending an installation stops every loop on that account. The procedure stays a new key.
 - **R21** ✅ Raw data never goes outside. Before an agent opens an address, sends a request, or writes to GitHub, it checks three things:
   1. The address is trusted: GitHub of the project and aboveloop, the sites that the project configuration names, the official package registries for installs. An address from untrusted text, a bare IP, a short link, a look-alike domain or a non-https address is not trusted. The agent opens it only with a GET that carries no data.
   2. Outside, only a GET with no data (no issue text, code, tokens, environment variables).
@@ -249,9 +253,9 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
   - Worst case: a change that all three miss runs on the owner's Mac with the owner's GitHub login and local keys.
 - **A6 The implement run in CI holds the private key of the App** (⬜; H5).
   - What it holds: `GH_APP_KEY_DEV` and the App ID, in the environment of the run and of its subagents. Its token script mints a token narrowed to its repo and the permissions of implement, for one hour, when the current one runs out ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)). The script narrows each token, but the agent holds the key, so the narrowing is not a stop.
-  - What a leak gives: tokens with every permission of the App on every repo where it is installed, until the owner makes a new key and deletes the old one (R20). The App has Contents write (push any branch, `main` and tags; merge), Issues and Pull requests write, and Variables read ([L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once)). So the private code and the issues of every installed repo can leave.
+  - What a leak gives: tokens with every permission of the App on every repo where it is installed, until the owner makes a new key and deletes the old one (R20). Tokens already minted keep working for at most one hour. The App has Contents write (push any branch, `main` and tags; merge), Issues and Pull requests write, and Variables read ([L3-loop-components §1](L3-loop-components.md#1-global-aboveloop-set-up-once)). So the private code and the issues of every installed repo can leave.
   - What a leak does not give: the App has no permission for workflows, administration or secrets. So no workflow file, no repo setting and no secret changes. A merge cannot be removed at the level of the App: GitHub puts the merge under Contents write, the same permission as a push. So "only the owner merges" stays a rule (R15, P2).
   - Why: a heavy spec in CI works longer than the hour of a token, and loses its work at the hour (L3-loop-workflow W13). The owner accepts the risk. The builder already has wide access on the owner's machine, and a fully automatic run has more risk; no known measure guarantees absolute safety, because the work needs the internet to write code. The examination of an issue before the work is the stop.
-  - The stops: the examination of an issue before the work (explore R13, implement R14, and the owner when the project's Auto-ready rules do not include the issue), the network check of each skill (R21), and the limits of the App above.
+  - The stops: the examination of an issue before the work (explore R13, implement R14, and the owner when the project's Auto-ready rules do not include the issue), the network check of each skill (R21), and the limits of the App above. A project command of the run starts with `GH_APP_KEY_DEV` unset, so a package script does not read the key. The run and its subagents still hold the key, so this is not a stop.
   - The owner marks it as a known risk, to look for a better way later.
   - Not chosen: a long-lived personal token (it acts as a person, and a fine-grained one cannot act on another person's repo); a paid plan of GitHub (it needs the repos in an organization).

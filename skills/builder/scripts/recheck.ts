@@ -26,9 +26,18 @@
  *
  *   node --experimental-strip-types --no-warnings recheck.ts --repo <owner/repo> --issue <N> [--session]
  */
+import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
+import { fileURLToPath } from "node:url";
 import { branchesUnder, openPrs, rest } from "./gh.ts";
 import { BRANCH_PREFIX, type Issue, type Pr, recheck, sessionCheck, sessionLines } from "./loop.ts";
+
+const token = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", fileURLToPath(new URL("./token.ts", import.meta.url))], { encoding: "utf8" });
+const word = token.stdout.trim();
+if (word === "stopped" || word === "failed") {
+  console.log(word);
+  process.exit(word === "failed" ? 1 : 0);
+}
 
 const { values: a } = parseArgs({ options: { repo: { type: "string" }, issue: { type: "string" }, session: { type: "boolean" } } });
 const n = Number(a.issue);

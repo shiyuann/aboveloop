@@ -13,7 +13,7 @@
  *   REPO (default GITHUB_REPOSITORY), GITHUB_TOKEN
  *   KIT_TAG, KIT_SHA: the release of aboveloop whose skills the agents read (both or none; none is main)
  *   CURSOR_API_KEY, GH_TOKEN_KIT (every agent: reads aboveloop)
- *   explore: GH_TOKEN_EXPLORER; implement: GH_TOKEN_BUILDER
+ *   explore: GH_TOKEN_EXPLORER; implement: GH_APP_ID_DEV, GH_APP_KEY_DEV (it mints its own token)
  *
  * --dry-run reads everything and changes nothing: no launch. A missing
  * value skips only its step, with one log line. A failed step does not stop
@@ -24,7 +24,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { choose, EXPLORED_LABEL, READY_LABEL, toExplore } from "../../skills/builder/scripts/loop.ts";
-import { agentsCreatedSince, holdBack, launch, launchBody, listAgents, SKILL } from "./cursor.ts";
+import { IMPLEMENT_WORK_MS, agentsCreatedSince, holdBack, launch, launchBody, listAgents, SKILL } from "./cursor.ts";
 import { type GitHub, gitHub } from "./github.ts";
 import { missing, payloadBytes, type StepName, stepsFor } from "./plan.ts";
 
@@ -55,6 +55,7 @@ export async function runLoop(o: Options): Promise<boolean> {
   const repo = env.REPO ?? "";
   // One clock for the run. A launch timeout keeps an agent created at or after this instant.
   const started = o.now ?? new Date();
+  env.LAUNCHED_AT = env.LAUNCHED_AT?.trim() || started.toISOString();
   let failed = false;
   const fail = (line: string) => {
     failed = true;
@@ -101,7 +102,7 @@ export async function runLoop(o: Options): Promise<boolean> {
     if (agents === undefined) agents = await listAgents(env.CURSOR_API_KEY as string, fetchImpl);
     if (agents === null) log(`${step}: the list of agents cannot be read; launching with no check for a second agent`);
     else {
-      const hold = holdBack(agents, body.name, extra.since ?? null, started);
+      const hold = holdBack(agents, body.name, extra.since ?? null, started, 2, step === "implement" ? IMPLEMENT_WORK_MS : undefined);
       if (hold?.fail) return fail(`${step}: launches nothing for ${what}: ${hold.why}; the owner looks at it`);
       if (hold) return log(`skip ${step}: ${what}: ${hold.why}`);
     }

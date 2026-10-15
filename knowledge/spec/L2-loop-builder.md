@@ -1,6 +1,6 @@
 # Builder loop
 
-> The builder loop is the life of an issue, in two modes with the same three steps: explore, spec and implement. ⬜ The comparison of the first heavy specs in CI with the heavy specs of sessions (§1).
+> The builder loop is the life of an issue, in two modes with the same three steps: explore, spec and implement. The first three heavy specs in CI are compared with the heavy specs of sessions (§1).
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
@@ -112,7 +112,11 @@ flowchart LR
   - Text from GitHub never makes light a kind that the configuration does not name: the list of light kinds is in the project's configuration, which is trusted ([L2-loop-untrusted-text §1](L2-loop-untrusted-text.md#1-the-inputs)). Explore judges the kind and the design choice from untrusted text, so its judgment can only keep a light kind light or make the step heavy.
 - **The models of the three steps.** In CI, explore, spec and implement use the latest Grok, at the effort extra high (`xhigh`). In a session, the three steps use the latest Opus, at `xhigh` or `high`. The efforts of each job are in [L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents); the rows for a session of `entry` (「用哪个模型」) follow this section.
   - Two exceptions to the note of `entry` 「spec 那一档不能降」 (measured in sessions): the heavy spec in CI with Grok, and `high` for the spec in a session.
-  - After the first three heavy specs in CI, the agent compares them with heavy specs of sessions: the findings of the deep-verify, the changes that the owner asks for in the PR, and the closed PRs. It asks the owner only when it finds a gap (⬜).
+  - The first three heavy specs in CI are compared with the heavy specs of sessions.
+    - Each deep-verify repaired its findings in the same run. No finding needed a direction from the owner. One review returned after the 15-minute budget, so the second look did not start. After minute 15, the run starts no role ([L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes)).
+    - The owner asked for no change of the spec.
+    - A session heavy spec differs in one place. The owner reads the diff in the dialog before the code. In CI the owner reads the ready PR. That difference is the design of the two modes (this section).
+    - No gap. The agent asks the owner only for a gap.
 - **One text for each step, in both modes.** `/builder` holds the three texts: `explore.md`, `spec.md` and `implement.md`. Both modes read them. `implement.md` holds the implement step: the branch and the draft PR, the test baseline, the agent nodes, the close, the PR body and its check. Each text gives the action of each mode where they differ, and ends with the part of a session ([L3-loop-builder §1](L3-loop-builder.md#1-builder-)).
   - The guidance of a session for one issue is in `/builder`:
     - the part of a session of `spec.md`: the branch and the draft PR, the plan and the spec on the branch, the deep-verify, how the agent leads the owner through each D and each O, the spec review;
@@ -363,7 +367,7 @@ The labels of this section tell what an issue is. They do not control the work: 
     - When it returns, one subagent repairs its findings on the latest state of the spec. It starts when no other subagent changes the spec or the plan of the issue, and the main agent commits ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry): one writer). It first examines again a finding on lines that changed after the fixed commit.
     - That subagent repairs a small conflict by the rules of `knowledge` (knowledge-base, "两页说的不一样"). A direction-level finding becomes a new D node of the plan when the agent finds it, and the agent leads the owner through it like any D. The plan grows; the agent does not predict these nodes.
     - If no meaning changed since the last deep-verify, the node is done with no run.
-    - It takes up to 30 minutes: each deep-verify has a budget of 30 minutes of wall time, in a session and in CI ([deep-verify-knowledge §0](../../skills/knowledge/references/deep-verify-knowledge.md#0-预算30-分钟)).
+    - It takes up to 15 minutes: each deep-verify has a budget of 15 minutes of wall time, in a session and in CI ([deep-verify-knowledge §0](../../skills/knowledge/references/deep-verify-knowledge.md#0-预算15-分钟)).
     - The last spec review shows the whole diff and the summary of the deep-verify: the number of findings, the repairs that changed a meaning, the new D nodes, the pages that changed after its fixed commit (the next deep-verify examines them), and the link to the report. A spec review starts after the node ends.
     - CI has no owner, so CI does not change ([L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes)).
     - Why: the attention of the owner is scarce, and the design keeps the owner on the loop. The owner does not wait for a deep-verify to talk or to change the spec, and gets no question before it. A question before each deep-verify cost the owner's attention each time, and a deep-verify in the foreground made the owner wait up to 30 minutes.

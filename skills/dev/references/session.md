@@ -138,7 +138,7 @@ Written in a session of the owner
 
 只有方向问题带给 owner，别的 agent 自己定，回复里报一句（`entry` 的 [SKILL.md](../../entry/SKILL.md)「拍板只问方向」）。
 
-一次一件，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「怎么问 owner」：一个问题只问一件，先一句 owner 要定什么，再讲背景和一个从 owner 这边讲的具体例子，每个选项说清选了会怎样；内部代号只跟在白话后面。owner 选了再做。做完一件，直接说下一件是什么，接着带。
+一次一件，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「怎么问 owner」写。顺序、在哪一层、处在哪一步，都在那一节，这里不另写。owner 选了再做。做完一件，直接说下一件是什么，接着带。
 - 为什么：没有 context、不一步一步来的问题，owner 答不了。会话照 entry 带路，每个问题都带着 context。
 
 **问是一件一件，做是并发。** owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A、C 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。

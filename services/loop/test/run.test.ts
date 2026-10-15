@@ -13,8 +13,9 @@ const BASE_ENV = {
   GITHUB_TOKEN: "gh-tok",
   CURSOR_API_KEY: "cursor-key",
   GH_TOKEN_KIT: "kit-tok",
+  GH_APP_ID_DEV: "99",
+  GH_APP_KEY_DEV: "pem",
   GH_TOKEN_EXPLORER: "explorer-tok",
-  GH_TOKEN_BUILDER: "agent-tok",
 };
 
 interface Call {
@@ -109,7 +110,11 @@ test("a real run: launches explore for #4 #7 and implement for #2, and writes no
   assert.ok(impl.prompt.text.includes('"issue": 2'));
   // No launch has repos. Each job gets its own token, and every one the kit's read token.
   for (const b of [explore, impl]) assert.ok(!("repos" in b), b.name);
-  assert.deepEqual(impl.envVars, { GH_TOKEN: "agent-tok", GH_TOKEN_KIT: "kit-tok" });
+  assert.equal(impl.envVars.GH_APP_ID_DEV, "99");
+  assert.equal(impl.envVars.GH_APP_KEY_DEV, "pem");
+  assert.equal(impl.envVars.GH_TOKEN_KIT, "kit-tok");
+  assert.equal(impl.envVars.GH_TOKEN, undefined);
+  assert.ok(impl.envVars.LAUNCHED_AT);
   assert.deepEqual(explore.envVars, { GH_TOKEN: "explorer-tok", GH_TOKEN_KIT: "kit-tok" });
   assert.match(r.text, /implement: launched builder \(implement\) for acme\/app#2 .*agent bc-1 https:\/\/cursor.com\/agents\/bc-1 run run-1/);
   // The log has no token and no issue text.

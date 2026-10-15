@@ -66,7 +66,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 - Implement gets `GH_APP_ID_DEV`, `GH_APP_KEY_DEV` and `GH_TOKEN_KIT`, and no `GH_TOKEN` (⬜). It mints its own tokens ("GitHub" below; [L2-loop-untrusted-text](L2-loop-untrusted-text.md#3-design-requirements) A6). Explore keeps `GH_TOKEN` and `GH_TOKEN_KIT`.
 - **The subagent `deep-verify`.** Its definition gives the same model and effort as the implement run, written out, not `"inherit"`.
   - The subagent runs the `model` of each `task` call, not the model of its definition. A call with `inherit`, or no model, ran `grok-4.7-high-fast` at twice the price ([L3-loop-builder B1](L3-loop-builder.md#2-connection-points)).
-  - The description tells the main agent to write the id of the run's model (`grok-4.7-xhigh`) in each call, never `inherit`, `fast` or empty. A live run after that release is still open (⬜).
+  - The description tells the main agent to write the id of the run's model (`grok-4.7-xhigh`) in each call, never `inherit`, `fast` or empty. A live run wrote `grok-4.7-xhigh` on the `task` call. The stream shows no `inherit` and no `grok-4.7-high-fast`.
 
 **The limits:**
 
@@ -174,6 +174,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 - The worst case for one heavy spec is 3 runs: the first run, which writes the short comment, and 2 tries that leave no mark. Then the workflow fails.
 - The spend limit of the Cursor account is the only hard cap.
 - Measured: two heavy specs of one L3 line each, with the solo form: $8.42 in 27.5 minutes (one subagent call; the subagent $3.57, in fast mode), and $5.72 in 30.9 minutes (two calls: the review and a second look; the subagents $1.90).
+- Measured: the third heavy spec. The `task` call set `model` to `grok-4.7-xhigh`. The solo review returned after the 15-minute budget, so the second look did not start.
 - On another project, an implement with no spec change took $16.26 in 18.5 minutes (measured).
 - Not measured: the panel form, the run with no subagent and the worst case.
 
@@ -285,6 +286,7 @@ The table gives each point and its level. The list under the table gives, for ea
   - Both heavy specs used the solo form. The deep-verify of one started at minute 10.8 of the run and took 10.7 minutes. That of the other started at minute 7.8 and took 16.6 minutes, with its second look.
   - The first explore batch at `xhigh` (2 issues) took 5.0 minutes.
 - **Measured:** one heavy spec in CI passed the hour. Its draft PR came at minute 14. Its deep-verify took 37.2 minutes. At minute 64.4, `gh api` got 401; at minute 65.5, `git push` got 401. The record of the later minute stayed on the machine.
+- **Measured:** one implement. The mint printed ok before any push. The time from the mint to the last push was under 25 minutes.
 - **Not measured:** a batch of 20 issues at `xhigh`, the panel form, and the run with no subagent (none occurred).
 - The token expires after one hour (GitHub docs, "Generating an installation access token for a GitHub App").
 - Cursor documents no limit on the length of a run. `GET` of a run gives its wall-clock duration (Cursor docs, Cloud Agents API).
@@ -322,9 +324,13 @@ The table gives each point and its level. The list under the table gives, for ea
 - **Docs:** an installation token expires after one hour and narrows only by repositories and permissions (GitHub docs, "Generating an installation access token for a GitHub App"). `gh` uses `GH_TOKEN` before its stored login (`gh help environment`). `gh auth setup-git` makes git use the login of `gh`.
 - `gh auth login --with-token` is documented for a classic token, and the login reads the user with GraphQL, so an installation token may be refused.
 - With no credential store, `gh` writes the token in its own config, outside the clones.
-- **Measured:** the agents of the loops have `gh` (`gh api` ran and got 401).
-- **Not verified:** the mint, `gh auth login --with-token` with an installation token, a push through `gh auth setup-git`, a second login that replaces the token, and no `GITHUB_TOKEN` or other helper that wins.
+- **Measured,** in part: one cloud agent logged `gh` in as `<your GitHub App>[bot]` and pushed. The remote URL had no token. The credential helper was `gh auth git-credential`.
+  - `DELETE /installation/token` with a token the agent had just minted returned 204. The next push had nothing new to send, so it did not show a 401.
+  - A later launch read the token back from `gh`'s hosts file. The revoke returned 401. The push after that exited 0.
+  - Another launch held the token in memory. The revoke returned 204. A new file was committed after that, and `git push` exited 0. The output had no 401.
+- **Not verified:** a push that gets 401 after the agent revokes the token that `gh` stored; a second mint that replaces that login; no `GITHUB_TOKEN` and no other credential helper that wins over the login.
 - **Experiment,** before the code depends on it: a launch on a test issue, by hand, with the key in its environment.
-  - Pass: push and comment work with the first token; after the token is revoked, a push gets 401; after a second mint, push and comment work.
-  - Also: `gh auth status` names the stored login; the git credential helper is the helper of `gh`; `.git/config` has no token.
-- **If it fails:** the token script writes each new token into the remote URL of the clone, and the agent gives `GH_TOKEN` from the script to each `gh` call.
+  - Pass: the push and the comment pass with the first minted token. The agent revokes that token. `DELETE /installation/token` revokes only the token that authenticates the call (GitHub docs, "Revoke an installation access token"). A push gets 401. After a second mint, the push and the comment pass. The Mac watches. The owner cannot revoke the run's token from the Mac.
+  - Also: `gh auth status` names the stored login as the source. The git credential helper is the helper of `gh`. `.git/config` has no token.
+- **If it fails:** the token script writes the token only in `gh`'s own configuration, outside the clones. It does not put the token in the remote URL. It does not set `GH_TOKEN`. The clone URL stays without a token (§2).
+  - Why: a token in the remote URL, or `GH_TOKEN` for implement, contradicts those two rules.

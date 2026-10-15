@@ -40,8 +40,8 @@ builder loop 是一个 issue 的一生，把 issue 变成 PR，有两种模式�
 - prompt 还会说项目仓库和 aboveloop 的 clone 在哪；本 skill 的文件和脚本在 aboveloop 那份 clone 里。下面说「本 skill 目录」，就是这份 `SKILL.md` 所在的目录。
 - **项目配置** `<项目根>/.agents/builder.md`：分 Explore 和 Implement 两部分，写这个项目的 issue 分哪几类、每类怎么查、怎么做、哪几类可以自动开工（Auto-ready）、哪几类走轻的 spec（Light spec）、测试命令、证据。aboveloop 不替项目定这些。
 - **要的能力**，只有两样：
-  - `gh api repos/<owner>/<repo>/…`（REST）：读 issue、PR、评论、分支，加删 issue 的 label，关 issue，开 draft PR、改 PR 正文，写评论。token 在环境变量 `GH_TOKEN` 里；交互会话里也可以是 `gh` 本机登录。
-  - `git push`（只有 implement 用）：把 issue 的分支推到项目那份 clone 的 origin。clone 时 remote 里已经带着 `GH_TOKEN`，不用再登录。
+  - `gh api repos/<owner>/<repo>/…`（REST）：读 issue、PR、评论、分支，加删 issue 的 label，关 issue，开 draft PR、改 PR 正文，写评论。explore 的 token 在环境变量 `GH_TOKEN` 里。CI 里 implement 的 token 是 `gh` 的登录，由 `scripts/token.ts` 写入；交互会话里也可以是 `gh` 本机登录。
+  - `git push`（只有 implement 用）：把 issue 的分支推到项目那份 clone 的 origin。explore 的 clone，remote 里已经带着 `GH_TOKEN`。implement 的 clone 地址没有 token，推送走 `gh` 的登录。
 - **对 GitHub 只用这两样，只有一个例外。** 不用 `gh pr create`、`gh issue …`、`gh pr list --json`。GraphQL 只用一次：implement 收尾时，用 `markPullRequestReadyForReview` 把自己的 draft PR 标成 ready（implement 第 7 步），因为 REST 改不了 draft。别的都不用 GraphQL。仓库范围的 REST 只要 `GH_TOKEN` 就够：workflow 给的是 loop 的 GitHub App 的一小时 token，只管这个仓库：explore 的 Contents 只读、Issues 读写；implement 的 Contents、Issues、Pull requests 读写，没有 `workflows`，所以推不了 workflow 文件。另有 `GH_TOKEN_KIT`，只读 aboveloop，只用来 clone 本 skill。在每台机器上都一样跑。
 - 哪样没有就停，说缺哪一样。不要绕：不换别的账号，不改 remote。`GH_TOKEN` 的值不打印、不写进任何文件。
 

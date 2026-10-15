@@ -61,10 +61,11 @@ CI：plan 写好，照 [implement.md](implement.md) 第 5 步第 5–6 条 commi
 
 - **会话：** deep-verify 是每次 spec review 前面一个固定的 agent 节点，在后台跑，不先问 owner。什么时候开始、跑完怎么修，照 6.2。CI 没有 owner，照下面跑。
 
-- **预算：** 每一次 deep-verify，两种模式都一样，从开始起 30 分钟，照 deep-verify-knowledge.md 第 0 步（预算）做。这里不另写一份。
+- **预算：** 每一次 deep-verify，两种模式都一样，从开始起 15 分钟，照 deep-verify-knowledge.md 第 0 步（预算）做。这里不另写一份。
 - **形式：** 多人或单人，哪一种照 deep-verify-knowledge.md 的「两种形式」。这里不另写一份。
 - **会话：** 多人是每个维度一个子 agent（C 只开一个）；单人是一个子 agent 查四个维度。没有开子 agent 的工具，照 deep-verify-knowledge.md 第 3 节一个维度一个维度地查，记录里写明。
 - **CI：** 每个角色是本轮自定义 subagent `deep-verify` 的一次新调用。一次调用从不接着以前的调用（不 resume）。启动本轮时 workflow 定义了这个 subagent，模型和本轮一样。每次 `task` 调用都把 `model` 写成这个 subagent 的说明里给的模型 id（本轮的模型和 effort），从不写 `inherit`、`fast`，也不空着：跑的是调用里写的模型，不是定义里的。CI 里 deep-verify 怎么做（哪种形式、每种形式的调用、范围、记录、没有 subagent 时），照 deep-verify-knowledge.md 的「CI 里的 deep-verify」一节，这里不另写一份。
+- **CI，每个阶段之后 push**：审查、反驳、修补、复查，每个阶段做完就 commit、push，这一阶段的报告写进 plan 的记录。不在并行的审查中间 push。规矩的正文在 [L3-loop-builder §1.2](../../../knowledge/spec/L3-loop-builder.md#12-implement)。
 - **CI，开始 deep-verify 之前：**
   1. 把 spec 和 plan 的草稿 commit、push，开 draft PR（implement.md 第 5 步第 5–6 条）。
   2. 只有第一次 push 草稿的那一轮，在 issue 下写一条短评论（下面的格式）。接着一个 draft 做的轮次，deep-verify 之前不写评论。
@@ -178,7 +179,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 
 里程碑的 plan（没有号的 plan）里的 D、O 没有 issue，也照 6.4、6.5 带；打勾和 owner 的原话照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「里程碑的 plan」写进那份 plan。只有 6.4 第 3 条不一样：会改 spec 的回答不当场改 spec，照那一条变成一个新的 A 节点。
 
-1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」：先一句 owner 要定什么，再讲它挡着什么、一个从 owner 这边讲的具体例子，最后是选项，推荐的放第一个；内部代号只跟在白话后面。只有方向问题是 D（`entry` 的「拍板只问方向」）。
+1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」写。顺序在那一节，这里不另写。只有方向问题是 D（`entry` 的「拍板只问方向」）。
 2. 背景里用白话写：它改的是什么，它挡着什么。plan 那一节的链接和节点的代号，跟在白话后面。
 3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec，加一条更新记录。
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。

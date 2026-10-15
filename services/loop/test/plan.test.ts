@@ -69,7 +69,7 @@ test("stepsFor: a run with no step, or all, does explore + implement; an explici
 
 test("a missing value skips only its step; the launch values are separate, so a dry run reads without them", () => {
   const env = { REPO, GITHUB_TOKEN: "g" };
-  assert.deepEqual(missing("implement", env), { read: [], launch: ["CURSOR_API_KEY", "GH_TOKEN_BUILDER", "GH_TOKEN_KIT"] });
+  assert.deepEqual(missing("implement", env), { read: [], launch: ["CURSOR_API_KEY", "GH_APP_ID_DEV", "GH_APP_KEY_DEV", "GH_TOKEN_KIT"] });
   assert.deepEqual(missing("explore", env), { read: [], launch: ["CURSOR_API_KEY", "GH_TOKEN_EXPLORER", "GH_TOKEN_KIT"] });
   assert.deepEqual(missing("implement", { ...env, GITHUB_TOKEN: " " }).read, ["GITHUB_TOKEN"]);
 });
@@ -109,7 +109,10 @@ test("the action has an input for each value and hands each to run.ts as env, ne
   const app = APP_NAMES.map((n) => n.toLowerCase()) as string[];
   for (const i of inputs) {
     assert.match(yml, new RegExp(`^  ${i}:$`, "m"), `input ${i}`);
-    if (app.includes(i)) continue; // the App's ID and key go to the mint steps, not to run.ts
+    if (app.includes(i)) {
+      assert.match(yml, new RegExp(`^        ${i.toUpperCase()}: \\$\\{\\{ inputs\\.${i} \\}\\}$`, "m"), `env of ${i}`);
+      continue;
+    }
     assert.match(yml, new RegExp(`^        [A-Z_]+: \\$\\{\\{ inputs\\.${i} \\}\\}$`, "m"), `env of ${i}`);
   }
   for (const n of [...VARIABLES, ...SECRETS].filter((n) => !(APP_NAMES as readonly string[]).includes(n)))
@@ -119,7 +122,8 @@ test("the action has an input for each value and hands each to run.ts as env, ne
   assert.equal(yml.match(/skip-token-revoke: true/g)?.length, 3, "the agents' tokens outlive the job");
   assert.ok(yml.includes("GH_TOKEN_KIT: ${{ steps.kit.outputs.token }}"));
   assert.ok(yml.includes("GH_TOKEN_EXPLORER: ${{ steps.explorer.outputs.token }}"));
-  assert.ok(yml.includes("GH_TOKEN_BUILDER: ${{ steps.dev.outputs.token }}"));
+  assert.ok(!yml.includes("GH_TOKEN_BUILDER"), "implement mints its own token");
+  assert.ok(yml.includes("if: ${{ false }}"), "step dev does not mint");
   // The kit token reads only aboveloop; only implement's token writes code.
   assert.ok(yml.slice(yml.indexOf("- id: kitrepo"), yml.indexOf("- id: kit\n")).includes(`kit=${KIT_REPO}`));
   const kit = yml.slice(yml.indexOf("- id: kit\n"), yml.indexOf("- id: explorer"));

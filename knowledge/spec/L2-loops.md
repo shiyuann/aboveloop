@@ -143,7 +143,7 @@ Each row is one arrow between two loops. The page of each loop tells its own par
 
 **Three places, each with one job:** the general rule in `entry`, and the points of each loop in its own page; the dev loop gives only the order.
 
-- **How to ask** is in `entry` (「拍板只问方向」, 「怎么问 owner」), in one copy. These rules keep the owner's attention, the most expensive resource, for the decisions that only the owner can make (P1).
+- **How to ask** is in `entry` (「拍板只问方向」, 「怎么问 owner」), in one copy. The form is there: context, the question, an example, the options, and why the first option. The reply names the loop and the place in it, as text in the reply. These rules keep the owner's attention, the most expensive resource, for the decisions that only the owner can make (P1).
 - **Where the owner acts** is in the page of each loop: L2-loop-builder ([§1](L2-loop-builder.md#1-the-life-of-an-issue-), [§2.1](L2-loop-builder.md#21-where-issues-come-from), [§3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder), [§7](L2-loop-builder.md#7-the-owners-part)), [L2-loop-dev §5](L2-loop-dev.md#5-when-the-owner-acts), [L2-release §5](L2-release.md#5-the-owners-part) and §2.2 of this page. The table below lists all of them.
 - **Which point comes first** is in the dev loop: the rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The dev loop holds no rule of how to ask.
 - Why: a session that does not go through `dev` (the owner says 「继续 #N」), a design discussion, and CI that asks in an issue comment must obey the same rules. Every session reads `entry`. So the rules are there, in one copy, not in one copy for each loop (P3).

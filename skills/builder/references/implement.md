@@ -19,6 +19,8 @@ implement 这一步（builder loop 的第三步）的唯一一份：一个 issue
 node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/recheck.ts --repo <owner/repo> --issue <N> --session
 ```
 
+**CI：token。** 开工和每次 push 之前先跑 `scripts/token.ts`（recheck 也会先跑它）。它打印 `stopped` 或 `failed`：在 draft PR 上写一句，结束。GitHub 回 401：再跑一次 `token.ts`，再试一次原来的调用。还是 401，才按第 4 步停。deep-verify 每个阶段之前也先跑它。
+
 - `<N>`：接着做。后面两行：`branch:` 分支名；`draft: #<M>`（这个 issue 自己的 draft，接着它；空的就新开分支）或 `pr: #<M>`（这个 issue 自己的 ready PR，在它的分支上接着改）。
 - `closed`：issue 已经关了。后面的 `branch:` 是下一个空的 `issues/<N>-<k>`（k 从 2 起），给一个 `Refs #<N>` 的 PR：发版之后的节点（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。只有 `closed` 一行：这个号是 PR，不是 issue，停下告诉 owner。
 - `labelled`：issue 带着 `ready-for-auto-builder`，CI 在做，label 就是锁。停下告诉 owner。owner 要在会话里做，先去掉 label（`gh api -X DELETE "repos/<owner>/<repo>/issues/<N>/labels/ready-for-auto-builder"`），再跑一遍。
@@ -110,7 +112,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/select.
 
 - 每次 push 之前再跑第 1 步的脚本：打印 `unlabelled`（owner 拿走了这个 issue）或 `closed`，结束，什么都不写。`limit` 不算：已经开了的活接着做。
 - 重的 spec 的 deep-verify，写草稿的这一轮开不了 subagent：在 plan 里记下，push，label 留着，结束（[spec.md](spec.md) 3.3）。
-- push 被 GitHub 拒了（第 5 步第 5 条之外，比如 token 过期）：label 留着，结束。
+- push 被 GitHub 拒了（第 5 步第 5 条之外，比如 token 过期）：先跑一次 `scripts/token.ts`，再试一次。还是被拒，label 留着，结束。
 
 1. **要 owner 拍板或做一步。** 一个 D：方向问题（`entry` 的「拍板只问方向」），spec 那一步碰到的，或 plan 里开着的 D、O 挡住了下一个节点。花钱、钥匙和账号、撤不回的动作，一律算。也包括：explore 问过的问题没人回答；测试红了又修不好。
 2. **要改 L1，或改 L2 的内容**（[L2-loop-builder §6](../../../knowledge/spec/L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)）。L2 只能改字：措辞、错字、链接，不能改 owner 的原话；要在那一页加更新记录的，就是改内容。规矩也算 L2：`AGENTS.md`、`.agents/*.md`、`skills/` 里的规矩。项目还没分层，就不改 `knowledge/` 的任何页，只写 issue 的 plan。
@@ -205,7 +207,7 @@ Why: <哪一句、要你做什么、为什么不做>
 ### 6. 写代码、跑测试
 
 - 照 `AGENTS.md` 和 `entry` 写代码：做 issue 要的那个量，修 bug 就加一条先红后绿的用例。
-- 一个节点做完，在 plan 里打勾，commit，push 到这个分支。这一轮半路死了，下一轮从 draft PR 接着做。CI 每次 push 之前，先再跑一遍第 1 步的脚本：打印 `unlabelled` 或 `closed` 就结束，不 push，不写评论（第 4 步）；`limit` 不算。会话每次 push 之前，先再跑一遍会话的脚本（第 0 步）：打印了 `labelled`，就是 owner 把 issue 交给了 CI，不再 push，告诉 owner。
+- 一个节点做完，在 plan 里打勾，commit，push 到这个分支。CI：deep-verify 的每个阶段做完也 push（审查、反驳、修补、复查），这一阶段的报告写进 plan 的记录。不在并行的审查中间 push。规矩的正文在 [L3-loop-builder §1.2](../../../knowledge/spec/L3-loop-builder.md#12-implement)。这一轮半路死了，下一轮从 draft PR 接着做。CI 每次 push 之前，先再跑一遍第 1 步的脚本：打印 `unlabelled` 或 `closed` 就结束，不 push，不写评论（第 4 步）；`limit` 不算。会话每次 push 之前，先再跑一遍会话的脚本（第 0 步）：打印了 `labelled`，就是 owner 把 issue 交给了 CI，不再 push，告诉 owner。
 - 节点并发：CI 一个 agent，节点一个接一个。会话可以给互不等、不改同一批文件的节点各开一个子 agent，放在同一条消息里并发做。子 agent 共用这个 issue 的 worktree，不 commit；主 agent 跑测试、在 plan 里打勾、commit、push。
 - 改 spec：CI 照第 5 步第 4 条；发现要改 L1 或 L2 的内容（包括规矩），按第 4 步停（第 2 种）。会话里，spec 改动都在分支上改，哪一层都可以；改 `skills/` 里的规矩不停。L1 只有 owner 改：要改 L1，先带 owner 拍板（[spec.md](spec.md) 最后一节的「带 owner 拍板」），用 owner 的原话。
 - 改动要碰 workflow 文件（`.github/workflows/`）：CI 按第 4 步停（第 1 种），因为 token 没有 `workflows` 权限，push 不上去。会话照常改。
@@ -223,7 +225,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
   2. 在原来那一条下面，写清卡在哪一步。
   3. 停下被它挡住的那一部分。同一个节点里不等它的部分，照样做完。节点拆到依赖一样：一部分等 owner、一部分不等，就拆成两个节点，不等的那个先做完。
   4. 新的 D、O：会话照 [spec.md](spec.md) 第 6 节带 owner 过；CI 按第 4 步停（第 1 种）。
-- **做完一个节点，就在 plan 里打勾、记证据、提交。** 状态在 plan 里，不只在回复里。条目怎么记，见 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」。
+- **做完一个节点，就在 plan 里打勾、记证据、提交，并 push。** CI 的 deep-verify 同一步：每个阶段做完就 push，报告在 plan 的记录里。不在并行的审查中间 push（[L3-loop-builder §1.2](../../../knowledge/spec/L3-loop-builder.md#12-implement)）。状态在 plan 里，不只在回复里。条目怎么记，见 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」。
 
 ### 6.2 什么挡路，什么不挡
 

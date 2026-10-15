@@ -19,10 +19,8 @@ export const VARIABLES = ["GH_APP_ID_DEV"] as const;
 export const SECRETS = ["CURSOR_API_KEY", "GH_APP_KEY_DEV"] as const;
 
 /**
- * The repo variable and secret of the GitHub App of the loop: the action mints the run's
- * GitHub tokens from them (GH_TOKEN_KIT, the read token of aboveloop for every agent;
- * GH_TOKEN_EXPLORER and GH_TOKEN_BUILDER for the two steps of builder), so they
- * go to the mint steps, not to run.ts.
+ * The repo variable and secret of the GitHub App of the loop.
+ * Explore still gets a minted token. Implement gets the key itself and mints.
  */
 export const APP_NAMES = ["GH_APP_ID_DEV", "GH_APP_KEY_DEV"] as const;
 
@@ -44,7 +42,7 @@ export function stepsFor(input: { step?: string }): StepName[] {
  */
 export const NEEDS: Record<StepName, { read: string[]; launch: string[] }> = {
   explore: { read: ["REPO", "GITHUB_TOKEN"], launch: ["CURSOR_API_KEY", "GH_TOKEN_EXPLORER", "GH_TOKEN_KIT"] },
-  implement: { read: ["REPO", "GITHUB_TOKEN"], launch: ["CURSOR_API_KEY", "GH_TOKEN_BUILDER", "GH_TOKEN_KIT"] },
+  implement: { read: ["REPO", "GITHUB_TOKEN"], launch: ["CURSOR_API_KEY", "GH_APP_ID_DEV", "GH_APP_KEY_DEV", "GH_TOKEN_KIT"] },
 };
 
 export function missing(step: StepName, env: Record<string, string | undefined>) {

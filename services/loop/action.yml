@@ -90,7 +90,7 @@ runs:
     # removes the label ready-for-auto-builder when it stops. The App has no workflows permission, so
     # GitHub refuses a push that changes a workflow file.
     - id: dev
-      if: inputs.gh_app_id_dev != '' && inputs.gh_app_key_dev != ''
+      if: ${{ false }} # implement mints its own token. This block stays as the permission list the token script matches.
       uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
       with:
         app-id: ${{ inputs.gh_app_id_dev }}
@@ -109,9 +109,10 @@ runs:
         KIT_SHA: ${{ inputs.kit_sha }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         CURSOR_API_KEY: ${{ inputs.cursor_api_key }}
+        GH_APP_ID_DEV: ${{ inputs.gh_app_id_dev }}
+        GH_APP_KEY_DEV: ${{ inputs.gh_app_key_dev }}
         GH_TOKEN_KIT: ${{ steps.kit.outputs.token }}
         GH_TOKEN_EXPLORER: ${{ steps.explorer.outputs.token }}
-        GH_TOKEN_BUILDER: ${{ steps.dev.outputs.token }}
       run: |
         args=()
         if [ -n "$STEP" ]; then args+=(--step "$STEP"); fi
