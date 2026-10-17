@@ -1,7 +1,6 @@
 /**
  * Which issue to take next. Prints one of:
  *
- *   limit            3 PRs wait for the owner (next line: their numbers)
  *   none             no open issue with the label ready-for-auto-builder to take
  *   <N>              take issue N (next lines: branch, draft)
  *
@@ -51,7 +50,6 @@ if (a.issues) {
 const c = choose({ issues, prs, branches });
 if ("stop" in c) {
   console.log(c.stop);
-  if (c.open) console.log(`open: ${c.open.map((n) => `#${n}`).join(" ")}`);
 } else {
   console.log(c.issue);
   console.log(`branch: ${c.branch}`);

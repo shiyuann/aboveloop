@@ -1,6 +1,6 @@
 # Components
 
-> Every part that the loops in CI need, and where it is: the global parts, set up one time (§1), and the parts of each app, set up by `setup-app` (§2). It is also the home of the owner's part of the setup. All parts are built.
+> Every part that the loops in CI need, and where it is: the global parts, set up one time (§1), and the parts of each app, set up by `setup-app` (§2). It also names the owner's part of the setup; the steps are in `setup-app`. All parts are built.
 
 Marks: ✅ built · 🔶 partly built · ⬜ not built.
 
@@ -72,16 +72,17 @@ flowchart TB
 **Local**
 
 - **The keys, stored one time.** Never in a repo or a chat. They are copied from here into the repo secrets.
-  - Where: `Local › ~/.config/aboveloop/loop.env` (never in the aboveloop folder, which `claude plugin update` copies): `CURSOR_API_KEY` (the owner edits the file, or runs `make loop-key NAME=CURSOR_API_KEY`), and `GH_APP_ID_DEV` (the owner edits the file, or runs `make loop-key NAME=GH_APP_ID_DEV`); and the App's key file beside it. The App's key stays the pem file.
+  - Where: `Local › ~/.config/aboveloop/loop.env` (never in the aboveloop folder, which `claude plugin update` copies): `CURSOR_API_KEY` and `GH_APP_ID_DEV` (written by `make loop-key`); and the App's key file beside it. The App's key stays the pem file.
 
 **Skills** (all in `GitHub › aboveloop › skills/`): `builder` runs as cloud agents; `setup-app` and the session entry of `dev` (`references/session.md`) run in a session of the owner.
 
-**The owner's part** (one time). The agent writes the code, the workflows and the configuration. The owner does only what needs the accounts of the owner:
+**The owner's part** (one time). The agent writes the code, the workflows and the configuration. The owner sets up only the parts that need the accounts of the owner:
 
 - The Cursor API key and a spend limit (**Cursor** above).
 - The GitHub App of the loop and its key file (**GitHub** above).
 - The Cursor GitHub App, for the owner's own cloud agents, not the loops (**GitHub** above).
-- The keys go into `~/.config/aboveloop/` (**Local** above).
+- The keys in `~/.config/aboveloop/` (**Local** above).
+- The steps, and the steps to change each key: `setup-app`'s [keys.md](../../skills/setup-app/references/keys.md).
 
 ## 2. Each app: `setup-app`
 
@@ -89,13 +90,13 @@ flowchart TB
 
 - **Workflow `loop.yml`.** The only trigger of the loops in CI in the app, a copy of the reference workflow, byte for byte. It reads the latest release of aboveloop from the variable `RELEASE`, and runs the action from a checkout at it.
   - Where: `GitHub › <app repo> › .github/workflows/loop.yml`
-- **Labels:** `explored` and `ready-for-auto-builder` ([L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder)), and the family `Kind:` ([L2-loop-builder §4](L2-loop-builder.md#4-labels-that-describe-an-issue)). `setup-app` makes the labels of `references/labels.tsv`, and one `Kind:` label for each kind of the project.
+- **Labels:** `explored` and `ready-for-auto-builder` ([L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder)), the family `Kind:` ([L2-loop-builder §4](L2-loop-builder.md#4-labels-that-describe-an-issue)), and the labels of a PR `Mode:`, `Agent:` and `auto-builder` ([L2-loop-builder §4.1](L2-loop-builder.md#41-labels-that-describe-a-pr)). `setup-app` makes the labels of `references/labels.tsv`, and one `Kind:` label for each kind of the project.
   - Where: `GitHub › <app repo> › Issues › Labels`
 - **Merged branches are deleted** ([L2-loop-builder §5](L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)).
   - Where: `GitHub › <app repo> › Settings › General › Pull Requests › Automatically delete head branches`
 - **Repo secrets**, copied from `Local › loop.env` with `make loop-secrets REPO=<app repo>`.
   - Where: `GitHub › <app repo> › Settings › Secrets`: `CURSOR_API_KEY`, `GH_APP_KEY_DEV`; `Settings › Variables`: `GH_APP_ID_DEV`
-- **Configuration of `builder`**: the kinds of issue, the light kinds of the spec step (the section "Light spec" in the part Explore, or "None"; [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes)), the Auto-ready rules, the tests, the evidence.
+- **Configuration of `builder`**: the kinds of issue, the light kinds of the spec step (the section "Light spec" in the part Explore, or "None"; `builder`'s [spec.md](../../skills/builder/references/spec.md) §1), the Auto-ready rules, the tests, the evidence.
   - Where: `GitHub › <app repo> › .agents/builder.md`
 - **Configuration of `dev`** (only in an app that changes the rank of the dev loop): what is urgent, the order of the groups, the size labels ([L3-loop-dev §3](L3-loop-dev.md#3-the-project-configuration-agentsdevmd)). With no file, the default rank applies. The session entry of `dev` reads it, and `check.sh` examines it.
   - Where: `GitHub › <app repo> › .agents/dev.md`
@@ -103,8 +104,8 @@ flowchart TB
   - Where: `GitHub › account › GitHub Apps › <your GitHub App> › Install App`: `<app repo>` in its repositories (`check.sh` asks GitHub as the App)
   - Where: `GitHub › account › Applications › Cursor`: `<app repo>` in the repository access, for the owner's own Cursor agents, not the loops (`check.sh` cannot read it)
 
-**The owner's part** (each app):
+**The owner's part** (each app). The owner sets up only the parts that need the accounts of the owner:
 
-- Install the GitHub App of the loop on the repo of the app (**Access** above). The loops do not need the Cursor GitHub App.
-- `setup-app` gives the exact clicks.
+- The install of the GitHub App of the loop on the repo of the app (**Access** above). The loops do not need the Cursor GitHub App.
+- The steps and the exact clicks: `setup-app`'s [SKILL.md](../../skills/setup-app/SKILL.md#要用户动手的).
 - The open steps of an app are in the plan of that app.

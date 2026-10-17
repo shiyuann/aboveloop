@@ -145,10 +145,7 @@ export async function runLoop(o: Options): Promise<boolean> {
     const issues = await gh.readyIssues(token, repo);
     log(`implement: ${issues.filter((i) => !i.pull_request).length} open issues with the label ${READY_LABEL}`);
     const choice = choose({ issues, prs: await gh.openPrs(token, repo) });
-    if ("stop" in choice) {
-      const open = choice.open ? ` (open: ${choice.open.map((n) => `#${n}`).join(" ")})` : "";
-      return log(`implement: no launch (${choice.stop})${open}`);
-    }
+    if ("stop" in choice) return log(`implement: no launch (${choice.stop})`);
     log(`implement: chose #${choice.issue}${choice.draft ? ` (continues its draft #${choice.draft})` : ""}`);
     const since = issues.find((i) => i.number === choice.issue)?.updated_at ?? null;
     await start("implement", `${repo}#${choice.issue}`, { repo, step: "implement", issue: choice.issue }, { issue: choice.issue, since });

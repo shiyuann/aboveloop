@@ -91,7 +91,7 @@ ready 的 PR，先有一次 review，给三个结论之一：merge、modify、re
    1. **急的（`urgent`）**：失败的 `loop.yml` 运行（项目挪不动）；带急的 label 的 issue（默认没有急的 label，项目在 `### Urgent` 里列），它的 PR，和它别的在做的活。
    2. **在做的（`started`）**：ready 的 PR；开着的 D、O 节点（发版的 O 也算）；`builder` 的问题；停了的 implement；implement 写的 plan；下一个 agent 节点。
    3. **issue，从小到大（`issues`）**：等 owner 选的 issue（`to_decide`），再是 explore 还没做的（`unexplored`）。
-3. 一组里按种类排：先是不是 PR 也不是 issue 的事实（失败的运行），再是 PR，再是别的在做的活（挡住的节点多的先），最后是 issue，从小到大。
+3. 一组里按种类排：先是不是 PR 也不是 issue 的事实（失败的运行），再是 PR，再是别的在做的活（挡住的节点多的先；没有 plan 节点的一项挡住 0 个节点），最后是 issue，从小到大。
 4. issue 的大小：项目配了 size label，先看 issue 带的第一个（列表里越靠前越小）；没带的排在带了的后面，再看最新的 Explore 评论（`<!-- builder-resolve:explore -->`）的 `Spec depth` 和 `Spec levels` 两行：轻的最小；然后是重的，按改到的最高一层：没有或只有 L3，L2 的内容，L1。没有 Explore 评论、或读不出这两行的，没有大小，排最后。
 5. 一样的，开得早的先：issue、PR 开的时间（plan 的节点看它的 issue），运行的时间。
 6. 不排：打了 ✅ 的，`on_hold`（只报个数），`ready`（CI 在做）。

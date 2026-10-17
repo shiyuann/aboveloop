@@ -2,7 +2,7 @@
 
 > owner 叫 deep-verify、叫深查 spec 和 plan 时读。这些时候也跑它：重的 spec 那一步写完草稿以后（`builder` 的 [spec.md](../../builder/references/spec.md) 3.3）：CI 里照常跑；会话里，它是每次 spec review 前面一个固定的节点，在后台跑，不先问 owner（spec.md 6.2）。CI 里照最后一节「CI 里的 deep-verify」做。词表在 [entry 的 SKILL.md](../../entry/SKILL.md)。
 
-规矩是先改 spec（`builder` 的 [issue-in-session.md](../../builder/references/issue-in-session.md) 第 2 节）。改多了，会出三种毛病：
+先改 spec，再写代码（`builder` 的 [issue-in-session.md](../../builder/references/issue-in-session.md) 第 2 节）。改一条规矩时，spec 那一步把决定和为什么写进 L2，implement 那一步再把步骤写进 skill（aboveloop 的 [L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。spec 改多了，会出三种毛病：
 
 - plan 跟不上 spec：照 plan 全做完，也到不了 spec 写的样子。
 - spec 在现在的代码上做不出来。

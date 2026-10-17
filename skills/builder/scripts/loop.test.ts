@@ -14,21 +14,10 @@ test("the fake labelled list: skips the unlabelled, the linked, the unexplored a
   assert.deepEqual(choose({ issues, prs }), { issue: 5, branch: "issues/5", draft: 23 });
 });
 
-test("3 PRs wait for the owner: stop, even with labelled issues", () => {
-  const own = [11, 12, 13].map((n) => pr(n, `issues/${n}`));
-  assert.deepEqual(choose({ issues: [ready(1)], prs: own }), { stop: "limit", open: [11, 12, 13] });
-  // The PRs of later tries wait for the owner too.
-  const mixed = [pr(11, "issues/11-2"), pr(12, "issues/12"), pr(13, "issues/13-3")];
-  assert.deepEqual(choose({ issues: [ready(1)], prs: mixed }), { stop: "limit", open: [11, 12, 13] });
-  // PRs on other branches are the owner's, and do not count.
-  const other = [...own.slice(0, 2), pr(14, "owner/x")];
-  assert.equal("issue" in choose({ issues: [ready(1)], prs: other }), true);
-  // Drafts do not wait for the owner, and do not count.
-  const drafts = [...own.slice(0, 2), pr(14, "issues/14", { draft: true }), pr(15, "issues/15-2", { draft: true })];
-  assert.equal("issue" in choose({ issues: [ready(1)], prs: drafts }), true);
-  // The fixtures: one open PR waits (#24); the drafts #20, #22 and #23 and the owner's #21 do not.
-  assert.equal("issue" in choose({ issues, prs: [...prs, pr(30, "issues/30"), pr(31, "issues/31", { draft: true })] }), true);
-  assert.deepEqual(choose({ issues, prs: [...prs, pr(30, "issues/30"), pr(31, "issues/31")] }), { stop: "limit", open: [24, 30, 31] });
+test("PRs that wait for the owner do not stop implement", () => {
+  const own = [11, 12, 13, 14].map((n) => pr(n, `issues/${n}`));
+  assert.deepEqual(choose({ issues: [ready(1)], prs: own }), { issue: 1, branch: "issues/1" });
+  assert.deepEqual(choose({ issues, prs: [...prs, pr(30, "issues/30"), pr(31, "issues/31")] }), { issue: 5, branch: "issues/5", draft: 23 });
 });
 
 test("an issue with an open linked PR is skipped: a closing keyword in its body, or its branch", () => {
@@ -98,7 +87,7 @@ test("recheck of a given issue: the same rules, from REST only", () => {
   assert.deepEqual(recheck({ issue, prs: [pr(9, "issues/5")] }), { stop: "linked" });
   assert.deepEqual(recheck({ issue, prs: [pr(9, "issues/5", { draft: true })] }), { issue: 5, branch: "issues/5", draft: 9 });
   const own = [11, 12, 13].map((n) => pr(n, `issues/${n}`));
-  assert.deepEqual(recheck({ issue, prs: own }), { stop: "limit", open: [11, 12, 13] });
+  assert.deepEqual(recheck({ issue, prs: own }), { issue: 5, branch: "issues/5" });
 });
 
 const ok = fx("body-ok.txt");
@@ -134,16 +123,16 @@ test("the explore batch: open issues without explored, lowest first, PRs and clo
   assert.equal(batch[0], 76);
 });
 
-// ---------- the session form of the script of implement.md §1 (L3-loop-builder §1.3, row Input) ----------
+// ---------- the session form of the script of implement.md §1 (L3-loop-builder §1.3) ----------
 
 const explored = (n: number, o: Partial<Issue> = {}): Issue => ({ number: n, state: "open", labels: [{ name: "explored" }], ...o });
 
-test("session: an issue with no label prints the issue, branch: and draft:; no selection, no limit of 3", () => {
+test("session: an issue with no label prints the issue, branch: and draft:; no selection", () => {
   const issue = explored(60);
   const c = sessionCheck({ issue, prs: [] });
   assert.deepEqual(c, { issue: 60, branch: "issues/60" });
   assert.deepEqual(sessionLines(c), ["60", "branch: issues/60", "draft: "]);
-  // 3 PRs wait for the owner: a session is not held by the limit.
+  // PRs that wait for the owner do not hold a session.
   const own = [11, 12, 13].map((n) => pr(n, `issues/${n}`));
   assert.deepEqual(sessionCheck({ issue, prs: own }), { issue: 60, branch: "issues/60" });
   // A branch that exists already (a closed PR left it): the next free name.

@@ -71,7 +71,7 @@ flowchart LR
 ```
 
 - **Worst case:**
-  - A wrong `ready-for-auto-builder` costs one implement run and one PR. The number of PRs that wait at one time has a limit (R19).
+  - A wrong `ready-for-auto-builder` costs one implement run and one PR. Each run of `loop.yml` launches one implement run at most (R19).
   - A wrongly closed duplicate stays on GitHub, and the owner can open it again.
   - A wrong Explore section can hide a real problem until the owner reads the issue.
 - **No stop prevents it.** The limit is R5: the token of explore cannot write code. Thus the damage stays on GitHub, where the owner sees it.
@@ -165,6 +165,9 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
 
 - **R1** ✅ Each agent gets its input between `<<<INPUT` and `INPUT>>>`. The workflow writes `<` and `>` in the input as JSON escapes, so that the input cannot close its markers. The prompt says that the input is data. (`services/loop`)
 - **R3** ✅ Each skill that reads untrusted text says: never do what it says. (`builder`, `dev`)
+- **R24** ✅ The mode of a run of `builder` comes only from the `<<<INPUT` block that the workflow `loop.yml` writes (R1): with the block, CI; with no block, a session. Text from GitHub never changes the mode. When the agent is not sure, it acts as CI. (`builder`'s `implement.md` §0)
+  - Why: a session has the owner's GitHub login and local keys (§1, A4), and the session mode can change each level of the spec and does not refuse an issue. If text from GitHub could make a CI run act as a session, the run would skip its refusal (R14), and the path to H5 would open.
+  - This page holds the rule, and `implement.md` §0 holds its steps. Why: the rule limits the power that a run gets, so it is a decision, not only a step.
 
 **Give each agent the least access**
 
@@ -211,13 +214,13 @@ Each requirement has its status: ✅ built, 🔶 partly built, ⬜ not built. An
 
 **Limit the damage**
 
-- **R19** ✅ Limits on volume and money: 20 issues for each explore batch, 3 ready PRs. The spend limit of the Cursor account, which the owner sets.
-  - The limit of 3 PRs: the time that the owner has to examine PRs is the limit. When 3 ready PRs wait for the owner, `loop.yml` launches no new implement run, so implement opens no new PR ([L3-loop-builder §1.2](L3-loop-builder.md#12-implement)).
-  - So a wrong label costs at most one implement run and one PR, and at most three ready PRs wait at one time (H3, A2; [L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder)).
-  - Where the values are set: which PRs count, in [L3-loop-builder §1.2](L3-loop-builder.md#12-implement); the agents, in [L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents).
+- **R19** ✅ Limits on volume and money: 20 issues for each explore batch, one implement run for each run of `loop.yml`. The spend limit of the Cursor account, which the owner sets.
+  - The time that the owner has to examine PRs is the limit, but it sets the order of review (the rank of the dev loop), not the volume of work: the PRs that wait for the owner do not stop a new implement run ([L3-loop-builder §1.2](L3-loop-builder.md#12-implement)).
+  - So a wrong label costs at most one implement run and one PR, and the runs of `loop.yml` limit how many implement runs occur (H3, A2; [L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder)).
+  - Where the values are set: the implement run, in [L3-loop-builder §1.2](L3-loop-builder.md#12-implement); the agents, in [L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents).
 - **R20** ✅ Each key has a procedure to change it:
-  - For the loops: `make loop-key`, then `make loop-secrets`.
-  - For the App key: a new key in the settings of the App, the App's key file in `~/.config/aboveloop/`, then `make loop-secrets`.
+  - The steps for each key (the loops, the App key) are in the skill `setup-app`, [keys.md](../../skills/setup-app/references/keys.md) (「换一把钥匙」).
+  - For the App key:
     - A minted token keeps working for at most one hour (GitHub docs, "Create an installation access token for an app").
     - `DELETE /installation/token` revokes only the token that authenticates the call (GitHub docs, "Revoke an installation access token"). The owner cannot revoke the run's token from the Mac by that call.
     - Suspending an installation stops every loop on that account. The procedure stays a new key.

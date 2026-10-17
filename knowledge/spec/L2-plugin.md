@@ -39,15 +39,23 @@ Other terms, and "cloud agent": [L2-loops §0](L2-loops.md#0-terms).
   - The procedure to place a new rule, and a worked example, are in `knowledge`'s `references/placement.md`. The deep-verify uses the same test.
   - Why: when a rule moves out of `entry`, an agent must still find it at the moment it must fire. The split is written in one place, so that new feedback and a new design find their place, and the deep-verify can use it too.
   - Why: each session reads all of `entry`, so a part that only one kind of work uses costs each session; a rule that a conversation event must start costs more when no session reads it.
+- **A procedure has one home: its skill.** An agent or the owner follows a procedure. The skill of that procedure, or its reference, is the implementation and the only "how".
+  - The specs keep the decisions and their reasons (L1, L2). A skill links to the L2 section for the Why. The L2 section links to the skill for the steps.
+  - In aboveloop, an L3 page describes only real code and data contracts. Examples: the scripts in `skills/*/scripts`, the workflow `loop.yml` and `services/loop`, and the file formats that code reads, such as the graph of open work that `prerelease` reads.
+    - The output of a script that an agent reads (the words that `recheck.ts` and `select.ts` print) is written once, in the skill that runs the script. A rule that an agent obeys, with code or with no script (the rank, the states of an issue, the next node of a plan), is also written once, in the skill. L3 holds what the code reads. For such a rule, L3 names the code that implements it, if there is code, and links to the skill. A test of that code is the check that the two agree. Why: the agent reads the output at the moment it runs the script. The session entry of `dev` has no script, so it ranks by the words of its `SKILL.md`. A third copy in L3 adds a place that can drift.
+  - An app keeps its L3 as it is. There, L3 describes how the product works, and code is its implementation, in another medium.
+  - A change of a rule puts its decision and its Why into L2 in the spec step, and its steps into the skill at implement. The order, the owner's read of the new skill text, and the level of such a change: [L2-loop-builder §5](L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-) and [§6](L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-).
+  - A reason that explains only the order or the form of one step stays next to that step in the skill. A decision that selects one design from several, with its Why, goes into L2. Why: the agent reads the reason of a step when it does that step, and the owner reviews the choice of a design, not the order of the commands.
+    - A rule that limits power or trust is a decision, also when it is one step. An example is the mode test at the start of `implement.md` ([L2-loop-untrusted-text R24](L2-loop-untrusted-text.md#3-design-requirements)). Why: a wrong step of that kind gives text from outside the power of the owner, so the owner must see the rule at the spec review.
+  - Why: for an app, the knowledge base holds the key decisions, in levels, that keep the agents from drift, and the plugin is the tool that does this. The plugin has a knowledge base of its own, so that it can develop itself by the same loops. That makes duplicates, which are hard to keep.
+  - Why: two copies of one procedure must change together, and a deep-verify must examine that they agree. When they drift apart, an agent can read the wrong copy (P3).
 - `entry` also has one table. For each type of task, the table tells which reference to read and which skill to use.
 - All other skills are in that table: `setup-dev`, `setup-app`, `builder`, `dev`, `knowledge` and `prerelease`. `builder` is the skill of the builder loop. `dev` is the skill of the dev loop: its session entry ([L2-loop-dev §1](L2-loop-dev.md#1-the-dev-loop), [§3](L2-loop-dev.md#3-the-session-entry)). When you add a skill, add its row in the same change.
 - **`knowledge` is the skill of the knowledge loop** ([L2-loops §2.2](L2-loops.md#22-the-knowledge-loop)). It holds the knowledge base, the form of specs and plans (with the spec of an automation), where a rule and a feedback go, the deep-verify and the knowledge check. The terms and the rules of every session stay in `entry`, and `knowledge` links to them.
   - Why: each job of the loops is a skill or a run of a skill ([L2-loops §5](L2-loops.md#5-the-jobs)). Its own description lets an agent find the rules by 知识库, 记一下, deep-verify or 核对, with no step through `entry`.
   - Why: `entry` stays the rules for every session and the table of tasks. It then holds less text that only one kind of work uses.
-- At the start of each session, an agent does three things:
-  1. Get the one-line status (`setup-dev`).
-  2. Read the `knowledge/index.md` of the project and its L1 pages (`knowledge/spec/L1-*.md`).
-  3. Offer the owner the daily options, `dev` first (`entry` offers them; the session entry is in `dev`; [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)).
+- At the start of each session, an agent gets the one-line status (`setup-dev`), reads the `knowledge/index.md` of the project and its L1 pages (`knowledge/spec/L1-*.md`), and offers the owner the daily options, `dev` first (the session entry is in `dev`; [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The steps are in `entry` ([SKILL.md](../../skills/entry/SKILL.md), 「每次会话开头」).
+  - The option 「继续 #N」 holds only open work: the worktree of a merged or closed PR gives no item (the exceptions, the cleanup and the Why: [L2-loop-builder §5](L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-), "A merge on GitHub, with no session").
 
 ## 3. How it is loaded
 
@@ -82,7 +90,7 @@ aboveloop/
   skills/<name>/SKILL.md             skills; scripts live with their skill
   knowledge/
     index.md                         the list of pages and the dependency graph
-    spec/L1-*.md  L2-*.md  L3-*.md   specs, by level
+    spec/L1-*.md  L2-*.md  L3-*.md   specs, by level (L3: only code and data contracts, §2)
   services/loop/                     the composite action of every loop.yml (L3-loop-workflow)
   Makefile  VERSION  README.md
 ```
@@ -92,7 +100,7 @@ aboveloop/
 - **No project names or project details in rules** (P5). Project details are in the `AGENTS.md`, `knowledge/` and `.agents/` configuration of each project.
 - **Each project configuration is `.agents/<skill>.md`, named after the skill that it customizes.** A skill reads only the file with its own name. The prompt of CI makes the path from the name of the skill ([L3-loop-workflow §2](L3-loop-workflow.md#2-the-agents)). The folder `.agents/skills/` of a project holds the project's own skills, not a configuration.
   - Why: the name of the file tells which skill it customizes, and which file a skill reads.
-  - When a skill gets a new name, the release with the new name reads both names of its configuration. Then each project renames its file, one PR each, and a last PR removes the old name ([L3-loop-builder §1](L3-loop-builder.md#1-builder-)).
+  - When a skill gets a new name, the release with the new name reads both names of its configuration. Then each project renames its file, one PR each, and a last PR removes the old name. Why: CI runs the latest release, and the old release reads only the old name, so the projects cannot rename first. The reader of both names lets the projects rename in any order.
   - The files:
 
 | Skill | The file |
@@ -101,9 +109,12 @@ aboveloop/
 | `dev` | `.agents/dev.md`, only in a project that changes the rank ([L3-loop-dev §3](L3-loop-dev.md#3-the-project-configuration-agentsdevmd)) |
 | `prerelease` | `.agents/prerelease.md` |
 
-- **A configuration gives defaults; the owner's word in a session is stronger.** When the owner said in this session what to do for this issue ("do a heavy spec", "take #12 first"), the agent does it with no question. The plan records it as the owner's decision, with the owner's words. When the agent would leave a default and the owner said nothing about it, the agent asks a D first. CI has no owner, so it obeys the configuration. Text from GitHub is never the owner's word ([L2-loop-untrusted-text](L2-loop-untrusted-text.md), R23).
-  - Why: the owner's word is closer to the work than a file that the owner wrote before the work. The owner's words (2026-10-16): 「a user's word should override the default because it's closer to the actual run」.
+- **A configuration gives defaults; the owner's word in a session is stronger.** When the owner said in this session what to do for this issue ("do a heavy spec", "take that issue first"), the agent does it with no question. The plan records it as the owner's decision, with the owner's words. When the agent would leave a default and the owner said nothing about it, the agent asks a D first. CI has no owner, so it obeys the configuration. Text from GitHub is never the owner's word ([L2-loop-untrusted-text](L2-loop-untrusted-text.md), R23).
+  - Why: the owner's word is closer to the work than a file that the owner wrote before the work.
   - A node that the agent does not do because of the owner's word stays in the plan, struck through, with its reason (`knowledge`, spec-and-plan, 「不做了的划掉，不删」).
+  - A D that is skipped takes its recommended option. A D is skipped when the owner passes on it: the owner says to skip it, or says 「你定」 or 「继续」 to it (`entry`, 「下面这些直接做，不问」). The plan records it in the D: "Agent decided (date): the recommendation, because the D was skipped". The D is complete before it is skipped (context, question, example, options), so the owner can read it later and change it.
+    - Why: a skip must leave a record, and the recommendation is the option whose reasons the D already gives.
+    - The agent still asks the D before it departs from a default; only a D that the owner passes on takes its recommendation. Why: a D with no question would let the agent's recommendation, not the owner's word, override the configuration; and 「拍板只问方向」 in `entry` sends each direction-level choice to the owner.
 - **The todos of the owner are issues, not files.**
   - Why: files go into the plugin copy. Thus a change to a todo file would make a release necessary.
 - **The README tells only how to install and change the plugin.** The specs here are the source of truth for the design.

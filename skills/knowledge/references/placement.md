@@ -18,9 +18,10 @@
 | 对话里的一件事一发生就要用（feedback、设计讨论）、每个会话都要守的 | `entry` 的正文，写短 |
 | 做一种活时用 | 那种活的 skill：`dev`（下一件做什么）、`builder`（issue 的流程）、`knowledge`（怎么写 `knowledge/`、让它一直是真的）、`prerelease`…… |
 | 一个决定，带它的为什么 | spec |
+| 一个流程的步骤（agent 或 owner 照着做的） | 那个流程的 skill 或 reference。spec 只留它的决定和为什么 |
 | 只是一个项目的事 | 那个项目（它的 `AGENTS.md`、`knowledge/`、`.agents/`） |
 
-- **副本只能是一行指针。** 别处要用，写一行链过来，不抄正文。抄的一份，原文一改就错。
+- **副本只能是一行指针。** 别处要用，写一行链过来，不抄正文。抄的一份，原文一改就错。skill 要讲为什么，也只写一行链到 L2 那一节；L2 要讲步骤，链到 skill。
 - **reference 要有人在那时指过来。** 放进 reference 的规矩，要有一份那时已经加载的文字（`entry` 的正文、那种活的 skill 或它的步骤）在那一刻链到它。
 - 为什么：在 aboveloop 的 [L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)。
 

@@ -16,7 +16,7 @@
 | issue 的分支 | `issues/<N>`，挂在 issue N 上，一个 draft PR。两种模式都在 spec 那一步开始时开它：spec、plan、deep-verify 的报告、`skills/` 的改动和代码都在上面。 |
 | spec review | owner 的一个步骤（O）：owner 读完这个 issue 的整份 spec 改动（这个 issue 的 PR 里 spec 的 diff）。它前面有一个固定的 agent 节点 deep-verify，在后台跑，不先问 owner；owner 读 diff 和 deep-verify 的小结。deep-verify 第一次多人（规模档以内单人），以后每次单人（[deep-verify-knowledge.md](deep-verify-knowledge.md) 的「两种形式」）。 |
 | owner 的步骤 | 只有 owner 做得了的一步，比如登录后台建一把 token。 |
-| 检查 | 构建做完之后的线上验收。 |
+| 检查 | 构建做完之后的线上验收。它不是一种节点：agent 做的是 A 节点，只有 owner 做得了的是 O 节点。 |
 | 外部事件 | 不由 owner 或 agent 决定的事，比如一个源发布了新数据。 |
 | in the loop | 每一步都等 owner 批准。 |
 | on the loop | owner 定规则、审永久的改动、看结果，能随时叫停，不逐步批准。 |
@@ -27,7 +27,7 @@
 
 spec 写应该怎么工作：理想中的样子。spec 分三层，文件名以层级开头；层、文件名、依赖图、改了一页之后要核对什么，见 [knowledge-base.md](knowledge-base.md)。
 
-- **开头一段元信息。** 标题下第一段写三样：上次更新的日期；一句话说现在做到哪；最近的改动。发版时写，改正文的提交不写。
+- **开头一段元信息。** 标题下第一段写三样：上次更新的日期；一句话说现在做到哪；最近的改动。发版时写，改正文的提交不写。skill 的改动记录不写在这里：它写在 frontmatter 的 `changelog:`。
   - 发版看这一页自上次发版 tag 以来的正文 diff，写成一条「日期：改了什么」。只改措辞、错字、链接的不写。新的在上，留 5 条左右。更早的看 git log。
   - L1 的那一条写清改了哪几条（比如 P2）。
   - 只写改了什么，不写经过：改名记录、迁移表、「以前叫 X」都不留。
@@ -85,7 +85,7 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - 半路发现的活属于别的事，就开一个新 issue，不塞进手上这份。
   - 共用的项目（比如 aboveloop）的 issue，可以给每个 app 一组节点，写这个 app 要做的活；app 自己的活，开在 app 自己的仓库里。
   - 为什么：一张图只画一个 issue，owner 拿图看得清它到哪了、等谁。代码一个 issue 一个分支，几个 agent 同时干活不撞。
-- **依赖图 `plan/index.md`**：所有开着的活一张图，上次发版以后做完的也在，打 ✅。dev loop 的一部分，在会话里用：给全局（`Now:`、图、谁在等什么）；先做哪件看 `dev` 的排序，它只看事实，不看这张图。只有会话里的 agent 改它，CI 不改。改它是小改动：一个分支、一个 PR，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」），不放在 issue 的分支上等 review。设计在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。格式：
+- **依赖图 `plan/index.md`**：所有开着的活一张图，上次发版以后做完的也在，打 ✅。dev loop 的一部分，在会话里用：给全局（`Now:`、图、谁在等什么）；先做哪件看 `dev` 的排序，它只看事实，不看这张图。只有会话里的 agent 改它，CI 不改。改它是小改动：一个分支、一个 PR，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」），不放在 issue 的分支上等 review。`prerelease` 的 `cleanup.ts` 读的那一部分在 aboveloop 的 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。格式就写在这里：
   - 元信息里一行 `Now:`：下一步是什么、等谁。
   - 一张 mermaid 图：节点是 issue（`I<N>["#<N> …：agent"]`）、发版（`O`）、外部事件（`E`），或里程碑的 plan 的下一个节点（`alphaO15["alpha O15 …：owner"]`，带上 plan 的名字）；箭头是真的在等。节点标上谁做。里程碑的 plan 的节点链着开着的 issue，图上画那个 issue。
     - 节点一律写成 `ID["字"]`。
@@ -274,6 +274,11 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
      - 例子：选每个选项，owner 会看到什么，从 owner 这边讲。
      - 选项：推荐的放第一个。每个说清谁做，花不花钱，能不能撤回；另外几条为什么不推荐。
      - 拍板之前，agent 先自己调研。agent 能定的，不放进来。少了上面一样，这个 D 就没写完，不拿去问。
+     - 项目配置（`.agents/<skill>.md`）给的是默认。owner 在这个会话里说了这个 issue 怎么做，就照做，不问。plan 里记成 owner 定的，写原话。
+     - owner 没说，agent 又要离开默认：先问一个 D。CI 里没有 owner，照配置（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。
+     - owner 跳过一个 D，就取推荐的那一个。跳过是：owner 说跳过它，或对它说「你定」「继续」（[entry 的 SKILL.md](../../entry/SKILL.md) 的「下面这些直接做，不问」）。
+       - D 里写「Agent decided (日期)：推荐的那一个，因为这个 D 被跳过了」，打勾。
+       - D 先写全了才跳过。owner 以后读得到，也能改。为什么在下面的「不做了的划掉，不删」。
      - owner 定了，就打勾，写日期和 owner 的原话。
   3. **owner 的步骤（O）。**
      - 写：agent 为什么做不了（一句）；按要做的顺序，每步点哪里、填什么；做完的样子；解开哪一节。
@@ -288,4 +293,7 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 
 - **没做完的条目拆成子项，分别打勾。** 做完的子项写日期和证据。没做完的写等谁：agent、owner，或哪个外部事件。子项全勾完，条目才打勾。
 - **不做了的划掉，不删。** 写成 `- [x] ~~**O2 …**~~ 不用做了（日期）：理由`。
+  - agent 因为 owner 的话不做一个节点，也这样划。理由写 owner 的原话。节点留在 plan 里，以后看得到跳过了什么。
+  - owner 跳过的 D 不划掉：它取推荐的那一个（上面的「owner 拍板（D）」）。
+  - 为什么：跳过一个节点，plan 里要留下记号，以后才看得到跳过了什么；跳过的 D 有推荐，就取推荐的那一个，活不停。
 - **验收不等日子。** 写着「满一周」「等到某日」的，先拿手上的数据量。量过了就打勾，把日子删掉。只有真的外部事件才留作等待，比如源还没发布、第一次真出事。写明等什么，让系统自己报出来。不靠日历，也不建定时任务等日子。

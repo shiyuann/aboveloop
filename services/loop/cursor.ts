@@ -155,7 +155,7 @@ export interface Subagent {
 }
 
 /**
- * The custom subagent of the implement run (L3-loop-builder §1.4 step 3, B1):
+ * The custom subagent of the implement run (L3-loop-builder §1.4, "The subagent `deep-verify`", B1):
  * each role of the deep-verify of a heavy spec is a new call of it (the panel form: one call
  * for each role; the solo form: one call for the four dimensions and one for its second look;
  * L2-loop-builder §7). The model is the run's, written out, not "inherit". Its prompt is

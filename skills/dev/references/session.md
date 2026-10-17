@@ -2,7 +2,7 @@
 
 > owner 叫 `dev`，说「start」「work」「dev work」「dev loop」「开工」「干活」「今天做什么」「扫一遍」「下一件事」，或会话开头选了 `dev` 时读。在等什么、issue 的状态、plan 的节点、owner 的选择和排序在 [SKILL.md](../SKILL.md)，先读那里；通用的规矩在 `entry` 的 [SKILL.md](../../entry/SKILL.md)。
 
-**先收事实，再分三路扫，改依赖图，给排序的前 5 件，一件一件带 owner 做。** 这是 dev loop 在会话里的入口：dev loop 是外层的 loop，排 owner 的注意力；活进内层的 builder loop。为什么这样做在 [L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)，每一步的设计在 [L3-loop-dev §1](../../../knowledge/spec/L3-loop-dev.md#1-the-session-entry)；做事用不着读它们，步骤都在这一页。
+**先收事实，再分三路扫，改依赖图，给排序的前 5 件，一件一件带 owner 做。** 这是 dev loop 在会话里的入口：dev loop 是外层的 loop，排 owner 的注意力；活进内层的 builder loop。步骤只在这一页。为什么这样做在 [L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)，做事用不着读它。
 
 ```mermaid
 flowchart TB
@@ -91,7 +91,7 @@ git show origin/<默认分支>:.agents/dev.md
 - 每个节点写代号、谁做（A 是 agent，D、O 是 owner，E 是外部事件，M 是里程碑的 plan 的发版，owner 的）、标题、它挡着哪几个节点。
 - **implement 写过的 plan 只算一件事**：只列「先审 implement 写的活」，不列它的节点。分支上的 plan：draft 的作者，或推过这个分支的人（输入一的 activity 那条命令），有一个不是 owner（空的也算不是），就是 implement 写的。commit 的作者看不出来。
 - draft 上没有 plan：也算一件事，「draft #M 还没有 plan」。
-- **别的会话在做的，标出来。** 一个 issue 的 worktree（`git worktree list`，`../<仓库名>-issues-<N>`）最近 3 小时里有 commit，或者开着一个名字里带这个 issue 号的会话（有列会话的工具，比如 Claude Code 的 ListAgents，就用它），就标「另一个会话在做」。它不进前 5，第 3 步的列表末尾写一行。
+- **别的会话在做的，标出来。** 一个 issue 的 worktree（`git worktree list`，`../<仓库名>-issues-<N>`）最近 3 小时里有 commit（`git -C <worktree> log -1 --since='3 hours ago' --format=%h` 打印了一个 SHA），或者开着一个名字里带这个 issue 号的会话（有列会话的工具，比如 Claude Code 的 ListAgents，就用它），就标「另一个会话在做」。它不进前 5，第 3 步的列表末尾写一行。
 
 **扫完，记下 review。** 每个新审的 PR，主 agent 照第 5 步查过，再以 owner 的登录写一条评论（`gh api repos/<owner>/<name>/issues/<M>/comments -F body=@<文件>`）。英文，按 ASD-STE100 写：
 
@@ -110,11 +110,11 @@ Look at:
 Written in a session of the owner
 ```
 
-- 第一行的标记一字不改：它是扫描找的固定字符串，开着的 PR 带着它（[L3-loop-dev §1.3](../../../knowledge/spec/L3-loop-dev.md#13-the-review-record)）。
+- 第一行的标记一字不改：它是扫描的 agent 找的固定字符串，开着的 PR 带着它。没有脚本读它（[L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
 
 ## 3. 改依赖图，给排序的前 5
 
-依赖图是 main 上的 `knowledge/plan/index.md`：所有开着的活一张图，上次发版以后做完的也在，打 ✅（格式在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「依赖图 `plan/index.md`」）。只有会话里的 agent 改它，CI 不改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)，设计在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。
+依赖图是 main 上的 `knowledge/plan/index.md`：所有开着的活一张图，上次发版以后做完的也在，打 ✅（格式在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「依赖图 `plan/index.md`」）。只有会话里的 agent 改它，CI 不改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。`prerelease` 的 `cleanup.ts` 读其中的 ✅，它读哪几处在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。
 
 1. `git fetch origin`，读默认分支上的 `knowledge/plan/index.md`（`git show origin/<默认分支>:knowledge/plan/index.md`）。没有就新建。
 2. 对着第 1、2 步的结果改：
@@ -126,6 +126,7 @@ Written in a session of the owner
    - 每个 issue 在表里写下一步和谁做。
    - 写 `Now:` 一行：下一步是什么、等谁。不写打了 ✅ 的项。
 3. 有改动，照小改动做（`entry` 的「小改动」）：从最新的 `origin/<默认分支>` 开一个分支，只提交这一个文件，信息写 `plan index: <改了什么>`，push，开 PR，检查过了当场 merge。不放在一个 issue 的分支上：下一个会话从默认分支上读它。
+   - 这个文件 merge 冲突了：取 `origin/<默认分支>` 上的那份，再做一遍自己的改动。那份的每个节点、每个箭头都留着。
 4. 照 [SKILL.md](../SKILL.md) 的「排序」排，不按图排。去掉另一个会话在做的（第 2 步）。draft 分支上的 plan 和里程碑的 plan 的下一个节点（第 2 步 c 的输入二、三）排在 `started` 那一组的最后。
 
 先给 owner 看 `Now:` 一行和这张图，再给前 5 件。给 owner 看前 5 件，一件一行：`<序号>. <哪件事，带链接> — <为什么排在这>`。理由写事实（「blocks A3, A4」「open for 9 days」「light spec」），不写空话。
@@ -141,8 +142,18 @@ Written in a session of the owner
 一次一件，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「怎么问 owner」写。顺序、在哪一层、处在哪一步，都在那一节，这里不另写。owner 选了再做。做完一件，直接说下一件是什么，接着带。
 - 为什么：没有 context、不一步一步来的问题，owner 答不了。会话照 entry 带路，每个问题都带着 context。
 
-**问是一件一件，做是并发。** 问 owner 一件之前，先在后台开不等这个回答的 agent 活：别的几件的 agent 活，和准备这个问题的活（`entry` 的「问是一个一个，活是并发」）。owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
+**问是一个一个，活是并发。** 这是 `entry` 的 [SKILL.md](../../entry/SKILL.md)「问是一个一个，活是并发」在 dev loop 里的部分。
+
+- 问 owner 一件之前，先在后台开不等这个回答的 agent 活：各份 plan 里能做的 A 节点、排序里别的几件、spec 那一步的 deep-verify。
+- 准备这个问题的活也先开。比如：一个子 agent 找出候选、排好序，它们就是一个 D 的选项。
+- owner 选了、轮到 agent 做的活，开一个后台子 agent 去做。主 agent 接着带 owner 看下一件，不等它做完。
+- 依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A 节点），同一条消息里各开一个子 agent。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。
+- 每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支。git 不让一个分支同时开在两个 worktree 里。
+- 一个 issue 的 spec 和 plan，同一时间只派一个子 agent 改。依赖图只由主 agent 改。这样不会撞。
+- 两件活改同一批文件，就有先后：排成一个接一个。
+- 子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
 - 为什么：依赖图上互不等的活，并发做更快。一份 plan 里的节点也一样。
+- 为什么先开活再问：owner 想一个问题时，子 agent 已经在做不等这个回答的活，对话和活同时走。
 
 主 agent 只带路、调度：问 owner，开子 agent，核对它们交回的结果，报给 owner。活本身交给子 agent：改文件，写 spec 和 plan，审 PR 和写审的记录，deep-verify 的修补和报告，解冲突的 merge。主 agent 只留极小的衔接：一个节点的测试、在 plan 里打勾、commit，owner 批了的 merge，依赖图上一行的更新。
 - 为什么：主会话要留给带路和调度，活本身交给子 agent，不让主会话自己做太多。
@@ -165,7 +176,7 @@ Written in a session of the owner
   - 关掉：`gh api -X PATCH repos/<owner>/<name>/issues/<N> -f state=closed -f state_reason=not_planned`。
   - 等：以 owner 的登录写一条评论：`gh api repos/<owner>/<name>/issues/<N>/comments -f body="The owner looked at it: wait. <理由>"`。理由用 owner 的原话。下一次会话里的入口跳过它。
 - **explore 还没做的 issue**：现在在会话里 explore（[builder 的 explore](../../builder/references/explore.md) 第 7 节），再五选一。或者留给 CI 的下一批。
-- **问题**：给出问题和选项。owner 的回答，用原话，以 owner 的登录写成评论。再按是谁问的，问 owner 接下来怎么走（[L3-loop-dev §1.5](../../../knowledge/spec/L3-loop-dev.md#15-one-item-at-a-time)）：
+- **问题**：给出问题和选项。owner 的回答，用原话，以 owner 的登录写成评论。再按是谁问的，问 owner 接下来怎么走（为什么：[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#7-the-owners-part)、[L2-loop-dev §5](../../../knowledge/spec/L2-loop-dev.md#5-when-the-owner-acts)）：
   - **implement 的问题**（issue 有关联的 PR：implement 那一轮停下写的）：交回 CI（打回 `ready-for-auto-builder`），还是在会话里接着做（照下面的「implement 写过的分支」）。
   - **explore 的问题**（issue 没有关联的 PR，问题在 Explore 评论之后）：去掉 `explored`（`gh api -X DELETE "repos/<owner>/<name>/issues/<N>/labels/explored"`），让下一批 explore 读到回答；还是现在在会话里再 explore（[builder 的 explore](../../builder/references/explore.md) 第 7 节）。不交回 CI：implement 读的那条 Explore 评论还写着 `none until the question has an answer`。
 - **停了的 implement**：留给 CI，下一次 `loop.yml` 接着这个 draft 做；或接到会话里，先去掉 label，再照下面的「implement 写过的分支」；或关掉。
@@ -176,7 +187,7 @@ Written in a session of the owner
 - **不是 owner 做的推送、失败的 `loop.yml` 运行**：给 owner 链接，owner 读提交或日志。agent 只报，不改什么。
 - **implement 写过的分支**：照 [spec.md](../../builder/references/spec.md) 最后一节的「先审 implement 写过的东西」（R23）。
 
-做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。然后照 `entry` 的「每一轮回复，只用三种方式之一结束」收尾：「接着看下 5 件，还是停」也照「怎么问 owner」写成一个问题。
+做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。然后照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「每一轮回复，只用三种方式之一结束」收尾。「接着看下 5 件，还是停」也照「怎么问 owner」写成一个问题。
 
 ## 5. 写 GitHub 之前
 

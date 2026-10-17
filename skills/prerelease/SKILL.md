@@ -201,7 +201,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/changel
 然后写页头。对每个自上次发版 tag 以来正文有 diff 的 Markdown 文件：
 
 1. 看正文的 diff，不看页头。只改了措辞、错字、链接的，跳过。
-2. 页头加一条，概括这段 diff 改了什么。日期用这一版的日期。这一版的日期已经在那一条上，就不再写第二条。新的在上，留 5 条左右。
+2. 改动记录写在页头，不写在正文。skill（`SKILL.md` 和 `references/`）写在 frontmatter 的 `changelog:`。spec 写在标题下那段页头列表。日期用这一版的日期。这一版的日期已经在那一条上，就不再写第二条。新的在上，留 5 条左右。
 3. L1 的那一条写清改了哪几条。
 4. `index.md` 里，上游正文有这种 diff 的页，「核对过」写成这一版的日期。新行留空的，也写成这个日期。
 5. 版本号命令改的文件，这里不手改。

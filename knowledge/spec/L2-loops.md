@@ -123,7 +123,7 @@ flowchart TB
   - A review reads the git diff of the page body. It does not read the header to decide that the meaning changed.
   - Why: the owner sees the fast work at once, in the same diff as the change. The slow work does not stop the owner.
   - Why: the date, the change lines, the deep-verify mark and the Checked dates are metadata. Only a release writes them, and a review uses the git diff of the body.
-- **Slow: the deep-verify, a fixed agent node before each spec review (O), for a heavy spec.** It runs in the background, and the owner does not wait for it. Its rules (the start times, the fixed commit, the repairs, a new D node, the forms and the cost) and their Why: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). In CI: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
+- **Slow: the deep-verify, a fixed agent node before each spec review (O), for a heavy spec.** It runs in the background, and the owner does not wait for it. Its rules (the start times, the fixed commit, the repairs, a new D node, the forms and the cost) and their Why: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). The steps: `builder`'s [spec.md](../../skills/builder/references/spec.md) 3.3 and 6.2. The code in CI: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
 - **The owner acts only at a D, at the last spec review and at the merge:** [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part). All the owner's points: §4.
 - **It is an inner loop.** It does work: it writes the change, examines the pages that build on it, and runs the deep-verify. Its level comes from the work that it does (§0), not from what starts it.
   - Why: a loop that is neither inner nor outer would be a third kind, with no rule.
@@ -145,18 +145,19 @@ Each row is one arrow between two loops. The page of each loop tells its own par
 
 **Three places, each with one job:** the general rule in `entry`, and the points of each loop in its own page; the dev loop gives only the order.
 
-- **How to ask** is in `entry` (「拍板只问方向」, 「怎么问 owner」), in one copy. The form is there: context, the question, an example, the options, and why the first option. The reply names the loop and the place in it, as text in the reply. These rules keep the owner's attention, the most expensive resource, for the decisions that only the owner can make (P1).
+- **How to ask** is in `entry` (「拍板只问方向」, 「怎么问 owner」), in one copy. The form is there: context, the question, an example, the options, and why the first option. The reply names the loop and the place in it, as text in the reply. The first sentence of a question names the issue (#N), the step and the node. Each new topic, a question too, gives its whole context again; the agent does not assume that the owner remembers the session. The question is in the text of the reply, never in a question tool or a form: a choice box gives one line to an option, and the context, the example and the why do not fit. These rules keep the owner's attention, the most expensive resource, for the decisions that only the owner can make (P1).
 - **Where the owner acts** is in the page of each loop: L2-loop-builder ([§1](L2-loop-builder.md#1-the-life-of-an-issue-), [§2.1](L2-loop-builder.md#21-where-issues-come-from), [§3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder), [§7](L2-loop-builder.md#7-the-owners-part)), [L2-loop-dev §5](L2-loop-dev.md#5-when-the-owner-acts), [L2-release §5](L2-release.md#5-the-owners-part) and §2.2 of this page. The table below lists all of them.
 - **Which point comes first** is in the dev loop: the rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The dev loop holds no rule of how to ask.
 - Why: a session that does not go through `dev` (the owner says 「继续 #N」), a design discussion, and CI that asks in an issue comment must obey the same rules. Every session reads `entry`. So the rules are there, in one copy, not in one copy for each loop (P3).
 
 **How a question goes to the owner, in each mode.**
 
-- **A session:** a question in the dialog, one at a time, by the fixed order of `entry`. The part of a session of `builder` spec.md leads the owner through a D or an O of one issue: it records the answer, gives the steps, and verifies each step. While the owner decides, the agent work that does not need the answer goes on in background subagents (`entry`, 「问是一个一个，活是并发」).
+- **A session:** a question in the dialog, one at a time, by the fixed order of `entry`. The part of a session of `builder` spec.md leads the owner through a D or an O of one issue: it records the answer, gives the steps, and verifies each step. Before the agent asks, it starts in background subagents the agent work that does not need the answer, so the work goes on while the owner decides (`entry`, 「问是一个一个，活是并发」).
 - **CI:** a question comment on the issue. Which run stops, the label and the owner's answer: [L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder).
 - **What waits:** `dev` in a session shows each point that waits for the owner, in one rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The briefing, a design that aboveloop does not implement, lists the same points, except the next nodes of the plans on draft branches and of the plans of milestones: these are only in `dev` in a session.
-- **How a turn of a session ends.** A turn that leads work ends in one of three ways: one D or O for the owner; nothing for the owner now, because each node of the owner waits behind a running node; or the work of the issue is done, and the dev loop offers the next item in another session. Each thing that the owner must do is a node of the plan first. The rule is in `entry`, in one copy.
-  - Why: a turn that ends on a list of loose asks stops the work, and the owner must find what to do. The owner's words (2026-10-16): 「i feel like our convo always gets stuck like right now」.
+- **How a turn of a session ends.** A turn that leads work ends in one of three ways: one D or O for the owner; nothing for the owner now, because each node of the owner waits behind a running node (the reply names the running nodes); or the work of the issue is done, and the reply gives the next item of the dev loop, to do in another session. A turn that only answers a question carries no work and stops after the answer. The rule is in `entry`, in one copy.
+  - Each thing that the owner must do is a node of the plan first: a choice is a D, a step that only the owner can do is an O. Then the agent asks it by 「怎么问 owner」.
+  - Why: the rules of the conversation are split across the loops, so a turn can end with no next step. A turn that ends on a list of loose asks stops the work, and the owner must find what to do.
 
 **The owner's points.** Each row is one point where the owner acts. The page of each loop holds the detail.
 
@@ -186,7 +187,7 @@ Each job is a skill, or a run of a skill (the field `step` of its input). The jo
 | Job | Loop | What it does |
 | --- | --- | --- |
 | `builder`: the explore run and the implement run | Builder loop | [L3-loop-builder §1](L3-loop-builder.md#1-builder-) |
-| `dev`: the session entry | Dev loop | [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry), [L3-loop-dev §1](L3-loop-dev.md#1-the-session-entry) |
+| `dev`: the session entry | Dev loop | [L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry), [L3-loop-dev §1](L3-loop-dev.md#1-the-session-entry); the steps: `dev`'s [session.md](../../skills/dev/references/session.md) |
 | `knowledge` | Knowledge loop | §2.2. It runs inside the jobs of the other loops, and in a session. |
 
 The workflow `loop.yml` of each project starts the automatic mode of the builder loop. How it starts each job in CI, and with which model and access, is in [L2-loop-architecture §2](L2-loop-architecture.md#2-routines).

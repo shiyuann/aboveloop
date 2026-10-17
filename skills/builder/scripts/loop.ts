@@ -5,9 +5,6 @@
  * Pure functions: the CLIs (explore.ts, select.ts, recheck.ts, check-pr-body.ts) only read input and print.
  */
 
-/** At most this many PRs wait for the owner at one time (L3-loop-builder §1.2). */
-export const PR_LIMIT = 3;
-
 /**
  * The branch of an issue: `issues/<N>`, or `issues/<N>-<k>` for a later try
  * (L2-loop-builder §5). Both modes use it. The author does not tell these PRs:
@@ -80,9 +77,9 @@ export function toExplore(issues: Issue[]): number[] {
     .slice(0, EXPLORE_MAX);
 }
 
-export type Stop = "limit" | "none" | "closed" | "unlabelled" | "unexplored" | "linked";
+export type Stop = "none" | "closed" | "unlabelled" | "unexplored" | "linked";
 /** `draft`: the open draft PR on the branch, which implement continues. */
-export type Choice = { stop: Stop; open?: number[] } | { issue: number; branch: string; draft?: number };
+export type Choice = { stop: Stop } | { issue: number; branch: string; draft?: number };
 
 const ISSUE_BRANCH = new RegExp(`^${BRANCH_PREFIX}(\\d+)(?:-\\d+)?$`);
 
@@ -109,15 +106,6 @@ export function branchName(issue: number, taken: Iterable<string> = []): string 
   let name = `${BRANCH_PREFIX}${issue}`;
   for (let k = 2; used.has(name); k++) name = `${BRANCH_PREFIX}${issue}-${k}`;
   return name;
-}
-
-/**
- * The PRs that wait for the owner, when they reach the limit: open, not a
- * draft, on the branch of an issue, from either mode.
- */
-function limitReached(prs: Pr[]): number[] | null {
-  const open = prs.filter((p) => p.draft !== true && branchIssue(p.head.ref) !== null).map((p) => p.number);
-  return open.length >= PR_LIMIT ? open.sort((a, b) => a - b) : null;
 }
 
 /**
@@ -152,8 +140,8 @@ function ownPr(n: number, linked: Pr[]): Pr | null {
 }
 
 /**
- * Where a session does the implement step of an issue (L3-loop-builder §1.3, row Input).
- * It selects nothing and has no limit of 3. `stop`: `labelled` (CI has the issue:
+ * Where a session does the implement step of an issue (L3-loop-builder §1.3).
+ * It selects nothing. `stop`: `labelled` (CI has the issue:
  * the label is the lock), `linked` (another PR holds it), `closed` (a closed issue,
  * with the branch for a `Refs #N` PR; a PR number gets no branch). `draft` is the
  * issue's own draft, `pr` its own ready PR, on `branch`.
@@ -195,9 +183,6 @@ export function sessionLines(c: SessionChoice): string[] {
  * taken: implement removes the label when it stops, so nothing waits for a comment.
  */
 export function choose(input: { issues: Issue[]; prs: Pr[]; branches?: string[] }): Choice {
-  const open = limitReached(input.prs);
-  if (open) return { stop: "limit", open };
-
   const linked = linkedPrs(input.prs);
   for (const issue of input.issues.filter(isReady).sort((a, b) => a.number - b.number)) {
     const c = take(issue.number, linked.get(issue.number) ?? [], input.branches ?? []);
@@ -212,8 +197,6 @@ export function choose(input: { issues: Issue[]; prs: Pr[]; branches?: string[] 
  */
 export function recheck(input: { issue: Issue; prs: Pr[]; branches?: string[] }): Choice {
   const { issue, prs } = input;
-  const open = limitReached(prs);
-  if (open) return { stop: "limit", open };
   if (issue.state !== "open" || issue.pull_request) return { stop: "closed" };
   if (!labelNames(issue).includes(READY_LABEL)) return { stop: "unlabelled" };
   if (!labelNames(issue).includes(EXPLORED_LABEL)) return { stop: "unexplored" };

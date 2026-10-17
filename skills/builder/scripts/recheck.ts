@@ -2,7 +2,6 @@
  * Re-examines the issue that this run was given, with repo-scoped REST only,
  * so it works in every session. CI form (implement.md §1) prints one of:
  *
- *   limit            3 PRs wait for the owner (next line: their numbers)
  *   closed           the issue is closed, or is a PR
  *   unlabelled       the issue no longer has the label ready-for-auto-builder
  *   unexplored       the issue does not have the label explored yet
@@ -13,8 +12,7 @@
  * `draft: #<M>` names the open draft PR on that branch, which implement continues;
  * `draft:` with nothing means a new branch.
  *
- * Session form (--session; L3-loop-builder §1.3, row Input): it selects nothing and
- * has no limit of 3. It prints one of:
+ * Session form (--session; L3-loop-builder §1.3): it selects nothing. It prints one of:
  *
  *   labelled         the issue has ready-for-auto-builder: CI has it (the label is the lock)
  *   linked           another open PR holds it
@@ -55,7 +53,6 @@ if (a.session) {
 const c = recheck(input);
 if ("stop" in c) {
   console.log(c.stop);
-  if (c.open) console.log(`open: ${c.open.map((x) => `#${x}`).join(" ")}`);
 } else {
   console.log(c.issue);
   console.log(`branch: ${c.branch}`);

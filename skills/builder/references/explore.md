@@ -53,7 +53,7 @@ node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/explore
 
 ### 读法
 
-文字、截图、代码和数据给出不止一种读法时，不挑一种当成事实（[L3-loop-builder §1.1](../../../knowledge/spec/L3-loop-builder.md#11-explore)）。
+文字、截图、代码和数据给出不止一种读法时，不挑一种当成事实（为什么：[L2-loop-builder §1](../../../knowledge/spec/L2-loop-builder.md#1-the-life-of-an-issue-) 的「A vague issue」）。
 
 - **列出每一种读法**，写在 Explore 评论的「Readings」下：读法、证据、它要改什么。
   - 字清楚、却看不出报告的人要的结果，也算不止一种读法。
@@ -102,7 +102,7 @@ Written by the builder loop (builder, explore) of <项目>. <项目配置的 Add
 - **L3**：改 `L3-` 开头的页。
 - **none**：不改 spec 的页，只改代码或数据。项目还没分层（`knowledge/spec/` 里没有 `L1-`、`L2-`、`L3-` 开头的页），也写 none；这时改动要改 `knowledge/` 的哪一页，在下面那一行写明。
 
-**Spec depth** 写 spec 那一步走轻的还是重的（[L3-loop-builder §1.4](../../../knowledge/spec/L3-loop-builder.md#14-the-spec-step-in-both-modes)）。只有下面几条都成立，才写 `light`，不然写 `heavy`：
+**Spec depth** 写 spec 那一步走轻的还是重的（[spec.md](spec.md) 第 1 节）。只有下面几条都成立，才写 `light`，不然写 `heavy`：
 
 - 这一类在项目配置的「Light spec」名单里，名单给它的条件也都成立；
 - 没有设计选择：只有一个合理的做法；

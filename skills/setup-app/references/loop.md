@@ -8,6 +8,7 @@
 
 - builder loop 靠两个 label 过滤 issue：explore 做完的打 `explored`；交给 CI 自动做的打 `ready-for-auto-builder`。它不是 sign-off。
 - 描述 issue 的 label，形式是 `名字: 值`：`Kind: <kind>`（explore 打）。
+- 描述 PR 的 label：`Mode: automatic` 或 `Mode: semi-automatic`、`Agent: cloud` 或 `Agent: local`、`auto-builder`（开 PR 的 agent 打，[L2-loop-builder §4.1](../../../knowledge/spec/L2-loop-builder.md#41-labels-that-describe-a-pr)）。
 
 1. 建 [labels.tsv](labels.tsv) 里的每一个（名字、颜色、说明，用 tab 隔开）：
 
@@ -59,7 +60,7 @@ make -C <aboveloop 工作副本> loop-secrets REPO=<owner>/<repo>
 - **把 loop 的 GitHub App 装到新仓库上**（agent 都向它要 token）。用户做：GitHub → Settings → Developer settings → GitHub Apps → `<你的 GitHub App>` → Install App → 装了它的账号旁边的齿轮 → Repository access 里加上这个仓库 → Save。不用重存钥匙。`check.sh` 会以 App 的身份问 GitHub 装没装。
 - **这个 App 要有 Variables 只读，没有写**：每个 `loop.yml` 都用它读发版变量 `RELEASE`（[L2-release §0](../../../knowledge/spec/L2-release.md#0-terms)）。只有 owner 的登录写这个变量，loop 的 token 都写不了（§2.3）。App 是全局的，设一次就够（[L2-release §5](../../../knowledge/spec/L2-release.md#5-the-owners-part)）。`check.sh` 各给一行：loop 的 GitHub App 是 Variables 只读；Cursor GitHub App 没有 Variables 权限。
 - `loop.env` 里已有的钥匙不用再存；新项目一般只要用户做上面这一条。
-- 钥匙过期了，循环的那一步就停：做一把新的，换掉 `loop.env` 里那一行，再对每个仓库跑 `make loop-secrets`。
+- 钥匙过期了，循环的那一步就停：照 [keys.md](keys.md) 第 2 节换。
 
 做完的样子：`gh secret list -R <owner>/<repo>` 列出这两个名字（只看名字，值读不到也不打印）。
 

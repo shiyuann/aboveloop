@@ -35,5 +35,10 @@ owner 说做（第 1 节第 2 步），就照 [spec.md](spec.md) 做 spec 那一
 5. 写这个 issue 的 plan（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md) 的「plan 怎么写」）。spec 和代码之间差的每一样，都写成一个节点或条目。
 6. 在 issue 的分支上提交，信息以 `#<N>` 开头，只带自己改的文件；push。回复里说改了哪几页，链到 draft PR，写下一步（比如「下一步：deep-verify，然后 O<k> spec review」）。
 
-- 规矩本身就是 spec。改 `skills/` 里的 skill（从 `entry` 起）和它们的 references，或项目 `AGENTS.md` 里的规矩，也这样做：应该怎样先写进 `knowledge/spec/`；`skills/` 里的文字到写代码时改，跟代码一起 merge。只改一段的，算小改动。merge 以后告诉 owner 下一版才到：`entry` 的「小改动」第 4 步。
+- 规矩本身就是 spec。改 `skills/` 里的 skill（从 `entry` 起）和它们的 references，或项目 `AGENTS.md` 里的规矩，也这样做，照这个顺序：
+  - spec 那一步：把决定和它的为什么写进 L2。owner 在 spec review 读它。
+  - implement 那一步：把步骤写进 skill，跟代码一起 merge。owner 在 PR 里、merge 之前读新的 skill 文字（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。
+  - 改 `skills/` 里一条规矩的意思，仍是改 L2 的内容（[L2-loop-builder §6](../../../knowledge/spec/L2-loop-builder.md#6-what-the-automatic-mode-can-change-in-the-spec-)）。
+  - 为什么步骤只写在 skill 里：[L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)。
+  - 只改一段的，算小改动。merge 以后告诉 owner 下一版才到：`entry` 的「小改动」第 4 步。
 - owner 这次说的，和一条记下的 owner 决定冲突：先问一句（`entry` 的「owner 说「应该怎么样」」第 1 步）。

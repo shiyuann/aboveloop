@@ -12,7 +12,7 @@ Terms: [L2-loops §0](L2-loops.md#0-terms).
 - **Each run uses only the latest release of aboveloop**, which the variable `RELEASE` names. A bad record stops the run, with no fallback to an older tag (§1 step 0).
 - **The schedule:** explore and implement every 6 hours (§1).
 - **The workflow writes no code, no comments and no labels.** It launches two kinds of cloud agents, each with its own input, repos, model and tokens (§2).
-- **The limits and the models of each job** are in §2: 3 ready PRs, 20 issues in each explore batch, one agent for each piece of work, 2 tries.
+- **The limits and the models of each job** are in §2: one implement run for each run of `loop.yml`, 20 issues in each explore batch, one agent for each piece of work, 2 tries.
 - **Cost** is measured for the first runs of each agent, in three cases (§3). The owner's setup is in [L3-loop-components](L3-loop-components.md) (§4).
 - **W4–W15** tell how far each connection point of the workflow and the cloud agents is verified (§5).
 
@@ -42,7 +42,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 1. **explore** (builder loop): the open issues to explore, as `toExplore` of `builder` selects them ([L3-loop-builder §1.1](L3-loop-builder.md#11-explore)). If there are any, launch `builder`, step explore, with the batch.
 2. **implement** (builder loop): the issue that `choose` of `builder` selects ([L3-loop-builder §1.2](L3-loop-builder.md#12-implement)). If there is one, launch `builder`, step implement, with it.
-   - This implement run does the spec step, then the implement step (the owner's decision). The deep-verify of a heavy spec in CI, and the case with no subagent: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
+   - This implement run does the spec step, then the implement step (the owner's decision). The deep-verify of a heavy spec in CI, and the case with no subagent: `builder`'s [spec.md](../../skills/builder/references/spec.md) 3.3; its code: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
    - The launch defines the subagent `deep-verify` (§2). `loop.yml` does not change.
 
 | Item | Value |
@@ -70,7 +70,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 **The limits:**
 
-- **Implement:** if 3 PRs wait for the owner, `loop.yml` launches no new implement run. Which PRs wait, and what a linked PR is: [L3-loop-builder §1.2](L3-loop-builder.md#12-implement).
+- **Implement:** one implement run for each run of `loop.yml`, on one issue. The PRs that wait for the owner do not stop it. What a linked PR is: [L3-loop-builder §1.2](L3-loop-builder.md#12-implement).
 - **Explore:** one agent for each batch of up to 20 issues, plus its subagents.
 - **One agent for each piece of work, and 2 tries** ("The next run tries again", below).
 - **The token** of a job lasts one hour (W13). Implement mints a new one when its hour runs out, for 3 hours from the launch (⬜). **Money:** the spend limit of the Cursor account (§3).
@@ -99,7 +99,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 - Explore's token reads the code and writes issues. Implement's also writes code and PRs, with no `workflows`.
 - The workflow signs every token with the GitHub App of the loop, also the read token for aboveloop.
 - Explore cannot make a new token: the workflow makes it, and the App key never reaches explore.
-- **Implement mints its own tokens** (⬜). The launch gives it the App key. The token script of `builder` mints a token for its repo only, with Contents, Issues and Pull requests write, for one hour ([L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes) step 3, "The token").
+- **Implement mints its own tokens** (⬜). The launch gives it the App key. The token script of `builder` mints a token for its repo only, with Contents, Issues and Pull requests write, for one hour ([L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes), "The token").
   - The script mints only until 3 hours after the launch. This guards against a stuck run; it is not a stop, because the agent holds the key ([L2-loop-untrusted-text](L2-loop-untrusted-text.md#3-design-requirements) A6).
   - Why: the job of the workflow ends at the launch, so the workflow cannot give a running agent a new token, and a heavy spec works longer than one hour (W13).
 - **The token of implement has one store** (⬜): the `gh` login of the agent, outside the clones.
@@ -107,7 +107,7 @@ Each run does these steps for its own repo. The rules that select the work are i
   - The clone URL has no token. The prompt rule: never put a token or the key in a clone, a commit, a comment, or a log.
   - Why no `GH_TOKEN` for implement: `gh` uses `GH_TOKEN` before its stored login, and the environment of a launch cannot change. Explore keeps `GH_TOKEN` because explore ends inside the hour (W13).
 - An implement run took 8 minutes (measured), well inside the hour of the token. From the mint of the token to the last GitHub write took 17.6 to 30.8 minutes in three implement runs (measured, W13).
-- One implement run drafts a heavy spec, gets its deep-verify from subagents, and implements it. It still uses one token until this is built (⬜). A token that expires in the deep-verify: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes). Whether the run ends its GitHub writes inside the hour is W13.
+- One implement run drafts a heavy spec, gets its deep-verify from subagents, and implements it. It still uses one token until this is built (⬜). A token that expires in the deep-verify: [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes) ("The token"). Whether the run ends its GitHub writes inside the hour is W13.
 - Implement's token can still push `main` or a tag of its project, and merge: GitHub Free has no branch protection (L2-loop-untrusted-text R4, R15).
 - One token has one set of permissions for all of its repos. So each job gets two: the kit's read token and its own.
 
@@ -162,11 +162,11 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 **Implement:**
 
-- Grok 4.7 at `xhigh` uses the most reasoning tokens. At most 3 PRs wait at one time (§2).
+- Grok 4.7 at `xhigh` uses the most reasoning tokens. One implement run for each run of `loop.yml` (§2).
 - A heavy spec does its deep-verify in subagents of the same run: no extra run. Each subagent reads the draft and the pages, so the run uses more tokens.
 - A subagent call that names no model, or `inherit`, runs in fast mode at `high`, at twice the price. The description of the subagent names the run's model (§2; L3-loop-builder B1).
 - The cost of the subagents is `totalUsage` of the main agent minus its runs. `totalUsage` also counts the Task subagents. The id of a subagent gives zero.
-- The subagent calls of one deep-verify. Which form each deep-verify takes: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part) and [L3-loop-builder §1.4](L3-loop-builder.md#14-the-spec-step-in-both-modes).
+- The subagent calls of one deep-verify. Which form each deep-verify takes: [L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part) and `knowledge`'s [deep-verify-knowledge](../../skills/knowledge/references/deep-verify-knowledge.md#两种形式).
   - The panel form: about 9 to 11 calls: 4 dimensions, up to 4 rebuttals, and 1 or 2 second looks.
   - The solo form: 1 or 2 calls: one for the four dimensions, and one for its second look, only after a repair that changed a meaning.
 - With no subagent, the next run does the deep-verify: one more run.
@@ -198,7 +198,7 @@ Each run does these steps for its own repo. The rules that select the work are i
 
 ## 4. The owner's part
 
-The agent writes the code, the workflows and the configuration; the owner does only what needs the owner's accounts. The steps, one time and for each app: [L3-loop-components](L3-loop-components.md). The owner's points of all loops: [L2-loops §4](L2-loops.md#4-how-the-loops-talk-to-the-owner).
+The agent writes the code, the workflows and the configuration; the owner does only what needs the owner's accounts. The steps, one time and for each app: `setup-app` (its [SKILL.md](../../skills/setup-app/SKILL.md) and [keys.md](../../skills/setup-app/references/keys.md)). Each component, and where it is: [L3-loop-components](L3-loop-components.md). The owner's points of all loops: [L2-loops §4](L2-loops.md#4-how-the-loops-talk-to-the-owner).
 
 ## 5. Connection points: how much is verified
 
@@ -264,7 +264,7 @@ The table gives each point and its level. The list under the table gives, for ea
 - **Measured:** an implement run marked its draft PR ready with this call and its `GH_TOKEN` of the GitHub App of the loop: `isDraft` `false`. Two more implement runs, one on another project, did the same.
 - GraphQL is blocked in Claude Code cloud sessions.
 - **Experiment:** the first live implement run ✅.
-- **If it fails:** implement stops as in case 1 of [L3-loop-builder §1.2](L3-loop-builder.md#12-implement): it writes a comment that asks the owner to mark the draft ready, and removes the label. The session entry of `dev` shows it.
+- **If it fails:** implement stops as in case 1 of `builder`'s [implement.md](../../skills/builder/references/implement.md) §4: it writes a comment that asks the owner to mark the draft ready, and removes the label. The session entry of `dev` shows it.
 
 **W12**
 
@@ -297,11 +297,11 @@ The table gives each point and its level. The list under the table gives, for ea
   - A batch of 20 issues, the panel form and the run with no subagent: the first real run of each.
 - **If it fails:**
   - A run that loses its token cannot comment or remove the label. After 2 tries with no mark the workflow fails, and the failed run shows it (W12).
-  - Only the first run of a heavy spec writes the short comment, so a heavy spec gets the first run and 2 tries (L3-loop-builder §1.4).
+  - Only the first run of a heavy spec writes the short comment, so a heavy spec gets the first run and 2 tries (`spec.md` 3.3).
   - While the workflow fails on this issue, `choose` selects it again, so no other issue of the repo gets an implement run. The owner removes `ready-for-auto-builder`, or answers in a comment, which gives 2 more tries.
   - The run pushes the draft before the deep-verify, so the next run continues from the first open node.
-  - The roles of the deep-verify end inside its budget, from its start (L3-loop-builder §1.4 step 3). Thus the time of the draft, the budget, the repairs and the implement step decide the hour.
-  - This occurred. The owner chose to give implement the App key: the run mints a new token (W15) and pushes after each step ([L3-loop-builder §1.2](L3-loop-builder.md#12-implement)).
+  - The roles of the deep-verify end inside its budget, from its start (deep-verify-knowledge §0). Thus the time of the draft, the budget, the repairs and the implement step decide the hour.
+  - This occurred. The owner chose to give implement the App key: the run mints a new token (W15) and pushes after each step (`implement.md` §6).
 
 **W14**
 

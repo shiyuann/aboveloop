@@ -26,6 +26,7 @@ knowledge/
     L3-….md
   plan/             ← 还要做什么、谁做、按什么顺序。index.md 是所有开着的活的依赖图，做完的打 ✅，发版时删。一个 issue 一份（42-export.md）：先在 issue 的分支上，merge 以后在 main 上；全部 ✅ 以后发版时删掉。不登记。不分层
   reference/        ← 实测、调研、原件。只追加，不改写成 spec。例外：deep-verify 的报告跟着它的 issue 的 plan 走，plan 全部 ✅ 以后发版时一起删掉，链接改成永久链接（L2-release §2.8）。不分层
+  notes/            ← owner 的笔记和点子：还不是 spec，也不是要做的活。文件名就是主题（onboarding.md），不加 notes-、ideas- 这类前后缀；图放在 notes/images/。不分层，不登记
 ```
 
 用户的反馈不进知识库：它开成 issue（[issue-template.md](../../entry/references/issue-template.md)）。owner 的反馈当场记进 issue，或手上这个 issue 的 spec 和 plan（[entry 的 SKILL.md](../../entry/SKILL.md) 的「owner 说「应该怎么样」」；记在哪：[placement.md](placement.md)）。
@@ -38,7 +39,7 @@ knowledge/
 | --- | --- | --- |
 | L1 | 为什么做、给谁做、原则、硬约束。比如用户是谁、产品原则、工程原则、定位 | 只有 owner。agent 想改，写成 plan 里的 owner 拍板 |
 | L2 | 关键的决定和用户故事。比如用户旅程、架构选型、每个 loop 定了什么 | agent 照 owner 定过的写。不自己发明决定 |
-| L3 | 具体怎么工作。比如每一屏、数据契约、服务器的接口 | agent |
+| L3 | app 里：具体怎么工作。比如每一屏、数据契约、服务器的接口。实现是文字的 plugin（aboveloop）里：只写代码和数据契约（下面「为什么」） | agent |
 
 - 一页通常一屏。不设行数上限。
 - L1 每次会话都读，所以写得短、写得准。
@@ -60,6 +61,11 @@ knowledge/
 - **不写经过。** 怎么一步步改过来的，在 git 里。更新记录只留最近几条（[spec-and-plan.md](spec-and-plan.md)）。
 - owner 的原话，只在它就是理由时写进来。
 - L3 写具体怎么工作。有用的理由可以写，不强求。
+- 实现是文字的 plugin（aboveloop），L3 只写真的代码和数据契约：脚本、workflow、服务，和代码读的文件格式。
+  - 一个流程的步骤（agent 或 owner 照着做的）只有一个家：它的 skill 或 reference。
+  - spec 只留决定和它的为什么（L1、L2）。skill 链到 L2 给为什么，L2 链到 skill 给步骤。
+  - app 的 L3 不变：它写产品怎么工作，代码是它的实现。
+  - 为什么：aboveloop 的 [L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)。
 
 理由写下来，是为了以后改的时候知道：这条原则撑着哪些决定。理由不成立了，这条就该重新看。
 
@@ -87,6 +93,7 @@ flowchart TB
   D --> E["逐页核对正文"]
   E -->|不成立| G["改那一页的正文"]
   G --> D
+  E -->|都成立| P["核对默认分支上开着的 plan：<br/>改节点，或加节点、条目"]
 ```
 
 1. 改 L1 之前，先要 owner 拍板。
@@ -94,8 +101,13 @@ flowchart TB
 3. 改了意思，改这一页的正文。页头不动：日期、更新记录、deep-verify 标记都不改。`index.md` 的「核对过」也不改。
 4. 在 `index.md` 里找出建立在它上面的页。引用了编号的，只看引用了改动那几条的页。
 5. 逐页核对正文。不成立，就改那一页的正文，再从第 4 步查它下面的页。
-6. 这些都在同一次提交里做完。
-7. 发版时才写页头，并改「核对过」。做法在 `prerelease`。
+6. 再核对默认分支上开着的 plan：`knowledge/plan/` 里 issue 的 plan 和里程碑的 plan，还有没打 ✅ 的节点的那几份。issue 的 plan 不在 `index.md` 里，所以第 4 步找不到它们。
+   - 一个开着的节点或条目，照这次的改动做就不对了：在那份 plan 里改它，或加一个节点、一个条目，写清是哪一次改动带来的。
+   - 节点全都 ✅ 的 plan 不加活。这次改动对它还要紧，就照 `entry` 的「owner 说「应该怎么样」」开 issue 或做小改动。
+   - 只核对默认分支上的 plan。别的 issue 的分支上的 plan（draft PR 里的），不在这一步里。
+   - 为什么：开着的 plan 都在 `knowledge/plan/` 里，一次改动就能找出它碰到的别的 plan，没关的 plan 加上活，跟着对齐。不然一个节点去掉了，别的 plan 里还留着它，要 owner 提了才改。只管默认分支上的 plan，改动小。
+7. 这些都在同一次提交里做完。
+8. 发版时才写页头，并改「核对过」。做法在 `prerelease`。
 
 ## 两页说的不一样
 

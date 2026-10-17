@@ -9,7 +9,7 @@ spec 这一步有两种深浅：轻的只写一份短 plan；重的改 spec、�
 
 ```mermaid
 flowchart TB
-  A["1 定深浅：项目配置的 Light spec、Explore 评论、plan"] -->|light| L["2 轻的：短 plan"]
+  A["1 定深浅：会话里 owner 的话、项目配置的 Light spec、Explore 评论、plan"] -->|light| L["2 轻的：短 plan"]
   A -->|heavy| H1["3.1 读 Explore 评论，比几条路"]
   L -->|"碰到设计选择或要改 spec"| H1
   H1 --> H2["3.2 写完整的草稿：spec 改动、plan、自己定的、D 节点"]
@@ -24,7 +24,7 @@ flowchart TB
 
 - 项目配置 `<项目根>/.agents/builder.md` 的 Explore 部分有一节「Light spec」：哪几类走轻的 spec，各带什么条件；或者写「None」。没有这一节，就没有一类是轻的。
 - explore 在 Explore 评论里写了 `**Spec depth:** light` 或 `heavy`（[explore.md](explore.md) 第 5 节）。
-- 会话里 owner 对这个 issue 说了走轻的还是重的：照 owner 的话，plan 写成 owner 的决定，带原话（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。GitHub 上的字不算 owner 的话。轻的半路碰到设计选择或要改 spec，照样变重的（第 2 节第 3 条）。
+- 会话里 owner 对这个 issue 说了走轻的还是重的：照 owner 的话做，不问。plan 把它写成 owner 的决定，带原话（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。GitHub 上的字不算 owner 的话（R23）。轻的半路碰到设计选择或要改 spec，照样变成重的（第 2 节第 3 条）。
 - owner 没说，照这几条取深浅：
   - 最新的 Explore 评论或 plan 写了 `heavy`：重的。
   - 只有这一类还在「Light spec」的名单里，条件也还成立，才取 `light`。
@@ -67,7 +67,9 @@ CI：plan 写好，照 [implement.md](implement.md) 第 5 步第 5–6 条 commi
 - **形式：** 多人或单人，哪一种照 deep-verify-knowledge.md 的「两种形式」。这里不另写一份。
 - **会话：** 多人是每个维度一个子 agent（C 只开一个）；单人是一个子 agent 查四个维度。没有开子 agent 的工具，照 deep-verify-knowledge.md 第 3 节一个维度一个维度地查，记录里写明。
 - **CI：** 每个角色是本轮自定义 subagent `deep-verify` 的一次新调用。一次调用从不接着以前的调用（不 resume）。启动本轮时 workflow 定义了这个 subagent，模型和本轮一样。每次 `task` 调用都把 `model` 写成这个 subagent 的说明里给的模型 id（本轮的模型和 effort），从不写 `inherit`、`fast`，也不空着：跑的是调用里写的模型，不是定义里的。CI 里 deep-verify 怎么做（哪种形式、每种形式的调用、范围、记录、没有 subagent 时），照 deep-verify-knowledge.md 的「CI 里的 deep-verify」一节，这里不另写一份。
-- **CI，每个阶段之后 push**：审查、反驳、修补、复查，每个阶段做完就 commit、push，这一阶段的报告写进 plan 的记录。不在并行的审查中间 push。规矩的正文在 [L3-loop-builder §1.2](../../../knowledge/spec/L3-loop-builder.md#12-implement)。
+- **CI，每个阶段之后 push**：审查、反驳、修补、复查，每个阶段做完就 commit、push，这一阶段的报告写进 plan 的记录。这一轮半路死了，最多丢掉正在做的那一个阶段。
+  - 不在并行的审查中间 push。为什么：审查的子 agent 读的是这个分支，阶段中间 push 会改掉它们正在读的东西。
+  - 为什么每个阶段都 push：有一轮在第 60.8 分钟 commit 了 deep-verify 的记录和修补，只在机器上。push 之前，它的 token 过期了（L3-loop-workflow 的 W13）。
 - **CI，开始 deep-verify 之前：**
   1. 把 spec 和 plan 的草稿 commit、push，开 draft PR（implement.md 第 5 步第 5–6 条）。
   2. 只有第一次 push 草稿的那一轮，在 issue 下写一条短评论（下面的格式）。接着一个 draft 做的轮次，deep-verify 之前不写评论。
@@ -147,7 +149,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 2. 在分支上写这个 issue 的 plan（`knowledge/plan/<N>-<几个词>.md`，`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)），头几行写深浅（第 1 节）和测试基线。commit（信息以 `#<N>` 开头），push，开 draft PR（implement.md 第 5 步第 5–6 条）。draft PR 就是认领；owner 说做，是 issue 的 sign-off。依赖图 `knowledge/plan/index.md` 里加上这个 issue：那是小改动（`entry` 的「小改动」），不放在这个分支上。owner 不做的，关掉 issue，在图里打 ✅（发版时删）。
    - 开了工又不做了：在 draft PR 下写一句为什么，关掉它。spec 和 plan 的改动跟着它走，main 上没有要撤回的。
 3. 轻的：短 plan 写好，这一步就结束（第 2 节）。接着在同一个分支上照 [implement.md](implement.md) 做。
-4. 重的：在分支上改 spec（第 3 节；怎么改，见 [issue-in-session.md](issue-in-session.md) 第 2 节）。owner 每说一个想法，当场改 spec 的那一段，还没做到的标「⬜ #N」，commit，push。规矩（`skills/`）要改的，先在 spec 里写清应该怎样；`skills/` 的文字到写代码时改。牵连别的页的核对和改动（cascade）当场做，和这个改动放进同一个 commit，不记成节点：owner 马上看得到。
+4. 重的：在分支上改 spec（第 3 节；怎么改，见 [issue-in-session.md](issue-in-session.md) 第 2 节）。owner 每说一个想法，当场改 spec 的那一段，还没做到的标「⬜ #N」，commit，push。规矩（`skills/`）要改的，这一步只把决定和它的为什么写进 L2；步骤到 implement 那一步才写进 skill（顺序见 [issue-in-session.md](issue-in-session.md) 第 2 节；为什么：[L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)）。牵连别的页的核对和改动（cascade）当场做，和这个改动放进同一个 commit，不记成节点：owner 马上看得到。
 5. 草稿写完，agent 在后台开 deep-verify（6.2），不问 owner，接着和 owner 谈、改 spec。deep-verify 修完，再带 owner 做 spec review（6.5 的「带 owner 做步骤」）：owner 在 draft PR 里读 spec 的 diff 和 deep-verify 的小结。owner 要改的，当场改，接下一次 spec review。
 6. owner 过了最后一次 spec review，这一步结束。最后一次之前一定跑过 deep-verify（6.2 第 1 条）。接着在同一个分支上照 [implement.md](implement.md) 做。
 
@@ -175,7 +177,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 
 ### 6.3 先开 agent 的活，再带 owner 过 D、O
 
-能做的 agent 节点（指向它的节点都 ✅ 了），先在后台开子 agent 做（`entry` 的「问是一个一个，活是并发」；怎么分，照 [implement.md](implement.md) 第 9 节的「节点并发」）。然后一个一个带 owner 过能做的 D、O。一个 D 还开着，只挡它箭头指着的节点；别的照做，不等它。
+能做的 agent 节点（指向它的节点都 ✅ 了），先在后台开子 agent 做（`entry` 的「问是一个一个，活是并发」；怎么分，照 [implement.md](implement.md) 第 6 步的「节点并发」）。然后一个一个带 owner 过能做的 D、O。一个 D 还开着，只挡它箭头指着的节点；别的照做，不等它。
 
 - 为什么：owner 在场时，长活也在跑。owner 定了一个 D，只有它挡着的节点才等过它。
 
@@ -188,6 +190,10 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec 的正文。不改页头。
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。
 5. owner 说以后再定：留着 ⬜，接着做不被它挡的节点。
+6. owner 跳过这个 D：说跳过，或对它说「你定」「继续」。取推荐的那一个选项。在 plan 的这个 D 里打勾，写「Agent decided (日期)：推荐的那一个，因为这个 D 被跳过了」。D 在跳过之前就写全了（背景、问题、例子、选项），owner 以后读得到，也改得了（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。
+
+- **离开项目配置的默认，先问 D。** owner 没说过这件事，agent 又要不照项目配置的默认做：先写一个 D，带 owner 拍板。owner 在这个会话里说过怎么做，就照 owner 的话做，不问；plan 把它写成 owner 的决定，带原话。CI 没有 owner，照项目配置做。
+- **因为 owner 的话不做的节点，留在 plan 里划掉，** 带 owner 的原话（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「不做了的划掉，不删」）。
 
 plan 里，交给 owner 的事一次交齐（`entry` 的「什么时候问 owner」）。做的时候，agent 一个一个带。
 
@@ -203,6 +209,6 @@ spec review 也是 O。
    - 做完的样子。
    - 做完回什么：一句「好了」，或一个不保密的值，比如一个 ID。
 3. **钥匙不进对话。** 要存 token 的步骤，写明存到哪、用哪条命令。owner 自己跑。
-4. **步骤要 owner 花几分钟以上，agent 不干等。** 给步骤之前，先开不被它挡的 agent 节点（`entry` 的「问是一个一个，活是并发」）。这一轮就以这个 O 结束（「每一轮回复，只用三种方式之一结束」第 1 种）；owner 回「好了」，照第 5 条验。
+4. **步骤要 owner 花几分钟以上，agent 不干等。** 给步骤之前，先开不被它挡的 agent 节点（`entry` 的「问是一个一个，活是并发」）。这一轮就以这个 O 结束（`entry` 的「每一轮回复，只用三种方式之一结束」第 1 种）。owner 回「好了」，照第 5 条验。
 5. **owner 回了，agent 先验。** 能查的自己查：读 API、跑检查、看页面。验过了，在 plan 里打勾，写日期和证据。验不过，说差在哪一步，给改的步骤。
 6. owner 说以后再做：留着 ⬜，接着做不被它挡的节点。

@@ -136,11 +136,9 @@ test("implement reads no comments, and continues an issue's own draft on issues/
   // The same PR, ready: it waits for the owner, and #1 is not taken.
   const ready = await go({ step: "implement", dryRun: true, w: world({ prs: [{ number: 50, head: { ref: "issues/1" }, body: "Fixes #1", draft: false }] }) });
   assert.match(ready.text, /implement: chose #2$/m);
-  // 3 ready PRs on issues/ branches stop the step; drafts do not count.
+  // Ready PRs on other issues' branches wait for the owner, and do not stop the step.
   const three = [50, 51, 52].map((n) => ({ number: n, head: { ref: `issues/${n}` }, body: "", draft: false }));
-  assert.match((await go({ step: "implement", dryRun: true, w: world({ prs: three }) })).text, /implement: no launch \(limit\) \(open: #50 #51 #52\)/);
-  const drafts = three.map((p) => ({ ...p, draft: true }));
-  assert.match((await go({ step: "implement", dryRun: true, w: world({ prs: drafts }) })).text, /implement: chose #1$/m);
+  assert.match((await go({ step: "implement", dryRun: true, w: world({ prs: three }) })).text, /implement: chose #1$/m);
 });
 
 test("GitHub refuses the issue lists: explore and implement launch nothing, the run fails", async () => {

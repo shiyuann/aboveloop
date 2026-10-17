@@ -1,2 +1,7 @@
 explored	C5DEF5	builder explored it: see the Explore comment
 ready-for-auto-builder	0E8A16	Hands the issue to the automatic mode (CI); not a sign-off
+Mode: automatic	BFD4F2	No owner in the run that opened the PR: the implement run of loop.yml, or a routine
+Mode: semi-automatic	BFD4F2	The owner was in the session that opened the PR
+Agent: cloud	E4E669	The agent that opened the PR ran in the cloud: CI, Claude Code on the web, a cloud agent
+Agent: local	E4E669	The agent that opened the PR ran on the owner's machine: the desktop app, the CLI, an IDE
+auto-builder	5319E7	The automatic builder pipeline opened the PR: the implement run of loop.yml
