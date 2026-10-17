@@ -176,7 +176,7 @@ Written in a session of the owner
 - **不是 owner 做的推送、失败的 `loop.yml` 运行**：给 owner 链接，owner 读提交或日志。agent 只报，不改什么。
 - **implement 写过的分支**：照 [spec.md](../../builder/references/spec.md) 最后一节的「先审 implement 写过的东西」（R23）。
 
-做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。再问 owner：接着看下 5 件，还是停。
+做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。然后照 `entry` 的「每一轮回复，只用三种方式之一结束」收尾：「接着看下 5 件，还是停」也照「怎么问 owner」写成一个问题。
 
 ## 5. 写 GitHub 之前
 

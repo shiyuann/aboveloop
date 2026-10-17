@@ -95,7 +95,7 @@ description: >-
 - **spec 和 plan 是唯一的参考。回复是临时的。** owner 不一定读回复，读了也记不住。
   - owner 要记住的东西（待办、拍板、开着的问题）写进 spec 或 plan。回复里只写一句，加链接。
   - 计划没定：写进 spec 的「owner 的那一份」。计划定了：写进 plan 的 owner 拍板（D）、owner 的步骤（O）节点（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)）。
-- **回复替 owner 省时间。** 回复里只放结论，和要 owner 做的一两件事（链到 plan）。过程和证据放进 commit、spec 或 plan。
+- **回复替 owner 省时间。** 回复里只放结论，和要 owner 做的那一件事（一个 D 或 O，链到 plan；「每一轮回复，只用三种方式之一结束」）。过程和证据放进 commit、spec 或 plan。
 - **平台上的东西，用平台的名字。** 照厂商文档的叫法写，比如 GitHub 的 project、item、built-in workflow。不另起名字（「看板」「卡片」）。自己起的名字对不上文档，也搜不到。拿不准，就读那一页文档。
 - **厂商的说法，写成对项目的影响。** 不照搬套餐名和计费档。写清要不要钱、要不要多一个组件。先找免费的路。
 
@@ -234,12 +234,24 @@ description: >-
 
 owner 的话里有「它」「那个」，多半指上一轮在谈的东西。拿不准，就问一句。不猜着改。
 
+**每一轮回复，只用三种方式之一结束。** 带着活的一轮（一个 issue 的 plan、dev loop、一件分几步的事）只这样收尾：
+
+1. **问 owner 一个 D 或 O**，照「怎么问 owner」写。
+2. **owner 现在没有要做的。** 能开的节点都开了；要 owner 的节点，都在一个正在跑的节点后面等。说哪几个节点在跑，各带回什么。
+3. **这个 issue 的活做完了。** 说一句，再给 dev loop 的下一件，在另一个会话里做。
+
+不用一串零散的事收尾：不写「有需要再说」「你可以考虑……」，一次回复不问三件。只答一个问题的一轮不带活：答完就停。
+
+**要 owner 做的每件事，先是一个节点。** 要 owner 选的，是 D；只有 owner 做得了的一步，是 O。先写进 plan，再照「怎么问 owner」问，写出原样的字、命令或选项。不写「你看想怎么做」。
+
+- 为什么：一轮停在一串零散的事上，活就停了，owner 还得自己找该做什么。owner 的原话（2026-10-16）：「i feel like our convo always gets stuck like right now … you need always be specific in sharing things or you need anything from me.」
+
 **说「做完了」之前，照这几步做：**
 
 1. 把还开着的每一项分成三类：等 owner；等一个外部事件；现在就能做。哪些 A 节点等 spec review，照 `builder` 的 [spec.md](../builder/references/spec.md) 6.1。
 2. 做完第三类。
 3. 把剩下的写进 plan，写清等谁：agent、owner，或哪个外部事件。
-4. 回复里说还剩什么，链到 plan。
+4. 照「每一轮回复，只用三种方式之一结束」收尾：剩下的有要 owner 的，问第一个；没有，说哪几个节点在跑。链到 plan。
 
 执行 plan 时，plan 里还有没勾的子项，就不说做完了。还有 agent 能做的条目，就不停。日子不算外部事件（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 的「验收不等日子」）。
 
