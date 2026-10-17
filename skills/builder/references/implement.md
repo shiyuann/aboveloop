@@ -180,7 +180,7 @@ Why: <哪一句、要你做什么、为什么不做>
 - 测试基线：plan 里已经有，就用它。没有，先在 `origin/<默认分支>` 上跑一遍测试，基线写进 plan，和这一轮的第一个 commit 一起提交。CI 先 `git switch --detach origin/<默认分支>` 跑，跑完再 switch 回分支。会话在临时的 worktree 里跑（`git worktree add --detach <临时目录> origin/<默认分支>`），跑完 `git worktree remove <临时目录>`。
 - 照分支上的 plan 做。plan 是 `knowledge/plan/<N>-*.md`，格式在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「plan 怎么写」。issue 的 PR 不改里程碑的 plan（没有号的 plan），两种模式都一样（[L2-loop-builder §1](../../../knowledge/spec/L2-loop-builder.md#1-the-life-of-an-issue-)）。
 - CI：先照 [spec.md](spec.md) 第 4 节把 spec 那一步做完：有 owner 回答的 D 写进回答；spec 那一步开着的节点（比如重的 spec 的 deep-verify）从第一个开着的接着做。只有没回答的 D 或 O 让它停（第 4 步第 1 种）。
-- 只做 agent 的节点（A、C），而且指向它的节点都 ✅ 了。不做 owner 的节点（D、O）。下一个节点被开着的 D 或 O 挡住：CI 按第 4 步停（第 1 种），评论里写是哪一个；会话当场带 owner 过它（[spec.md](spec.md) 最后一节的「带 owner 拍板」「带 owner 做步骤」），过了接着做。
+- 只做 agent 的节点（A），而且指向它的节点都 ✅ 了。不做 owner 的节点（D、O）。下一个节点被开着的 D 或 O 挡住：CI 按第 4 步停（第 1 种），评论里写是哪一个；会话当场带 owner 过它（[spec.md](spec.md) 最后一节的「带 owner 拍板」「带 owner 做步骤」），过了接着做。
 - 发版的 O 节点，和它后面的节点，不在这个 PR 里做：plan 到它为止，做完前面的就收尾（第 7 步）。两种模式都这样。它们留在 plan 里：merge 以后在默认分支上等，`dev` 的会话入口列出来，由 owner 的会话做（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。
 - 分支上没有 plan：CI（上一轮在写 plan 之前就死了）照下面新开分支的第 2–3 条记基线，照 [spec.md](spec.md) 写 plan。会话里，这是没有 plan 的活（第 9 节）：基线写进 PR 正文的 Tests。
 
@@ -235,7 +235,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 
 - **写代码的节点。** 写完、测试过、提交，push 到 issue 的分支，接着做下一个。不停下等 owner 看代码：owner 在 PR 里看。
 - **没有箭头指过来的 owner 节点。** 一个 D 还开着，只挡它箭头指着的节点。别的照做。
-- **检查（C）。** 它没有出去的箭头。没过就修：修是 agent 的活。修要 owner 的，加一个节点。
+- **检查的 A 节点。** 没过就修：修是 agent 的活。修要 owner 的，加一个节点。
 - **做完一个节点。** 不问「要不要继续」，不为报进度停下。回复里写一行进度，接着做。
 - **日子。** 见 `knowledge` 的 spec-and-plan.md「验收不等日子」。
 - **不是真的等的箭头。** 后一个节点的做法确定不受前一个节点的结果影响，就改图：删掉箭头，图下写一句为什么。然后接着做。

@@ -60,7 +60,7 @@ git show origin/<default>:knowledge/plan/<file>
 | Stopped drafts | An issue with `ready-for-auto-builder` whose draft has no commit for a day | b |
 | `started` | An issue with `explored`, no `ready-for-auto-builder`, and a linked PR or a plan on `main`: a session works on it, or implement stopped. The draft PR of a session is a linked PR | c |
 | Plan nodes | The next D and O nodes of the plans on `main` (a release O too), with "written by implement" and the drafts of the issue | c |
-| Plan work | The next A, C and E nodes of the plans on `main` | c |
+| Plan work | The next A and E nodes of the plans on `main` | c |
 | Foreign pushes | Pushes to `main` in the last 24 hours that the owner did not make, and release tags that are not a release (by the release variable) | the rank, before the groups (§1.4) |
 | Failed runs | Failed runs of `loop.yml` in the last 24 hours | the rank, group `urgent` (§1.4) |
 | `on_hold` | Issues on which the owner said wait | the count only |
@@ -100,13 +100,13 @@ Each scan with input gets its own subagent, all in one message, so they run at t
   - Input 3, the nodes of the plan of a milestone:
     - A node that links issues (`#N`) is not an item while one of its issues is open; the issue is the item.
     - When each issue that it links is closed as completed, and no other item of the node is open, the node is done: the session entry sets its ✅ (§1.6).
-    - A node that names a node of the plan of an issue (`#<N> C1`) waits only for that node: it is done when that node is ✅, even while the issue is open. It is not an item of its own: the next node of the plan of that issue is the item (inputs 1 and 2).
+    - A node that names a node of the plan of an issue (`#<N> A1`) waits only for that node: it is done when that node is ✅, even while the issue is open. It is not an item of its own: the next node of the plan of that issue is the item (inputs 1 and 2).
     - An M node is done when its release is out, an E node when its event occurred.
     - A node whose plan says to reopen its closed issue is open: the session reopens the issue when the work starts.
     - Another close as not planned is one item for the owner: reopen the issue, remove the node, or open a new issue (a change of content, [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
   - A plan that implement wrote is one item. On `main`, the author of the PR that closed the issue, or an account that pushed its branch, is not the owner. On a branch, the author of the draft and each account that pushed the branch must be the owner; one other account (or none) makes it implement's. The author of a commit does not show it.
   - A draft with no plan is one item: "draft #M has no plan yet".
-  - Each node shows its code, who does it (A and C the agent, D and O the owner, E an outside event, M a release of the plan of a milestone: the owner), its title and the nodes that it blocks.
+  - Each node shows its code, who does it (A the agent, D and O the owner, E an outside event, M a release of the plan of a milestone: the owner), its title and the nodes that it blocks.
 - **The work of another session.** A worktree of the issue (`../<repo>-issues-<N>`) with a commit in the last 3 hours, or an open session whose name holds the issue number, marks the issue "another session works on it". It is not in the top 5; one line at the end of the list names it.
 
 ### 1.3 The review record
@@ -166,7 +166,7 @@ flowchart LR
 
 - **A node of a plan:**
   - `spec.md` (the part of a session) for a D, an O or the spec step; `implement.md` for an agent node.
-  - A node of the plan of a milestone: an A or C node first becomes an issue in the milestone (`explore.md`, the part of a session), and a D or O node goes by `spec.md` ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
+  - A node of the plan of a milestone: an A node first becomes an issue in the milestone (`explore.md`, the part of a session), and a D or O node goes by `spec.md` ([L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-)).
   - A release O: the owner runs `prerelease`; the agent sets its ✅ when it does the next node.
 - The work of one issue goes into the builder loop ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)).
 - After 5 items, the agent tells from the graph what waits, and for whom, and asks: the next 5, or stop.

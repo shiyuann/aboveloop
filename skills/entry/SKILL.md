@@ -58,7 +58,7 @@ description: >-
 | 有自动化或 agent 时，owner 在环里还是环上 | `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」 |
 | owner 说做一个 issue：写 spec 和 plan、过 deep-verify、带 owner 过 D 和 O、spec review | spec 那一步：`builder` 的 [spec.md](../builder/references/spec.md)，会话的部分在它最后一节 |
 | spec 那一步结束了，开始写代码 | implement 那一步：`builder` 的 [implement.md](../builder/references/implement.md)（分支、基线、节点、收尾、PR 正文） |
-| owner 点名做里程碑的 plan 里的节点（「做 alpha A30」） | A、C 节点先开成 milestone 里的 issue：`builder` 的 [explore.md](../builder/references/explore.md) 第 7 节；D、O 照 [spec.md](../builder/references/spec.md) 6.4、6.5 |
+| owner 点名做里程碑的 plan 里的节点（「做 alpha A30」） | A 节点先开成 milestone 里的 issue：`builder` 的 [explore.md](../builder/references/explore.md) 第 7 节；D、O 照 [spec.md](../builder/references/spec.md) 6.4、6.5 |
 | 定一个自动的活跑在哪、多久跑一次 | aboveloop 的 [L2-loop-architecture §2](../../knowledge/spec/L2-loop-architecture.md#2-routines)：routine 的通用规矩，和工作循环的 routine。每个系统的 routine 写在它自己的 spec 里 |
 | 工作循环：dev loop（会话里的入口、依赖图、简报的设计），builder loop 怎么接、`loop.yml`、agent、费用 | dev loop 在 [L2-loop-dev](../../knowledge/spec/L2-loop-dev.md) 和 [L3-loop-dev](../../knowledge/spec/L3-loop-dev.md)；各 loop 共有的在 [L2-loops](../../knowledge/spec/L2-loops.md)，knowledge loop 在它的 [§2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop)。builder loop（两种模式；label `explored`、`ready-for-auto-builder`，`builder`）在 [L2-loop-builder](../../knowledge/spec/L2-loop-builder.md) 和 [L3-loop-builder](../../knowledge/spec/L3-loop-builder.md) |
 | 开一个 issue：正文怎么写 | [issue-template.md](references/issue-template.md) |

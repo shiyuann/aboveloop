@@ -33,7 +33,7 @@ flowchart TB
 
 ## 2. 轻的 spec
 
-1. 写一份短 plan：深浅，和 agent 的节点（A、C），每个写做什么、什么算过。两种模式都写在 issue 的分支上（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。plan 的格式照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「plan 怎么写」。
+1. 写一份短 plan：深浅，和 agent 的节点（A），每个写做什么、什么算过。两种模式都写在 issue 的分支上（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。plan 的格式照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「plan 怎么写」。
 2. 不改 spec 的页。不写 D 节点，不跑 deep-verify，不要 spec review。
 3. 半路碰到设计选择，或要改 spec：在 plan 里把深浅改成 `heavy`，照下一节接着做。下一轮读到 `heavy`，就不会再取 `light`。
 

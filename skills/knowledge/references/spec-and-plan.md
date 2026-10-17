@@ -94,13 +94,13 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - 做完的打 ✅，留在图里，箭头不动：issue 关了（做完或不做），发版、外部事件已经发生。标法只有两处，`prerelease` 照它删：
     - 图上：节点的字以 ` ✅` 结尾，比如 `I<N>["#<N> 发版那一步 ✅"]`。
     - 表里：第一格以 ` ✅` 结尾，比如 `| #<N> ✅ | 做完了 | — | — |`。
-    - 别处的 ✅ 不算：字中间的 ✅（`"#<N> A1–A7 ✅，下一步 C1"`）、图下说明里的 ✅。
+    - 别处的 ✅ 不算：字中间的 ✅（`"#<N> A1–A7 ✅，下一步 A8"`）、图下说明里的 ✅。
   - `Now:` 和排序不看打了 ✅ 的项。图下的说明不打 ✅：一件做完了，照实改它的说明，或删掉。
   - 发版时，`prerelease` 删打了 ✅ 的节点、提到它的每一行图（它的箭头），和打了 ✅ 的表行。
     - 一行图有几个箭头，整行一起删：不碰它的箭头也没了。所以一行只写一个。
   - 图只存箭头、下一步和 `Now:`。issue 开着还是关了，每次从 GitHub 现读。
   - 谁改：`dev` 的会话里的入口每次对一遍 GitHub，新 issue 加进来，关了的打 ✅；agent 开工、owner 说等或关的时候，顺手改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。
-- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A、C 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
+- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
 
 ## 例子
 
@@ -133,7 +133,7 @@ flowchart TB
   D2["D2 owner 拍板：文件格式"] --> A3
   A3 --> A4["A4 agent：文件传到桶"]
   O3["O3–O4 owner：建桶、建 token"] --> A4
-  A3 --> C1["C1 agent：导出一份测试数据"]
+  A3 --> A6["A6 agent：导出一份测试数据"]
   O5["O5 owner：发版"] --> A5["A5 agent：打开线上的开关"]
   A4 --> O5
   E1["E1 外部事件：商店审核通过"] --> A5
@@ -146,7 +146,7 @@ flowchart TB
 - 最后一次 spec review 是 O2。O2 过了，A3、A4 不再等 owner 叫执行。
 - 导出不用桶，上传要等 O3–O4。所以拆成两个节点：A3、A4。
 - 只有 A5 等发版，所以图上画了 O5。别的节点 merge 以后，跟着下一次发版走，不画。
-- C1 是检查，不挡谁：它没有出去的箭头。
+- A6 是检查，没有节点等它，所以没有出去的箭头。种类不定箭头。
 
 ## A1 agent：调研导出格式 ✅
 
@@ -196,7 +196,7 @@ agent 做不了：spec 改动要 owner 认。
   - [ ] 等 D2 的子项
   - 过：导出的用例在 `make test` 里通过。
 
-## C1 agent：导出一份测试数据 ⬜
+## A6 agent：导出一份测试数据 ⬜
 
 - [ ] 跑 `make export`，数文件的行数。过：和库里的行数一样。
 
@@ -231,23 +231,23 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 
 ## 依赖图和节点
 
-- **一个节点只有一个角色、一种任务。** 不把 owner 的活和 agent 的活放进一个节点。节点分五种：
+- **一个节点只有一个角色、一种任务。** 不把 owner 的活和 agent 的活放进一个节点。节点分四种：
 
   | 任务 | 谁 | 代号 | 在图上 |
   | --- | --- | --- | --- |
   | 构建 | agent | A1、A2 | 在 |
   | 拍板 | owner | D1、D2 | 在，箭头指向等它的节点 |
   | 步骤 | owner | O1、O2 | 在，箭头指向等它的节点 |
-  | 检查 | agent | C1、C2 | 在。箭头从它检查的节点来，没有出去的箭头 |
   | 外部事件 | 没有人 | E1、E2 | 在 |
 
-  A 节点那一节里的条目，代号是节点的代号加序号：A2.1、A2.2。只有 owner 做得了的检查，用 O 代号，画进图，没有出去的箭头。
+  A 节点那一节里的条目，代号是节点的代号加序号：A2.1、A2.2。只有 owner 做得了的检查，用 O 代号，画进图；箭头照真的等画。
+- **种类不定箭头。** 检查（跑命令、触发 workflow、看页面、读日志的验收）也是 A 节点。别的节点等不等它，照「箭头只画真的等」：merge 要等这次验收，就画箭头；不等，就不画。
 - **spec review 是 O 节点。** 一轮 spec 改动结束时放一个。指向它的节点（调研、核对、拍板）都做完，前面固定有一个 deep-verify 的 A 节点，在后台跑（形式照 [deep-verify-knowledge.md](deep-verify-knowledge.md) 的「两种形式」；[spec.md](../../builder/references/spec.md) 6.2），才带 owner 做。owner 要改的，当场改，牵连的页放进同一个 commit，不另画节点；deep-verify 找到的方向问题，当场加成新的 D 节点。写代码的 A 节点挂在最后一个 spec review 后面。
 - **发版是 O 节点**：owner 叫 `prerelease`。只在有节点要等发版时才画，比如线上的开关、新代码上线后改 label。发版之后的节点留在 plan 里，在 main 上等。最新一版（L2-release §0）包含这次 merge 了，发版节点就算做完：`dev` 的会话里的入口看得出来，做下一个节点的 agent 给它打 ✅。
   - 为什么：一次发版带走好几个 merge 了的 issue。每份 plan 都画一个发版，它们就都卡在同一个点上。
 - issue 的 plan 不用 M 节点（发布、上线）。里程碑的 plan 可以有 M：发布看得到了，就给 M 打勾。
 - **每个节点的标签以它的代号开头。** 标签写代号、谁、几个字的要点：「A3 agent：导出成文件」「D2 owner 拍板：文件格式」「O3–O4 owner：建桶、建 token」「O2 owner：spec review」「E1 外部事件：商店审核通过」。做完的加 ✅。
-- **节点第一次出现就写全标签。** mermaid 源码里一个节点先以光秃秃的代号出现（`O15 --> C1`），有的预览就只画「C1」，后面写的标签和 ✅ 都不显示。先写带标签的那一行，再写别的箭头。
+- **节点第一次出现就写全标签。** mermaid 源码里一个节点先以光秃秃的代号出现（`O15 --> A16`），有的预览就只画「A16」，后面写的标签和 ✅ 都不显示。先写带标签的那一行，再写别的箭头。
 - **代号在一份 plan 里唯一。** 两个节点不用同一个代号。每种代号在整份 plan 里连续编号。代号不复用，划掉的也占着。
 - **引用别的 plan 的节点，写上 issue 号或那份 plan 的名字**，比如「#<N> D2」「<里程碑> plan <代号>」。只写「plan」和节点号，读的人不知道是哪一份。
 - **一个 A 节点里有的部分等的不一样，就拆成两个 A 节点。** 每个有自己的代号。不画成「A9 的这一块」「A9 的那一块」。
@@ -267,7 +267,7 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 - **每种节点那一节写什么：**
   1. **agent（A）。** 一个 A 节点交付一样能用的东西，能单独说「做完了」。
      - 条目的代号是 A2.1 这样。每条写：做什么（路径、做法、命令）；怎样算过。条目多，就按主题分 `###` 小节。
-     - 检查不写在这一节里。它们是 C 节点（第 4 条）。构建做完，A 节点就打勾。
+     - 检查可以是自己的 A 节点：构建做完，构建的 A 节点就打勾；检查的 A 节点等它的条目全打勾。
   2. **owner 拍板（D）。** 这一节就是问 owner 的那个问题，写全：谁拿去问，都不用再查（会话、CI 的问题评论、dev loop）。
      - 背景：改的是哪一条，它挡着什么。不假设读的人记得这个 issue。
      - 问题：owner 要定什么，一句话。
@@ -279,13 +279,9 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
      - 写：agent 为什么做不了（一句）；按要做的顺序，每步点哪里、填什么；做完的样子；解开哪一节。
      - 不只写「步骤见 spec 某节」。
      - 放进来之前，agent 先自己做一遍（[entry 的 SKILL.md](../../entry/SKILL.md) 的「什么时候问 owner」）。
-     - 只有 owner 做得了的检查，也是 O。写一句 agent 为什么做不了。它在图上，没有出去的箭头。
+     - 只有 owner 做得了的检查，也是 O。写一句 agent 为什么做不了。它在图上；箭头照真的等画。
      - spec review 写：deep-verify 的报告（单人的，是当天报告里的一小节；没改过意思、跳过的，写一句没跑）；要 owner 读的几页，每页一句改了什么；还开着的 D。owner 说完，打勾，写日期和原话。
-  4. **检查（C）。** 构建和 owner 的步骤做完之后的线上验收。
-     - agent 做：跑命令、触发 workflow、看页面、读日志。每条写跑什么、看什么、怎样算过。
-     - 一个节点的几项检查合成一个 C 节点，代号写成一段（C1–C3）。箭头从它检查的那个节点来。它没有出去的箭头：检查不挡谁。
-     - 它和被检查的节点各自打勾：构建做完，A 节点就打勾；检查节点等它的条目全打勾。
-  5. **外部事件（E）。** 写：等什么；怎么知道到了；到了做什么。系统能自己报出来的，写明谁报。
+  4. **外部事件（E）。** 写：等什么；怎么知道到了；到了做什么。系统能自己报出来的，写明谁报。
 - **英文的 plan** 的标签用 Agent、Owner decides、Owner、Event，比如 `A2 Agent: export to a file`、`O2 Owner: spec review`。
 
 ## 条目怎么记

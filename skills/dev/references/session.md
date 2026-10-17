@@ -86,9 +86,9 @@ git show origin/<默认分支>:.agents/dev.md
   - 有 drafts：分支 `issues/<N>-<k>` 上开着 draft，有会话在做一个节点（issue 开着时，默认分支上那份不列，活的在分支上）。把 draft 列在这份 plan 的节点旁边，带 PR 号。先看 draft 做的是哪个节点，不另开一个会话做同一个。
 - 输入二：`started` 里的 issue 的 draft。会话开工的 issue，plan 从 spec 那一步起就只在这里。列 draft：`gh api 'repos/<owner>/<name>/pulls?state=open&per_page=100' --jq '.[] | select(.draft) | [.number, .head.ref, .user.login] | @tsv'`，只留分支是 `issues/<N>`（或 `issues/<N>-<k>`）、N 在 `started` 里的。它的 plan 是分支上的 `knowledge/plan/<N>-*.md`。issue 带着 `ready-for-auto-builder` 的分支不扫：label 就是锁，CI 在做。
 - 输入三：默认分支上里程碑的 plan，即 `knowledge/plan/` 里不以数字开头的文件，除了依赖图 `index.md`。
-  - 节点链着 issue（`#N`）：它的 issue 有一个开着，它就不算一项，那个 issue 才是。它链的 issue 都以完成关了、节点也没有别的没勾的条目，它就做完了：会话里的入口给它打 ✅，是这份 plan 记状态的小改动（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「里程碑的 plan」）。节点指着一个 issue 的 plan 里的节点（`#<N> C1`）：只等那个节点，那个节点 ✅ 了它就做完，issue 开着也一样；它自己不算一项，那份 issue 的 plan 的下一个节点才是（输入一、二）。M 节点是发版：发布看得到了才 ✅；E 节点在事件发生后 ✅。plan 说要重开的关着的 issue，节点还开着，开工时重开。别的以不做（not planned）关掉的，是 owner 的一项：重开、删掉节点，或开一个新 issue。
+  - 节点链着 issue（`#N`）：它的 issue 有一个开着，它就不算一项，那个 issue 才是。它链的 issue 都以完成关了、节点也没有别的没勾的条目，它就做完了：会话里的入口给它打 ✅，是这份 plan 记状态的小改动（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「里程碑的 plan」）。节点指着一个 issue 的 plan 里的节点（`#<N> A1`）：只等那个节点，那个节点 ✅ 了它就做完，issue 开着也一样；它自己不算一项，那份 issue 的 plan 的下一个节点才是（输入一、二）。M 节点是发版：发布看得到了才 ✅；E 节点在事件发生后 ✅。plan 说要重开的关着的 issue，节点还开着，开工时重开。别的以不做（not planned）关掉的，是 owner 的一项：重开、删掉节点，或开一个新 issue。
 - 输入二、三的每份 plan：照输入一的同一条规则，列出标题是 ⬜、而图上指向它的节点都 ✅ 了的节点。
-- 每个节点写代号、谁做（A、C 是 agent，D、O 是 owner，E 是外部事件，M 是里程碑的 plan 的发版，owner 的）、标题、它挡着哪几个节点。
+- 每个节点写代号、谁做（A 是 agent，D、O 是 owner，E 是外部事件，M 是里程碑的 plan 的发版，owner 的）、标题、它挡着哪几个节点。
 - **implement 写过的 plan 只算一件事**：只列「先审 implement 写的活」，不列它的节点。分支上的 plan：draft 的作者，或推过这个分支的人（输入一的 activity 那条命令），有一个不是 owner（空的也算不是），就是 implement 写的。commit 的作者看不出来。
 - draft 上没有 plan：也算一件事，「draft #M 还没有 plan」。
 - **别的会话在做的，标出来。** 一个 issue 的 worktree（`git worktree list`，`../<仓库名>-issues-<N>`）最近 3 小时里有 commit，或者开着一个名字里带这个 issue 号的会话（有列会话的工具，比如 Claude Code 的 ListAgents，就用它），就标「另一个会话在做」。它不进前 5，第 3 步的列表末尾写一行。
@@ -141,7 +141,7 @@ Written in a session of the owner
 一次一件，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「怎么问 owner」写。顺序、在哪一层、处在哪一步，都在那一节，这里不另写。owner 选了再做。做完一件，直接说下一件是什么，接着带。
 - 为什么：没有 context、不一步一步来的问题，owner 答不了。会话照 entry 带路，每个问题都带着 context。
 
-**问是一件一件，做是并发。** 问 owner 一件之前，先在后台开不等这个回答的 agent 活：别的几件的 agent 活，和准备这个问题的活（`entry` 的「问是一个一个，活是并发」）。owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A、C 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
+**问是一件一件，做是并发。** 问 owner 一件之前，先在后台开不等这个回答的 agent 活：别的几件的 agent 活，和准备这个问题的活（`entry` 的「问是一个一个，活是并发」）。owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
 - 为什么：依赖图上互不等的活，并发做更快。一份 plan 里的节点也一样。
 
 主 agent 只带路、调度：问 owner，开子 agent，核对它们交回的结果，报给 owner。活本身交给子 agent：改文件，写 spec 和 plan，审 PR 和写审的记录，deep-verify 的修补和报告，解冲突的 merge。主 agent 只留极小的衔接：一个节点的测试、在 plan 里打勾、commit，owner 批了的 merge，依赖图上一行的更新。
@@ -170,7 +170,7 @@ Written in a session of the owner
   - **explore 的问题**（issue 没有关联的 PR，问题在 Explore 评论之后）：去掉 `explored`（`gh api -X DELETE "repos/<owner>/<name>/issues/<N>/labels/explored"`），让下一批 explore 读到回答；还是现在在会话里再 explore（[builder 的 explore](../../builder/references/explore.md) 第 7 节）。不交回 CI：implement 读的那条 Explore 评论还写着 `none until the question has an answer`。
 - **停了的 implement**：留给 CI，下一次 `loop.yml` 接着这个 draft 做；或接到会话里，先去掉 label，再照下面的「implement 写过的分支」；或关掉。
 - **D 或 O 节点**（draft 分支上的 plan）：在这个 issue 的 worktree 里，照 [spec.md](../../builder/references/spec.md) 的「带 owner 拍板」或「带 owner 做步骤」做。
-- **agent 节点**（draft 分支上的 plan）：照 [implement.md](../../builder/references/implement.md)（第 0 步起）做到打勾。里程碑的 plan 的节点：A、C 节点先照 [builder 的 explore](../../builder/references/explore.md) 第 7 节开成 milestone 里的 issue；D、O 节点照 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过，记录照 spec-and-plan.md「里程碑的 plan」。
+- **agent 节点**（draft 分支上的 plan）：照 [implement.md](../../builder/references/implement.md)（第 0 步起）做到打勾。里程碑的 plan 的节点：A 节点先照 [builder 的 explore](../../builder/references/explore.md) 第 7 节开成 milestone 里的 issue；D、O 节点照 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过，记录照 spec-and-plan.md「里程碑的 plan」。
 - **main 上的 plan 的节点**，issue 还开着、还没有分支：在 spec 那一步。照 [spec.md](../../builder/references/spec.md) 最后一节做：先开分支和 draft PR，plan 跟着分支走，之后只在分支上改。
 - **main 上的 plan 的节点**，issue 已经关了：照 [implement.md](../../builder/references/implement.md) 第 9 节「`Refs #<N>` 的 PR」（只改 plan 的、要改别的文件的、发版的 O）。
 - **不是 owner 做的推送、失败的 `loop.yml` 运行**：给 owner 链接，owner 读提交或日志。agent 只报，不改什么。

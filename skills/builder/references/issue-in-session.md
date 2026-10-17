@@ -21,7 +21,7 @@ flowchart TB
 
 - 新功能、改画面、改数据、修 bug、改规矩，都这样做。例外：已经开了的、清楚的小 issue，owner 在场时当场做完，不写 plan、不跑 deep-verify：照 [implement.md](implement.md) 第 9 节「当场做完的小事」。
 - owner 说「交给 builder」：照 [implement.md](implement.md) 第 9 节的「交给 builder」。owner 没说，就不打 `ready-for-auto-builder`。
-- 里程碑的 plan 里的节点，owner 点名做（「做 <里程碑> 的 A<k>」）：A、C 节点照 [explore.md](explore.md) 第 7 节先开成 milestone 里的 issue，D、O 照 [spec.md](spec.md) 6.4、6.5。
+- 里程碑的 plan 里的节点，owner 点名做（「做 <里程碑> 的 A<k>」）：A 节点照 [explore.md](explore.md) 第 7 节先开成 milestone 里的 issue，D、O 照 [spec.md](spec.md) 6.4、6.5。
 - 怎么写 spec 和 plan，在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)。
 
 ## 2. 在 issue 的分支上改 spec 和 plan

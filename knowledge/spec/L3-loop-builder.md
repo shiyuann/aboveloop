@@ -56,7 +56,7 @@ What each text holds:
 
 - **`explore.md`:** the batch, the reads, the merge of duplicates, the research, the Explore comment with the spec depth, the labels.
   - Its last section is the part of a session: open the issue by the template of [L2-loop-builder §2.3](L2-loop-builder.md#23-each-issue-is-self-contained), and explore it at once (§1.1).
-  - For an A or C node of the plan of a milestone, the issue gets that milestone, and the node links to the issue.
+  - For an A node of the plan of a milestone, the issue gets that milestone, and the node links to the issue.
 - **`spec.md`:** the depth; the light spec (a short plan); the heavy spec. The heavy spec has the options from the Explore comment, a complete draft of the spec and the plan, the agent's decisions and the D nodes, the deep-verify by a second agent, and the owner's decisions by `entry`'s 「拍板只问方向」.
   - Only for CI: the push of the draft before the deep-verify, and the subagent `deep-verify` with its fallback. Also only for CI: the stop at a D, and the answer of the owner in the next run.
   - Its last section is the part of a session: the branch of the issue, its draft PR, and the plan and the spec on it; R23 for a spec that the implement run wrote; how the agent leads the owner through each D and each O, one at a time (also a D or O of the plan of a milestone); the deep-verify node before each spec review, in the background with no question to the owner; the spec review.
