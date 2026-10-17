@@ -41,7 +41,7 @@ description: >-
 1. 跑 `setup-dev` skill 第一节的命令。把它打印的那一行原样告诉 owner。
 2. 那一行说「装的是旧的」、「落后」或「检查失效」，就照它给的命令修。这份约定可能是旧的，别处看不出来。
 3. 读 `<项目根>/knowledge/index.md`，和 `knowledge/spec/` 里所有 `L1-` 开头的页。还没分层的项目，有 `profile.md` 就读它。
-4. 给 owner 几个日常的选项，用提问的工具（比如 Claude Code 的 AskUserQuestion）。owner 第一句已经说了要做什么，就不给。
+4. 在回复的正文里给 owner 几个日常的选项，编号列出，不用提问的工具。owner 第一句已经说了要做什么，就不给。
    - **dev**：会话里的入口。扫一遍，给出排序的前 5 件，一件一件带着做（`dev` skill，[session.md](../dev/references/session.md)）。
    - **继续 #N**：依赖图 `knowledge/plan/index.md` 里在做的 issue，和 `git worktree list` 里每个 `issues/<N>`（或 `issues/<N>-<k>`）的 worktree，各一项，接着做这个 issue。
    - **发版**：有 merge 了、还没发版的 PR 时（`prerelease` skill）。
@@ -162,7 +162,7 @@ description: >-
 
 - 为什么：owner 的注意力最贵。agent 自己能定哪个最好的，不问；owner 只参与方向性的、几个维度难以取舍的问题。
 
-**怎么问 owner：一次一个问题，用白话，照固定的顺序。** 每一个交给 owner 的问题（拍板、步骤、开不开 issue）都这样问，不只在会话里的入口。写在回复正文里，分成下面这几段。一行一个选项的选择框放不下背景、例子和理由，不用。
+**怎么问 owner：一次一个问题，用白话，照固定的顺序。** 每一个交给 owner 的问题（拍板、步骤、开不开 issue）都这样问，不只在会话里的入口。写在回复正文里，分成下面这几段。不用提问的工具（比如 Claude Code 的 AskUserQuestion）或表单：选择框一个选项只给一行，放不下背景、例子和理由。
 
 先写现在在哪一层、处在哪一步。高层是 dev：排队，带 owner 看下一件。进了一张 issue，就是这张 issue 的执行：写 spec、改 PR、等 merge。从一层进到另一层，说一声。
 
