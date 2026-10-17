@@ -209,6 +209,7 @@ Why: <哪一句、要你做什么、为什么不做>
 - 照 `AGENTS.md` 和 `entry` 写代码：做 issue 要的那个量，修 bug 就加一条先红后绿的用例。
 - 一个节点做完，在 plan 里打勾，commit，push 到这个分支。CI：deep-verify 的每个阶段做完也 push（审查、反驳、修补、复查），这一阶段的报告写进 plan 的记录。不在并行的审查中间 push。规矩的正文在 [L3-loop-builder §1.2](../../../knowledge/spec/L3-loop-builder.md#12-implement)。这一轮半路死了，下一轮从 draft PR 接着做。CI 每次 push 之前，先再跑一遍第 1 步的脚本：打印 `unlabelled` 或 `closed` 就结束，不 push，不写评论（第 4 步）；`limit` 不算。会话每次 push 之前，先再跑一遍会话的脚本（第 0 步）：打印了 `labelled`，就是 owner 把 issue 交给了 CI，不再 push，告诉 owner。
 - 节点并发：CI 一个 agent，节点一个接一个。会话可以给互不等、不改同一批文件的节点各开一个子 agent，放在同一条消息里并发做。子 agent 共用这个 issue 的 worktree，不 commit；主 agent 跑测试、在 plan 里打勾、commit、push。
+  一个节点的子 agent 自己定要不要再开子 agent：节点里有互不等、不改同一批文件的条目，开了能快，就开。在运行时允许的嵌套层数以内；到了上限，就自己一条一条做。主 agent 不替它拆，也不把条目画成节点。
 - 改 spec：CI 照第 5 步第 4 条；发现要改 L1 或 L2 的内容（包括规矩），按第 4 步停（第 2 种）。会话里，spec 改动都在分支上改，哪一层都可以；改 `skills/` 里的规矩不停。L1 只有 owner 改：要改 L1，先带 owner 拍板（[spec.md](spec.md) 最后一节的「带 owner 拍板」），用 owner 的原话。
 - 改动要碰 workflow 文件（`.github/workflows/`）：CI 按第 4 步停（第 1 种），因为 token 没有 `workflows` 权限，push 不上去。会话照常改。
 - 测试红了又修不好：CI 按第 4 步停（第 1 种）；会话告诉 owner 卡在哪，带 owner 定怎么办（[spec.md](spec.md) 最后一节的「带 owner 拍板」）。
