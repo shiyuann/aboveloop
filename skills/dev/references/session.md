@@ -141,7 +141,7 @@ Written in a session of the owner
 一次一件，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「怎么问 owner」写。顺序、在哪一层、处在哪一步，都在那一节，这里不另写。owner 选了再做。做完一件，直接说下一件是什么，接着带。
 - 为什么：没有 context、不一步一步来的问题，owner 答不了。会话照 entry 带路，每个问题都带着 context。
 
-**问是一件一件，做是并发。** owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A、C 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
+**问是一件一件，做是并发。** 问 owner 一件之前，先在后台开不等这个回答的 agent 活：别的几件的 agent 活，和准备这个问题的活（`entry` 的「问是一个一个，活是并发」）。owner 选了、轮到 agent 做的活，开一个后台子 agent 去做，主 agent 接着带 owner 看下一件，不等它做完。依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A、C 节点），同一条消息里各开一个子 agent。每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支：git 不让一个分支同时开在两个 worktree 里。一份 plan 里的子 agent 怎么分、谁 commit，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 9 节的「节点并发」。一个 issue 的 spec 和 plan 同一时间只派一个子 agent 改，依赖图只由主 agent 改，免得撞。两件活改同一批文件，就有先后，排成一个接一个。子 agent 回来，主 agent 先核对它的结果，再告诉 owner。
 - 为什么：依赖图上互不等的活，并发做更快。一份 plan 里的节点也一样。
 
 主 agent 只带路、调度：问 owner，开子 agent，核对它们交回的结果，报给 owner。活本身交给子 agent：改文件，写 spec 和 plan，审 PR 和写审的记录，deep-verify 的修补和报告，解冲突的 merge。主 agent 只留极小的衔接：一个节点的测试、在 plan 里打勾、commit，owner 批了的 merge，依赖图上一行的更新。

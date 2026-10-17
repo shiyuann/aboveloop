@@ -152,7 +152,7 @@ Each row is one arrow between two loops. The page of each loop tells its own par
 
 **How a question goes to the owner, in each mode.**
 
-- **A session:** a question in the dialog, one at a time, by the fixed order of `entry`. The part of a session of `builder` spec.md leads the owner through a D or an O of one issue: it records the answer, gives the steps, and verifies each step.
+- **A session:** a question in the dialog, one at a time, by the fixed order of `entry`. The part of a session of `builder` spec.md leads the owner through a D or an O of one issue: it records the answer, gives the steps, and verifies each step. While the owner decides, the agent work that does not need the answer goes on in background subagents (`entry`, 「问是一个一个，活是并发」).
 - **CI:** a question comment on the issue. Which run stops, the label and the owner's answer: [L2-loop-builder §3](L2-loop-builder.md#3-the-labels-explored-and-ready-for-auto-builder).
 - **What waits:** `dev` in a session shows each point that waits for the owner, in one rank ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)). The briefing, a design that aboveloop does not implement, lists the same points, except the next nodes of the plans on draft branches and of the plans of milestones: these are only in `dev` in a session.
 

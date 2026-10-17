@@ -172,9 +172,11 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 - 上一次 deep-verify 之后 L1 改过，验全量，不问 owner。为什么：deep-verify 之前没有给 owner 的问题；L1 改过时，deep-verify-knowledge.md 第 1 节本来就推荐全量。
 - 为什么在后台跑、不先问 owner：owner 的注意力稀缺，owner 在 loop 之上（on the loop），不被 deep-verify 卡住。deep-verify 在后台跑，owner 不等它，也不用回答问题。
 
-### 6.3 先过 owner 的节点
+### 6.3 先开 agent 的活，再带 owner 过 D、O
 
-能做的 D、O（指向它的节点都 ✅ 了），一个一个带 owner 过，放在 agent 的长活前面：owner 这时在场，后面的长活就不再等 owner。一个 D 还开着，只挡它箭头指着的节点；别的照做。
+能做的 agent 节点（指向它的节点都 ✅ 了），先在后台开子 agent 做（`entry` 的「问是一个一个，活是并发」；怎么分，照 [implement.md](implement.md) 第 9 节的「节点并发」）。然后一个一个带 owner 过能做的 D、O。一个 D 还开着，只挡它箭头指着的节点；别的照做，不等它。
+
+- 为什么：owner 在场时，长活也在跑。owner 定了一个 D，只有它挡着的节点才等过它。
 
 ### 6.4 带 owner 拍板（D）
 

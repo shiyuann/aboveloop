@@ -130,7 +130,8 @@ flowchart TB
   - Why: a question with no context cannot get a good answer. The agent follows `entry` to lead the conversation, and gives the context with each question.
   - Why: two levels. `entry` holds how to ask, the page of each loop holds where the owner acts, and the dev loop holds which comes first. A session that does not go through `dev`, and CI that asks in an issue comment, obey the same rules (L2-loops §4).
 - **Questions go one at a time; the work goes in parallel.**
-  - When the owner chooses agent work, the agent starts a background subagent for it and goes on to the next item.
+  - Before the agent asks the owner about an item, it starts in background subagents all agent work that does not need the answer: the ready agent nodes of the plans, the agent work of the other items, and the work that prepares the choice (for example, the candidates of a D). When the owner chooses agent work, the agent starts a subagent for it and goes on to the next item. The rule is in `entry` (「问是一个一个，活是并发」).
+    - Why: one question at a time is a rule for the questions of the owner, not for the work. The owner's words (2026-10-16): 「even in the semi-automated mode, you should start to work on nodes in parallel as well as talking to me about decision nodes」.
   - Agent work that does not wait for other work in the graph (several issues, or several A or C nodes of one plan) starts in parallel, one subagent each. The subagents of one plan follow the rule of the builder loop ([L3-loop-builder §1.3](L3-loop-builder.md#13-the-implement-step-in-both-modes), row "Agent nodes in parallel").
   - One subagent at a time changes the spec and the plan of one issue; only the main agent changes the graph. Two pieces of work that change the same files go one after the other.
   - The main agent orchestrates: it asks the owner, starts subagents, examines their results and reports.

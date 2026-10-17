@@ -198,6 +198,15 @@ description: >-
 
 - 为什么：没有 context、几个问题一起问，owner 答不了，要回头再问。问题里满是内部代号、背景照 agent 记得的写、例子从 agent 那边讲、决定埋在长框里、发之前不自查，owner 就得一次次请 agent 讲清楚。一次一个问题，写在回复里，照这个顺序：context、要定的问题、例子、选项、为什么推荐这一个。先写在哪个 loop、处在哪一步。选择框把一段话压成一行，放不下这五段。
 
+**问是一个一个，活是并发。** 「一次只问一个」只管问 owner 的问题，不管活。
+
+- owner 在想一个问题时，不等这个回答的 agent 活都接着做：plan 里能做的 A 节点（指向它的节点都 ✅ 了），dev loop 里别的几件，deep-verify。
+- 先在后台开子 agent 做这些活，再问 owner。不为用不着的回答停活，也不等活做完才问。
+- 准备这个问题的活，也在问之前开始：找候选、排好、写清每个要什么。比如「挑一个 issue 来试」是一个 D，选项是子 agent 找到、排好的候选，最好的放第一个。
+- 子 agent 回来，主 agent 先核对：读它的 diff，跑它说的检查，再告诉 owner。子 agent 的报告只是一句话（P2）。
+- 两件活改同一批文件，就是一件：给一个子 agent，或排成一个接一个（[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
+- 为什么：owner 拍板时 agent 不停。owner 一答，只有被这个 D 挡着的节点才开始，别的早在跑。owner 的原话（2026-10-16）：「even in the semi-automated mode, you should start to work on nodes in parallel as well as talking to me about decision nodes」。
+
 **还没定的设计，先做 spec 那一步。** 下一步是还没定的产品、数据模型或架构，就先停下写代码，照 [spec.md](../builder/references/spec.md) 做 spec 那一步。不先做一版再问。谁定，照上面的「拍板只问方向」。
 
 - 要 owner 拍板：agent 先自己调研。写进 plan 的「owner 拍板」。还没有 plan，就写进 spec 的「待定」。给 2～4 个选项，每个一句理由，推荐的放第一个。
