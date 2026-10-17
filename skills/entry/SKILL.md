@@ -142,7 +142,7 @@ description: >-
 
 1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。会话的 worktree 本来就在自己的分支上、还没有提交，就用它。
 2. 改，commit，push，开一个 PR（`builder` 的 [implement.md](../builder/references/implement.md) 第 5 步第 6 条的命令，去掉 `-F draft=true`），正文一两句：改了什么，为什么。不写 `Fixes`：小改动没有 issue。
-3. 跑检查：改动碰到的部分的测试（项目配置的命令），和 PR 上 GitHub 的检查（仓库有的话）。都过了，agent 当场 merge（`gh pr merge <M> --merge`）。owner 不审它。没过，修好再跑；修不好，告诉 owner。
+3. 跑检查：改动碰到的部分的测试（项目配置的命令），和 PR 上 GitHub 的检查（仓库有的话）。都过了，agent 当场 merge（`gh pr merge <M> --merge`）。merge 了，当场删这个分支和它的 worktree（下面「会话里的每样改动都开 PR」的清理）。owner 不审它。没过，修好再跑；修不好，告诉 owner。
 4. 改的是 aboveloop 的规矩（小改动或 issue 的 PR 都一样）：merge 以后，下一版才到 owner 的会话里：告诉 owner，不替 owner 发版。
 
 为什么：会话在自己的 worktree 和分支上干活，没有停在 main 上的目录，所以每样改动都走一个分支和一个 PR。owner 先在 draft PR 里看定了的样子（spec 的 diff），再让 agent 写代码。小改动不等 owner：检查过了，agent 就 merge（owner 定的）。一个 issue 一个分支、一个 PR，几个 agent 同时干活也不撞。
@@ -332,7 +332,7 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
   - 分支、worktree、draft PR、测试基线、收尾、PR 正文和它的检查，照 `builder` 的 [implement.md](../builder/references/implement.md) 第 5 步和第 7–8 步，和 CI 是同一份。一件事分几个 commit 没关系。
   - 发版（`prerelease`）不走 PR 推 main：版本号那次提交；发版内的修复，tag 的说明列出它；第 6 步 merge 之后的 `Merge follow-up`，发版的回复列出它（[L2-release §1](../../knowledge/spec/L2-release.md#1-the-order-)）。别的工作都走 PR。
   - merge 不是发版。要上线，照 `prerelease` 的 [release.md](../prerelease/references/release.md) 发一版。
-  - merge 之后的清理，照 [implement.md](../builder/references/implement.md) 第 7 步的最后一段。
+  - merge 以后当场清理，owner 说留着才留：本地分支、它的 worktree，和推上去的分支（仓库没开「Automatically delete head branches」时）。删之前，看分支上有没有默认分支没有的提交：`git cherry origin/<默认分支> <分支>` 打印 `+` 行，就不删，告诉 owner 为什么。命令照 [implement.md](../builder/references/implement.md) 第 7 步的最后一段。
 
 ## 界面文件不取数、不算业务
 
