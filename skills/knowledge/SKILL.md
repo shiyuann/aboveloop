@@ -4,7 +4,7 @@ description: >-
   knowledge loop 的 skill：让 `<项目根>/knowledge/` 一直是真的。知识库的规矩（三层 L1、L2、L3，文件名，
   `index.md` 的依赖图，改了一页之后核对哪些页、更新记录、核对过的日期，两页说的不一样），spec 怎么写、
   plan 怎么写（节点、条目、依赖图 `plan/index.md`），deep-verify（深查 spec 和 plan，多人或单人，页头的标记），
-  知识检查的脚本 `knowledge-check.ts`，一条规矩或 feedback 放进哪一份、记在哪、写什么，和自动化的 spec（owner 在环里
+  知识检查的脚本 `knowledge-check.ts`，改 plan 的图的脚本 `plan.ts`，一条规矩或 feedback 放进哪一份、记在哪、写什么，和自动化的 spec（owner 在环里
   还是环上）。词和每次会话都守的规矩在 `entry`。
   Use when the user says 知识库, 记一下, 加进知识库, deep-verify, 深查, 核对, 核对过, spec 怎么写, plan 怎么写,
   依赖图, 更新记录, 改了一页, 两页说的不一样, knowledge check, 记在哪, 放在哪, 在环里还是环上,
@@ -33,9 +33,26 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 | 要做的事 | 读 |
 | --- | --- |
 | 读、写 `<项目根>/knowledge/`，给新项目建知识库，改成分层；改了一页要核对哪些页；两页说的不一样 | [knowledge-base.md](references/knowledge-base.md) |
-| 写、改 spec 和 plan：正文、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式。页头在发版时写 | [spec-and-plan.md](references/spec-and-plan.md) |
+| 写、改 spec 和 plan：正文、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式。页头在发版时写 | [spec-and-plan.md](references/spec-and-plan.md)。plan 的图（节点、箭头、✅、条目的勾、D 的回答、`Now:`）用脚本 `scripts/plan.ts` 改，不手改：它的「图的部分用 `plan.ts` 改」 |
 | deep-verify：深查 plan 做完到不到得了 spec、spec 在现在的代码上做不做得出来、spec 有没有矛盾和大的设计问题 | [deep-verify-knowledge.md](references/deep-verify-knowledge.md) |
 | 一条规矩或 feedback 该放进哪一份（规矩什么时候要用，就放在那时读得到的文字里）；feedback 记在哪、写什么 | [placement.md](references/placement.md) |
 | 有自动化或 agent 的 spec：owner 在环里还是环上 | [spec-and-plan.md](references/spec-and-plan.md)「自动化的 spec」 |
 | 一次设计讨论怎么谈成 spec 的例子（不用每次读） | [case-study-design-discussion.md](references/case-study-design-discussion.md) |
 | 只查形式：锚点、⬜ 标记的 issue 还开不开、`index.md` 的「建立在」、plan 的格式、deep-verify 报告的小发现只给数 | 知识检查：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/knowledge-check.ts --cwd <项目根>`（不联网加 `--offline`）。deep-verify 的第 2 步和第 7 步也跑它 |
+| owner 要在浏览器里看 plan 的图：缩放、跟着最新的改动、节点详情、活动（拍板、勾选、日志）、知识检查的发现；在里程碑的 plan 里把节点圈成 proposal，开成 issue | 下面的「看 plan 的图」 |
+
+## 看 plan 的图
+
+`plan-view.ts` 起一个本机的网页，读 `<项目根>/knowledge/plan/` 和它的 git 历史。文件改了、有了新提交，页面自己刷新。接口、写的检查、事件和节点的状态在 aboveloop 的 [L3-loop-dev §5](../../knowledge/spec/L3-loop-dev.md#5-the-plan-viewer)。
+
+1. 在后台起它：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/plan-view.ts --cwd <项目根>`。在 aboveloop 的仓库里，也可以用 `make plan-view CWD=<项目根>`。
+2. 把它打印的地址（默认 `http://127.0.0.1:4317/`）给 owner。端口占着，加 `--port <别的端口>`。加 `--open`，它自己开浏览器。
+3. owner 不看了，停掉这个进程。
+
+- 它只听 127.0.0.1。只读的时候，它不往外发东西，不改文件。
+- 节点的状态（能做、等、挡着）、关键路径、活动和拍板，都由脚本从 plan 和 git 算出来，页面只画。
+- 在里程碑的 plan 里，owner 能在页面上改分组。每一样都走 `plan.ts` 的同一个函数和同一道检查（[spec-and-plan.md](references/spec-and-plan.md) 的「图的部分用 `plan.ts` 改」）：
+  - 按住 shift 拖一个框，或按住 shift 点节点，选中几个 A 节点；写标题，点 Propose：圈成一个 proposal。
+  - 点一个 proposal：看它的节点，加、减节点，删掉这个 proposal。
+  - 点 Open as issue：页面先给出要跑的 `gh issue create` 命令和 plan 要改的几行。owner 点 Run it，它才跑。开 issue 是对外的动作，撤不回，所以只由 owner 在页面上点。
+  - 页面说 issue 开了、plan 没写上：issue 已经在 GitHub 上。不再开一次：把 `#N` 记进 plan，告诉 owner。

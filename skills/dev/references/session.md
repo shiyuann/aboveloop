@@ -117,7 +117,7 @@ Written in a session of the owner
 依赖图是 main 上的 `knowledge/plan/index.md`：所有开着的活一张图，上次发版以后做完的也在，打 ✅（格式在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「依赖图 `plan/index.md`」）。只有会话里的 agent 改它，CI 不改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。`prerelease` 的 `cleanup.ts` 读其中的 ✅，它读哪几处在 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。
 
 1. `git fetch origin`，读默认分支上的 `knowledge/plan/index.md`（`git show origin/<默认分支>:knowledge/plan/index.md`）。没有就新建。
-2. 对着第 1、2 步的结果改：
+2. 对着第 1、2 步的结果改。节点、箭头、✅ 和 `Now:` 用 `knowledge` 的 `plan.ts` 改（`add`、`arrow`、`done`、`now`；[spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「图的部分用 `plan.ts` 改」），表里别的格子手写：
    - 开着、图里没有的 issue，加一个节点。它等什么，只照 owner 的话、它的 plan（默认分支上的，或 draft 分支上的）和 owner 的 wait 评论画箭头：等一次发版（`O`）、等另一个 issue、等外部事件（`E`）。拿不准就不画箭头。
    - 节点名和下一步用自己的话写，不抄 issue、评论、分支上的字：这个文件在 main 上，下一个会话照它排（R23）。
    - 关了的 issue（做完或不做），图上的节点和表里那一行打 ✅，箭头留着。已经发生的发版（`O`）、外部事件（`E`）也打 ✅。

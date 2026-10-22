@@ -35,6 +35,7 @@ import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from
 import { join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { chartMask, openUnderDone, parseChartLine, parsePlan } from "../../knowledge/scripts/plan-graph.ts";
 import { fenced, linksOf, relativePath } from "./links.mjs";
 import { repoOf, run } from "./scope.ts";
 
@@ -44,76 +45,50 @@ const INDEX = "knowledge/index.md";
 const GRAPH = "knowledge/plan/index.md";
 const DONE = "✅";
 
-/** A plan is finished when it has a `##` heading and each one ends with ✅. Open items under a ✅ heading are warnings. */
+/**
+ * A plan is finished when it has a `##` heading and each one ends with ✅. Open items under a ✅ heading are warnings.
+ * The parser is `knowledge`'s `plan-graph.ts`, which `plan.ts` and the knowledge check use too.
+ */
 export function planState(text: string) {
-  const lines = text.split("\n");
-  const code = fenced(lines);
-  const open: string[] = [];
-  const warnings: { line: number; text: string }[] = [];
-  let headings = 0;
-  let done = false;
-  lines.forEach((line, i) => {
-    if (code[i]) return;
-    const h = /^##[ \t]+(.+?)[ \t]*$/.exec(line);
-    if (h) {
-      headings++;
-      done = h[1].endsWith(DONE);
-      if (!done) open.push(h[1]);
-    } else if (done && /^\s*[-*+][ \t]+\[ \][ \t]/.test(line)) warnings.push({ line: i + 1, text: line.trim().slice(0, 120) });
-  });
-  return { finished: headings > 0 && open.length === 0, open, warnings };
+  const plan = parsePlan(text, "knowledge/plan/0-plan.md");
+  const open = plan.sections.filter((s) => !s.title.endsWith(DONE)).map((s) => s.title);
+  return { finished: plan.sections.length > 0 && open.length === 0, open, warnings: openUnderDone(plan, text) };
 }
-
-/** A node of a mermaid chart in the graph: `ID["label"]` (the format in knowledge's spec-and-plan.md). */
-const NODE = /([A-Za-z_]\w*)\["([^"]*)"\]/g;
 
 /**
  * The ✅ items of the graph of open work (L2-loop-dev §4, L3-loop-dev §2): in a mermaid chart, each node whose label ends with ✅,
  * and each line that names one by its id; outside code, each table row whose first cell ends with ✅. A line that
  * goes keeps, on a line of its own, the label of each node that stays and has no label on a line that stays.
  * `to` is that text, or null. A line with more than one arrow goes whole: a warning. Lines from 1.
+ * The chart lines are read by `knowledge`'s `plan-graph.ts` (`chartMask`, `parseChartLine`).
  */
 export function finishedItems(text: string) {
   const lines = text.split("\n");
   const code = fenced(lines);
-  const chart: boolean[] = [];
-  let fence: string | null = null;
-  let mermaid = false;
-  for (const line of lines) {
-    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if (fence) {
-      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && !m[2].trim()) fence = null;
-      chart.push(fence !== null && mermaid);
-    } else {
-      if (m && !(m[1][0] === "`" && m[2].includes("`"))) [fence, mermaid] = [m[1], m[2].trim() === "mermaid"];
-      chart.push(false);
-    }
-  }
+  const chart = chartMask(lines);
+  const parsed = lines.map((line, i) => (chart[i] ? parseChartLine(line) : null));
   const nodes: string[] = [];
-  lines.forEach((line, i) => {
-    if (chart[i]) for (const m of line.matchAll(NODE)) if (m[2].trim().endsWith(DONE) && !nodes.includes(m[1])) nodes.push(m[1]);
-  });
+  for (const p of parsed) for (const r of p?.refs ?? []) if (r.label !== null && r.label.trim().endsWith(DONE) && !nodes.includes(r.id)) nodes.push(r.id);
+  // A line that is not a node statement (`style I36 …`, `class …`) names an id as a word.
   const ids = new RegExp(`(?<![\\w])(?:${nodes.join("|") || "(?!)"})(?![\\w])`);
-  const bare = (line: string) => line.replace(NODE, "$1").replace(/\|[^|]*\|/g, "");
-  const goes = lines.map((line, i) =>
-    chart[i]
-      ? ids.test(bare(line))
-      : !code[i] && line.trimStart().startsWith("|") && line.trim().slice(1).split("|")[0].trim().endsWith(DONE),
-  );
-  const labelled = new Set(lines.flatMap((line, i) => (chart[i] && !goes[i] ? [...line.matchAll(NODE)].map((m) => m[1]) : [])));
+  const goes = lines.map((line, i) => {
+    const p = parsed[i];
+    if (p) return p.refs.some((r) => nodes.includes(r.id)) || ((p.other || p.rest !== "") && ids.test(line));
+    return !code[i] && line.trimStart().startsWith("|") && line.trim().slice(1).split("|")[0].trim().endsWith(DONE);
+  });
+  const labelled = new Set(parsed.flatMap((p, i) => (p && !goes[i] ? p.refs.filter((r) => r.label !== null).map((r) => r.id) : [])));
   const out: { line: number; text: string; to: string | null }[] = [];
   const warnings: { line: number; text: string }[] = [];
   lines.forEach((line, i) => {
     if (!goes[i]) return;
     const keep: string[] = [];
-    if (chart[i])
-      for (const m of line.matchAll(NODE))
-        if (!nodes.includes(m[1]) && !labelled.has(m[1])) {
-          labelled.add(m[1]);
-          keep.push(`${/^\s*/.exec(line)![0]}${m[0]}`);
-        }
-    if (chart[i] && (bare(line).match(/-->|---|==>|-\.->/g) ?? []).length + (bare(line).includes("&") ? 1 : 0) > 1)
-      warnings.push({ line: i + 1, text: line.trim() });
+    const p = parsed[i];
+    for (const r of p?.refs ?? [])
+      if (r.label !== null && !nodes.includes(r.id) && !labelled.has(r.id)) {
+        labelled.add(r.id);
+        keep.push(`${/^\s*/.exec(line)![0]}${line.slice(r.start, r.end)}`);
+      }
+    if (p && p.edges.length > 1) warnings.push({ line: i + 1, text: line.trim() });
     out.push({ line: i + 1, text: line.trim().slice(0, 160), to: keep.length ? keep.join("\n") : null });
   });
   const to = new Map(out.map((o) => [o.line, o.to]));

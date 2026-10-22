@@ -1,0 +1,104 @@
+# my-app #<N> plan：导出
+
+> **更新 <日期>** · issue [#<N>](…) 的待办。spec 的改动在分支 `issues/<N>` 上，draft PR #<M>。现在等 owner：O1 spec review。
+>
+> - <日期>：……
+
+```mermaid
+flowchart TB
+  A1["A1 agent：调研导出格式 ✅"] --> O1["O1 owner：spec review ✅"]
+  D1["D1 owner 拍板：存在哪 ✅"] --> O1
+  O1 --> A2["A2 agent：deep-verify（后台）"]
+  O1 --> O2["O2 owner：spec review"]
+  A2 --> O2
+  O2 --> A3["A3 agent：导出成文件"]
+  D2["D2 owner 拍板：文件格式"] --> A3
+  A3 --> A4["A4 agent：文件传到桶"]
+  O3["O3–O4 owner：建桶、建 token"] --> A4
+  A3 --> A6["A6 agent：导出一份测试数据"]
+  O5["O5 owner：发版"] --> A5["A5 agent：打开线上的开关"]
+  A4 --> O5
+  E1["E1 外部事件：商店审核通过"] --> A5
+```
+
+- O1 时 owner 要改两处：当场改，牵连的页放进同一个 commit。A2 在后台验这次改动，再接 O2。
+- 最后一次 spec review 是 O2。O2 过了，A3、A4 不再等 owner 叫执行。
+- 导出不用桶，上传要等 O3–O4。所以拆成两个节点：A3、A4。
+- 只有 A5 等发版，所以图上画了 O5。别的节点 merge 以后，跟着下一次发版走，不画。
+- A6 是检查。图上没有节点等它，所以没有出去的箭头；它挡着 implement 的收尾：A6 ✅ 之前，PR 不标成 ready。种类不定箭头。
+
+## A1 agent：调研导出格式 ✅
+
+- [x] 做完的节点压成一两行（日期、commit）。
+
+## D1 owner 拍板：存在哪 ✅
+
+owner 定的（<日期>，「原话」）：……
+
+## O1 owner：spec review ✅
+
+- [x] 多人的 deep-verify（<日期>，报告链接）。owner 读完，要改两处（<日期>，「原话」）。
+
+## A2 agent：deep-verify（后台） ⬜
+
+- [ ] **A2.1 ……**
+
+## O2 owner：spec review ⬜
+
+agent 做不了：spec 改动要 owner 认。
+
+之前：单人的 deep-verify，范围是上一次 deep-verify 之后的 diff（报告链接）。
+
+- [ ] owner 读这几页：……（每页一句改了什么）。
+- 做完的样子：owner 说过了，或说要改哪里。要改，就当场改，再加一个 spec review。
+
+## D2 owner 拍板：文件格式 ⬜
+
+背景：改的是 A3.2 怎么做：导出的文件用哪种格式。它挡着 A3。
+
+问题：导出的文件用 CSV 还是 JSON？
+
+例子：选 CSV，owner 在桶里看到一个 `.csv`，用表格软件就能打开。选 JSON，看到一个 `.json`，要用编辑器看。
+
+- **推荐：CSV。** agent 做，不花钱，能撤回。理由一句。
+- JSON：agent 做，不花钱，能撤回。为什么不推荐。
+
+## A3 agent：导出成文件 ⬜
+
+- [x] **A3.1 <一件事>**（<日期>，`abc1234`，证据）
+- [ ] **A3.2 导出成文件**（`src/export.ts`）。等 D2。
+  - [x] 做完的子项（日期、证据）
+  - [ ] 等 D2 的子项
+  - 过：导出的用例在 `make test` 里通过。
+
+## A6 agent：导出一份测试数据 ⬜
+
+- [ ] 跑 `make export`，数文件的行数。过：和库里的行数一样。
+
+## O3–O4 owner：建桶、建 token ⬜
+
+agent 做不了：要 owner 的云账号登录。按顺序做。做完解开 A4。
+
+- [ ] **O3 建桶。**
+  1. 点哪里。
+  2. 填什么。
+  - 做完的样子：……
+- [ ] **O4 建一把只能写这个桶的 token。** ……
+
+## A4 agent：文件传到桶 ⬜
+
+- [ ] **A4.1 上传**（`src/upload.ts`）。等 O3–O4。过：……
+
+## O5 owner：发版 ⬜
+
+agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
+
+- 做完的样子：带这个 PR 的 tag 在 origin 上。
+
+## E1 外部事件：商店审核通过 ⬜
+
+等什么；怎么知道到了。到了：做 A5。
+
+## A5 agent：打开线上的开关 ⬜
+
+- [ ] **A5.1 ……**。等 O5、E1。

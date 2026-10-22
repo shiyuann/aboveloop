@@ -187,13 +187,13 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 
 1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」写。顺序在那一节，这里不另写。几个问题必须一起定的例外，在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「每个节点一节」的「owner 拍板（D）」。只有方向问题是 D（`entry` 的「拍板只问方向」）。
 2. 背景里用白话写：它改的是什么，它挡着什么。plan 那一节的链接和节点的代号，跟在白话后面。
-3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec 的正文。不改页头。
+3. owner 答了：在 plan 里打勾，写日期和 owner 的原话（`plan.ts answer --option … --quote …`，`knowledge` 的 spec-and-plan.md「图的部分用 `plan.ts` 改」）。这个决定改了 spec，就当场改 spec 的正文。不改页头。
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。
 5. owner 说以后再定：留着 ⬜，接着做不被它挡的节点。
-6. owner 跳过这个 D：说跳过，或对它说「你定」「继续」。取推荐的那一个选项。在 plan 的这个 D 里打勾，写「Agent decided (日期)：推荐的那一个，因为这个 D 被跳过了」。D 在跳过之前就写全了（背景、问题、例子、选项），owner 以后读得到，也改得了（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。
+6. owner 跳过这个 D：说跳过，或对它说「你定」「继续」。取推荐的那一个选项。在 plan 的这个 D 里打勾，写「Agent decided (日期)：推荐的那一个，因为这个 D 被跳过了」（`plan.ts answer --skipped`）。D 在跳过之前就写全了（背景、问题、例子、选项），owner 以后读得到，也改得了（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。
 
 - **离开项目配置的默认，先问 D。** owner 没说过这件事，agent 又要不照项目配置的默认做：先写一个 D，带 owner 拍板。owner 在这个会话里说过怎么做，就照 owner 的话做，不问；plan 把它写成 owner 的决定，带原话。CI 没有 owner，照项目配置做。
-- **因为 owner 的话不做的节点，留在 plan 里划掉，** 带 owner 的原话（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「不做了的划掉，不删」）。
+- **因为 owner 的话不做的节点，留在 plan 里划掉（`plan.ts drop`），** 带 owner 的原话（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「不做了的划掉，不删」）。
 
 plan 里，交给 owner 的事一次交齐（`entry` 的「什么时候问 owner」）。做的时候，agent 一个一个带。
 
