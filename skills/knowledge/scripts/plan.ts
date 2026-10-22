@@ -25,7 +25,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { basename, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { fenced } from "../../prerelease/scripts/markdown.mjs";
@@ -43,6 +43,9 @@ import {
   type PlanNode,
   parseChartLine,
   parsePlan,
+  parseSubgraph,
+  proposalCodes,
+  RETIRED,
 } from "./plan-graph.ts";
 
 /** An edit that the command refuses: the text says why. */
@@ -432,6 +435,251 @@ export function setNow(text: string, file: string, now: string): string {
   return lines.join("\n");
 }
 
+// ---------- the groups of a milestone plan: proposals and issues ----------
+
+/** The next free proposal code of a plan: one above each `P<k>` that the plan uses or keeps. */
+export function nextProposal(text: string, file: string): string {
+  const nums = proposalCodes(parsePlan(text, file)).map((c) => Number(c.slice(1)));
+  return `P${Math.max(0, ...nums) + 1}`;
+}
+
+function milestoneOnly(plan: Plan) {
+  if (plan.kind !== "milestone") refuse(`${plan.file} is not the plan of a milestone: only a milestone plan has proposals`);
+}
+
+/** A node that can go into a group: an open A node. */
+function member(plan: Plan, code: string): PlanNode {
+  const n = nodeOf(plan, code);
+  if (n.kind !== "A") refuse(`${n.code} is not an A node: only A nodes go into an issue`);
+  if (n.done) refuse(`${n.code} is ${DONE}: a ${DONE} node does not move into or out of a group`);
+  return n;
+}
+
+/** The group of a code, or a refusal. */
+function groupOf(plan: Plan, code: string) {
+  return plan.groups.find((g) => g.code === code) ?? refuse(`${plan.file} has no group ${code}`);
+}
+
+const isStyle = (line: string) => /^\s*(?:style|classDef|class|linkStyle|click)\b|^\s*$/.test(line);
+
+/**
+ * Rebuild the block of a group in one chart: the labelled lines of `add` go into the block (their arrows stay
+ * outside, with the bare id), the labelled lines of `remove` come out, and the block goes before the first line
+ * that names one of its nodes, so each node keeps its label at its first appearance.
+ */
+function rebuild(plan: Plan, lines: string[], chart: PlanChart, o: { header: string; group?: { line: number; endLine: number }; add: PlanNode[]; remove: PlanNode[] }) {
+  const base = chart.start; // the index (from 0) of the first line inside the chart
+  const L = lines.slice(base, chart.end - 1);
+  const indent = parseSubgraph(o.header)?.indent ?? indentOf(lines, chart);
+  const inner = `${indent}  `;
+  const removeIds = new Set(o.remove.map((n) => n.id));
+  const keep: string[] = [];
+  const out: string[] = [];
+  let at: number | null = null;
+  if (o.group) {
+    const from = o.group.line - 1 - base;
+    const to = o.group.endLine - 1 - base;
+    for (const line of L.slice(from + 1, to)) {
+      const ids = parseChartLine(line).refs.map((r) => r.id);
+      if (ids.length && ids.every((id) => removeIds.has(id))) out.push(line.startsWith(inner) ? indent + line.slice(inner.length) : line);
+      else keep.push(line);
+    }
+    L.splice(from, to - from + 1);
+    at = from;
+  }
+  const defs: string[] = [];
+  for (const n of o.add) {
+    let raw: string | null = null;
+    for (let j = 0; j < L.length; j++) {
+      const p = parseChartLine(L[j]);
+      const mine = p.refs.filter((r) => r.id === n.id && r.label !== null);
+      if (!mine.length) continue;
+      raw ??= L[j].slice(mine[0].start, mine[0].end);
+      if (!p.edges.length && p.refs.every((r) => r.id === n.id)) {
+        L.splice(j--, 1);
+        continue;
+      }
+      for (const r of [...mine].reverse()) L[j] = L[j].slice(0, r.start) + r.id + L[j].slice(r.end);
+    }
+    if (raw === null) refuse(`${n.code} has no label in the chart of the group`);
+    defs.push(`${inner}${raw}`);
+  }
+  const ids = new Set([...o.add, ...o.remove].map((n) => n.id));
+  if (o.group) for (const line of keep) for (const r of parseChartLine(line).refs) ids.add(r.id);
+  const first = L.findIndex((line) => parseChartLine(line).refs.some((r) => ids.has(r.id)));
+  let end = L.length;
+  while (end > 0 && isStyle(L[end - 1])) end--;
+  const pos = Math.min(at ?? end, first < 0 ? end : first);
+  const block = [...keep, ...defs].some((l) => parseChartLine(l).refs.length) ? [o.header, ...keep, ...defs, `${indent}end`] : [];
+  if (o.group && !block.length) refuse("the group would have no node: remove the proposal with plan.ts unpropose");
+  L.splice(pos, 0, ...out, ...block);
+  lines.splice(base, chart.end - 1 - base, ...L);
+}
+
+/** The chart that labels each of the nodes, or a refusal. */
+function chartOfNodes(plan: Plan, lines: string[], nodes: PlanNode[]): PlanChart {
+  const c = charts(plan).find((x) => nodes.every((n) => labelsOf(plan, lines, n.id, x).length)) ?? refuse(`the nodes ${nodes.map((n) => n.code).join(", ")} have no labels in one chart`);
+  return c;
+}
+
+/** Circle open A nodes into a new proposal `P<k>` (`subgraph P<k>["P<k> proposal：<title>"]`). */
+export function proposeGroup(text: string, file: string, o: { title: string; codes: string[]; code?: string }): string {
+  const plan = parsePlan(text, file);
+  milestoneOnly(plan);
+  const title = o.title.trim();
+  if (!title || title.includes('"')) refuse('give a title with no "');
+  if (!o.codes.length) refuse("give the codes of the nodes of the proposal");
+  const nodes = o.codes.map((c) => member(plan, c));
+  for (const n of nodes) if (n.group) refuse(`${n.code} is in the group ${n.group}: use plan.ts regroup`);
+  const code = o.code ?? nextProposal(text, file);
+  if (proposalCodes(plan).includes(code)) refuse(`${plan.file} already used ${code}: a code is not used again`);
+  const lines = text.split("\n");
+  const chart = chartOfNodes(plan, lines, nodes);
+  const indent = indentOf(lines, chart);
+  const label = plan.lang === "zh" ? `${code} proposal：${title}` : `${code} Proposal: ${title}`;
+  rebuild(plan, lines, chart, { header: `${indent}subgraph ${code}["${label}"]`, add: nodes, remove: [] });
+  return lines.join("\n");
+}
+
+/** Remove the box of a proposal: its nodes stay, and a line `%% P<k>` keeps the code used. */
+export function unproposeGroup(text: string, file: string, code: string): string {
+  const plan = parsePlan(text, file);
+  milestoneOnly(plan);
+  const g = groupOf(plan, code);
+  if (g.kind !== "proposal") refuse(`${code} is an issue group: it stays`);
+  const lines = text.split("\n");
+  const indent = parseSubgraph(lines[g.line - 1])!.indent;
+  const inner = `${indent}  `;
+  for (let i = g.line; i < g.endLine - 1; i++) if (lines[i].startsWith(inner)) lines[i] = indent + lines[i].slice(inner.length);
+  lines.splice(g.endLine - 1, 1);
+  lines[g.line - 1] = `${indent}%% ${code}`;
+  return lines.join("\n");
+}
+
+/** Add nodes to a proposal, or take nodes out of it. */
+export function regroupGroup(text: string, file: string, code: string, o: { add?: string[]; remove?: string[] }): string {
+  const plan = parsePlan(text, file);
+  milestoneOnly(plan);
+  const g = groupOf(plan, code);
+  if (g.kind !== "proposal") refuse(`${code} is an issue group: its nodes are the work of issue #${g.issue}`);
+  const add = (o.add ?? []).map((c) => member(plan, c));
+  for (const n of add) if (n.group) refuse(`${n.code} is in the group ${n.group}`);
+  const remove = (o.remove ?? []).map((c) => nodeOf(plan, c));
+  for (const n of remove) {
+    if (n.group !== code) refuse(`${n.code} is not in ${code}`);
+    if (n.done) refuse(`${n.code} is ${DONE}: a ${DONE} node does not move out of its group`);
+  }
+  if (!add.length && !remove.length) refuse("give --add or --remove");
+  const lines = text.split("\n");
+  const chart = charts(plan).find((c) => c.start < g.line && g.endLine < c.end) ?? refuse(`${code} is not in a chart of the plan`);
+  rebuild(plan, lines, chart, { header: lines[g.line - 1], group: g, add, remove });
+  return lines.join("\n");
+}
+
+/**
+ * The edit that opens a proposal as issue `#<issue>`: `subgraph P<k>[…]` becomes `subgraph I<N>["#<N> <title>"]`
+ * with a line `%% P<k>` under it, and each member gets ` #<N>` at the end of its labels and of its heading.
+ * `issue` can be a placeholder (`"N"`) for a dry run.
+ */
+export function openIssueEdit(text: string, file: string, code: string, issue: number | string): string {
+  const plan = parsePlan(text, file);
+  milestoneOnly(plan);
+  const g = groupOf(plan, code);
+  if (g.kind !== "proposal") refuse(`${code} is already the issue #${g.issue}`);
+  const members = g.nodes.map((c) => nodeOf(plan, c));
+  if (!members.length) refuse(`${code} has no node`);
+  for (const n of members) if (n.done) refuse(`${n.code} is ${DONE}: its label does not change, so it cannot get #${issue}`);
+  const lines = text.split("\n");
+  // The headings first: they are below the chart, so the line numbers of the chart stay.
+  for (const n of members)
+    if (n.section) {
+      const i = n.section.line - 1;
+      lines[i] = lines[i].replace(/(\s*(?:✅|⬜))?\s*$/, (_m, mark: string | undefined) => ` #${issue}${mark ?? ""}`);
+    }
+  for (const n of members) for (const l of labelsOf(plan, lines, n.id)) lines[l.i] = `${lines[l.i].slice(0, l.labelEnd).replace(/\s+$/, "")} #${issue}${lines[l.i].slice(l.labelEnd)}`;
+  const indent = parseSubgraph(lines[g.line - 1])!.indent;
+  lines.splice(g.line - 1, 1, `${indent}subgraph I${issue}["#${issue} ${g.title}"]`, `${indent}  %% ${code}`);
+  return lines.join("\n");
+}
+
+/** The issue body by default: the sections of the member nodes, and the plan that holds them. */
+export function issueBody(text: string, file: string, code: string): string {
+  const plan = parsePlan(text, file);
+  const g = groupOf(plan, code);
+  const parts = g.nodes.map((c) => nodeOf(plan, c)).map((n) => `## ${n.section?.title ?? n.label}\n\n${(n.section?.body ?? "").trim()}`);
+  return [`${g.code} of the milestone plan \`${file}\`: ${g.title}.`, ...parts].join("\n\n") + "\n";
+}
+
+/** The `gh` arguments that open a proposal as an issue in the milestone of the plan (its file name). */
+export function openIssueCommand(text: string, file: string, code: string, body?: string): string[] {
+  const plan = parsePlan(text, file);
+  milestoneOnly(plan);
+  const g = groupOf(plan, code);
+  if (g.kind !== "proposal") refuse(`${code} is already the issue #${g.issue}`);
+  return ["issue", "create", "--title", g.title, "--milestone", basename(file, ".md"), "--body", body ?? issueBody(text, file, code)];
+}
+
+/** Runs `gh` with the arguments in the repo; returns its stdout. Tests give their own. */
+export type GhRunner = (args: string[], cwd: string) => string;
+export const ghCli: GhRunner = (args, cwd) => execFileSync("gh", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+
+/**
+ * Open a proposal as a GitHub issue, then record it in the plan. It checks the edit first (with a stand-in
+ * number), runs `gh issue create`, reads the number from the URL that gh prints, and writes the plan when the
+ * edit adds no problem. `dryRun` runs nothing and writes nothing: it gives the command and the text with `#N`.
+ */
+export function runOpenIssue(o: { cwd: string; file: string; code: string; body?: string; dryRun?: boolean; gh?: GhRunner }) {
+  const path = join(o.cwd, o.file);
+  const before = readFileSync(path, "utf8");
+  const command = openIssueCommand(before, o.file, o.code, o.body);
+  const trial = applyEdit(before, o.file, (t) => openIssueEdit(t, o.file, o.code, 999999));
+  if (!trial.ok) refuse(`the plan would get a problem: ${trial.findings.filter((f) => f.kind === "problem").map((f) => f.text).join("; ")}`);
+  if (o.dryRun) return { command, issue: null, text: openIssueEdit(before, o.file, o.code, "N"), findings: [] as PlanFinding[], written: false };
+  let printed: string;
+  try {
+    printed = (o.gh ?? ghCli)(command, o.cwd);
+  } catch (e) {
+    const err = e as { stderr?: string; message?: string };
+    return refuse(`gh issue create failed: ${String(err.stderr || err.message || e).trim().split("\n")[0]}`);
+  }
+  const m = /\/issues\/(\d+)/.exec(printed);
+  if (!m) refuse(`gh did not print the URL of an issue: ${printed.trim().slice(0, 200)}`);
+  const issue = Number(m![1]);
+  const r = applyEdit(before, o.file, (t) => openIssueEdit(t, o.file, o.code, issue));
+  if (r.ok && r.text !== before) writeFileSync(path, r.text);
+  return { command, issue, text: r.text, findings: r.findings, written: r.ok };
+}
+
+/** A word for a POSIX shell: as it is, or in single quotes. */
+export const shellQuote = (w: string) => (/^[\w./:@%+=,-]+$/.test(w) ? w : `'${w.replace(/'/g, "'\\''")}'`);
+
+/** The lines that differ between two texts: one `@@ line <n>` hunk for each change, then its `-` and `+` lines (a line diff by LCS). */
+export function lineDiff(a: string, b: string): string[] {
+  const x = a.split("\n");
+  const y = b.split("\n");
+  const n = x.length;
+  const m = y.length;
+  const lcs: Uint32Array[] = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) lcs[i][j] = x[i] === y[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+  const out: string[] = [];
+  let i = 0;
+  let j = 0;
+  let open = false;
+  while (i < n || j < m) {
+    if (i < n && j < m && x[i] === y[j]) {
+      i++;
+      j++;
+      open = false;
+      continue;
+    }
+    if (!open) out.push(`@@ line ${j + 1}`);
+    open = true;
+    if (i < n && (j >= m || lcs[i + 1][j] >= lcs[i][j + 1])) out.push(`-${x[i++]}`);
+    else out.push(`+${y[j++]}`);
+  }
+  return out;
+}
+
 // ---------- the check of an edit ----------
 
 const key = (f: PlanFinding) => `${f.kind}\u0000${f.text}`;
@@ -506,6 +754,10 @@ export const USAGE = [
   '  drop <file> <code> --reason "…"',
   '  answer <file> <D code> --option "…" --quote "…" | --skipped',
   '  now <index.md> "…"',
+  '  propose <milestone plan> --title "…" <code>…   (prints the new P code)',
+  "  unpropose <milestone plan> <P code>",
+  "  regroup <milestone plan> <P code> [--add <code>…] [--remove <code>…]",
+  "  open-issue <milestone plan> <P code> [--dry-run] [--body-file f]   (gh issue create --milestone <plan name>)",
   "  json <file>",
   "  Each edit takes --date YYYY-MM-DD (default: today).",
 ];
@@ -528,7 +780,10 @@ export function main(argv: string[], out: (line: string) => void = console.log):
       summary: { type: "string" },
       check: { type: "string" },
       evidence: { type: "string" },
-      add: { type: "string" },
+      add: { type: "string", multiple: true },
+      remove: { type: "string", multiple: true },
+      title: { type: "string" },
+      "dry-run": { type: "boolean" },
       drop: { type: "string" },
       reason: { type: "string" },
       option: { type: "string" },
@@ -580,6 +835,7 @@ export function main(argv: string[], out: (line: string) => void = console.log):
     if (!existsSync(path)) refuse(`${file} is not there`);
     const need = (value: string | undefined, name: string) => value ?? refuse(`${verb} needs ${name}`);
     let edit: (text: string) => string;
+    let note: string | null = null;
     switch (verb) {
       case "add": {
         const body = v["body-file"] !== undefined ? readFileSync(resolve(root, v["body-file"]), "utf8") : undefined;
@@ -600,9 +856,9 @@ export function main(argv: string[], out: (line: string) => void = console.log):
       }
       case "item": {
         const code = need(args[1], "a code");
-        if ([v.check, v.add, v.drop].filter((x) => x !== undefined).length !== 1) refuse("item needs one of --check, --add, --drop");
+        if ([v.check, v.add, v.drop].filter((x) => x !== undefined).length !== 1 || (v.add?.length ?? 1) !== 1) refuse("item needs one of --check, --add, --drop");
         if (v.check !== undefined) edit = (t) => checkItem(t, file, code, { which: v.check!, evidence: v.evidence, date });
-        else if (v.add !== undefined) edit = (t) => addItem(t, file, code, { text: v.add! });
+        else if (v.add !== undefined) edit = (t) => addItem(t, file, code, { text: v.add![0] });
         else edit = (t) => dropItem(t, file, code, { which: v.drop!, reason: need(v.reason, "--reason"), date });
         break;
       }
@@ -615,8 +871,39 @@ export function main(argv: string[], out: (line: string) => void = console.log):
       case "now":
         edit = (t) => setNow(t, file, need(args[1], 'the text: plan.ts now <index.md> "…"'));
         break;
+      case "propose": {
+        const code = nextProposal(readFileSync(path, "utf8"), file);
+        edit = (t) => proposeGroup(t, file, { title: need(v.title, "--title"), codes: args.slice(1), code });
+        note = `proposal ${code}`;
+        break;
+      }
+      case "unpropose":
+        edit = (t) => unproposeGroup(t, file, need(args[1], "a P code"));
+        break;
+      case "regroup":
+        edit = (t) => regroupGroup(t, file, need(args[1], "a P code"), { add: v.add, remove: v.remove });
+        break;
+      case "open-issue": {
+        const body = v["body-file"] !== undefined ? readFileSync(resolve(root, v["body-file"]), "utf8") : undefined;
+        const before = readFileSync(path, "utf8");
+        const r = runOpenIssue({ cwd: root, file, code: need(args[1], "a P code"), body, dryRun: v["dry-run"] });
+        out(`gh ${r.command.map(shellQuote).join(" ")}`);
+        if (v["dry-run"]) {
+          for (const line of lineDiff(before, r.text)) out(line);
+          out("dry run: nothing ran, nothing written");
+          return 0;
+        }
+        if (!r.written) {
+          out(`issue #${r.issue} is open, but the plan is not written: the edit adds a problem`);
+          for (const line of format(r.findings)) out(line);
+          return 1;
+        }
+        out(`opened #${r.issue}; wrote ${file}`);
+        for (const line of format(r.findings)) out(line);
+        return 0;
+      }
       default:
-        return refuse(`unknown verb "${verb ?? ""}": check, add, arrow, unarrow, done, item, drop, answer, now, json`);
+        return refuse(`unknown verb "${verb ?? ""}": check, add, arrow, unarrow, done, item, drop, answer, now, propose, unpropose, regroup, open-issue, json`);
     }
     const before = readFileSync(path, "utf8");
     const r = applyEdit(before, file, edit);
@@ -627,6 +914,7 @@ export function main(argv: string[], out: (line: string) => void = console.log):
     }
     if (r.text !== before) writeFileSync(path, r.text);
     out(`wrote ${file}`);
+    if (note) out(note);
     for (const line of format(r.findings)) out(line);
     return 0;
   } catch (e) {

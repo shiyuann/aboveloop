@@ -239,3 +239,64 @@ test("transitions of index.md: a ✅ node leaves at the release; an open node do
   assert.deepEqual(t(INDEX.replace('  REL --> I43["#43 live runs：agent"]\n', "")), [`${FILE}:1 the node I43 is removed: strike it through (plan.ts drop), do not remove it`]);
   assert.deepEqual(t(INDEX.replace("issue life：agent ✅", "issue life：agent")), [`${FILE}:10 the ✅ node I36 lost its ✅`]);
 });
+
+// ---------- groups: proposals and issues in a milestone plan ----------
+
+const ALPHA = fixture("alpha.txt");
+const MS = "knowledge/plan/alpha.md";
+const ms = (text: string) => checkPlan(parsePlan(text, MS), text);
+
+test("groups: a proposal P<k>, an issue I<N> with its %% P<k>, a kept code %% P<k>, and the group of each node", () => {
+  const p = parsePlan(ALPHA, MS);
+  assert.deepEqual(p.groups, [
+    { code: "I7", kind: "issue", title: "调研格式", issue: 7, nodes: ["A2"], line: 8, endLine: 11, from: "P1" },
+    { code: "P2", kind: "proposal", title: "导出和上传", issue: null, nodes: ["A3", "A4"], line: 12, endLine: 15, from: null },
+    { code: "P4", kind: "proposal", title: "测试数据", issue: null, nodes: ["A5"], line: 17, endLine: 19, from: null },
+  ]);
+  assert.deepEqual(p.retired, ["P3"]);
+  assert.deepEqual(
+    p.nodes.map((n) => `${n.code}:${n.group}`),
+    ["O1:null", "A1:null", "A2:I7", "A3:P2", "A4:P2", "A5:P4", "D1:null", "O2:null"],
+  );
+  assert.deepEqual(ms(ALPHA), []);
+  assert.deepEqual(parsePlan(EXAMPLE, ISSUE).groups, []);
+});
+
+const GROUP_BROKEN: [string, string, [string, string][], "problem" | "question", RegExp][] = [
+  ["a group in the plan of an issue", "knowledge/plan/9-x.md", [], "problem", /the group I7 is in a plan that is not the plan of a milestone/],
+  ["a node in two groups", MS, [["  %% P3\n", "  %% P3\n  subgraph P5[\"P5 proposal：again\"]\n    A3\n  end\n"]], "problem", /A3 is in two groups: P2 and P5/],
+  ["nested groups", MS, [["    A4[\"A4 agent：文件传到桶\"]\n  end\n", "    subgraph P5[\"P5 proposal：in\"]\n      A4[\"A4 agent：文件传到桶\"]\n    end\n  end\n"]], "problem", /the group P5 is inside another group/],
+  ["a group with no node", MS, [["  %% P3\n", "  subgraph P3[\"P3 proposal：empty\"]\n  end\n"]], "problem", /the group P3 has no node/],
+  ["a D node in a group", MS, [["  %% P3\n", "  %% P3\n  subgraph P5[\"P5 proposal：d\"]\n    D1[\"D1 owner 拍板：桶在哪\"]\n  end\n"], ['  D1["D1 owner 拍板：桶在哪"] --> A4', "  D1 --> A4"]], "problem", /D1 is in the group P5: only A nodes go into an issue/],
+  ["an issue member with no #N in its label", MS, [['A2["A2 agent：调研格式 #7"]', 'A2["A2 agent：调研格式"]'], ["## A2 agent：调研格式 #7 ⬜", "## A2 agent：调研格式 ⬜"]], "problem", /A2 is in the issue group I7: its label and its heading carry #7/],
+  ["a node with #N outside its issue group", MS, [['A5["A5 agent：导出一份测试数据"]', 'A5["A5 agent：导出一份测试数据 #9"]'], ["## A5 agent：导出一份测试数据 ⬜", "## A5 agent：导出一份测试数据 #9 ⬜"]], "problem", /A5 carries #9 and is not in the group I9/],
+  ["a proposal label not in the form", MS, [['subgraph P2["P2 proposal：导出和上传"]', 'subgraph P2["导出和上传"]']], "problem", /the group P2 is not in the form P2\["P2 proposal：<title>"\]/],
+  ["a proposal code used two times", MS, [["  %% P3\n", "  %% P2\n"]], "problem", /the proposal code P2 is used two times/],
+  ["an open A node in no group", MS, [['  subgraph P4["P4 proposal：测试数据"]\n    A5["A5 agent：导出一份测试数据"]\n  end\n', '  A5["A5 agent：导出一份测试数据"]\n  %% P4\n']], "question", /the open A node A5 is in no group/],
+  ["a gap in the P codes", MS, [["  %% P3\n", ""]], "question", /the P codes skip P3/],
+  ["an arrow inside a group", MS, [['    A4["A4 agent：文件传到桶"]\n', '    A4["A4 agent：文件传到桶"]\n    A3 --> A4\n']], "question", /an arrow inside the group P2/],
+];
+
+for (const [name, file, pairs, kind, re] of GROUP_BROKEN)
+  test(`groups: ${name} is a ${kind}`, () => {
+    const text = patch(ALPHA, ...pairs);
+    const f = checkPlan(parsePlan(text, file), text);
+    assert.ok(
+      f.some((x) => x.kind === kind && re.test(x.text)),
+      `no ${kind} ${re}; got:\n${texts(f).join("\n")}`,
+    );
+    if (kind === "question") assert.deepEqual(texts(problems(f)), [], "a question only");
+  });
+
+test("groups in transitions: an issue group stays, a proposal code stays used, a new proposal takes the next code, a ✅ node does not move", () => {
+  const before = parsePlan(ALPHA, MS);
+  const t = (...pairs: [string, string][]) => texts(checkTransition(before, parsePlan(patch(ALPHA, ...pairs), MS)));
+  assert.deepEqual(t(["  subgraph I7[\"#7 调研格式\"]\n    %% P1\n", "  %% P1\n"], ["    A2[\"A2 agent：调研格式 #7\"]\n  end\n", "    A2[\"A2 agent：调研格式 #7\"]\n"]), [`${MS}:1 the issue group I7 is removed: an issue group stays`]);
+  assert.deepEqual(t(["  %% P3\n", ""]), [`${MS}:1 the proposal code P3 is gone: a removed or opened proposal keeps a line %% P3`]);
+  assert.deepEqual(t(["  subgraph P4[\"P4 proposal：测试数据\"]", "  subgraph P3[\"P3 proposal：测试数据\"]"]), [`${MS}:1 the proposal code P4 is gone: a removed or opened proposal keeps a line %% P4`]);
+  assert.deepEqual(t(['  O1["O1 owner：spec review ✅"] --> A1["A1 agent：调研 ✅"]\n', '  O1["O1 owner：spec review ✅"]\n'], ["    A5[\"A5 agent：导出一份测试数据\"]\n", "    A5[\"A5 agent：导出一份测试数据\"]\n    A1[\"A1 agent：调研 ✅\"]\n"], ["  A1 --> O2\n", "  O1 --> A1\n  A1 --> O2\n"]), [`${MS}:19 the ✅ node A1 moved into the group P4`]);
+  // Open: P2 becomes I8 with %% P2; its members keep their group.
+  const opened = patch(ALPHA, ['  subgraph P2["P2 proposal：导出和上传"]\n', '  subgraph I8["#8 导出和上传"]\n    %% P2\n'], ['A3["A3 agent：导出成文件"]', 'A3["A3 agent：导出成文件 #8"]'], ['A4["A4 agent：文件传到桶"]', 'A4["A4 agent：文件传到桶 #8"]'], ["## A3 agent：导出成文件 ⬜", "## A3 agent：导出成文件 #8 ⬜"], ["## A4 agent：文件传到桶 ⬜", "## A4 agent：文件传到桶 #8 ⬜"]);
+  assert.deepEqual(ms(opened), []);
+  assert.deepEqual(texts(checkTransition(before, parsePlan(opened, MS))), []);
+});

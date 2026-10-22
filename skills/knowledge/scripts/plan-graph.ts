@@ -56,6 +56,8 @@ export interface PlanNode {
   mark: "✅" | "⬜" | null;
   /** Each line where a chart gives the node a label (a node drawn again in a second chart). */
   labelLines: number[];
+  /** The code of the group (`subgraph`) that the node is in: "P1", "I42"; or null. */
+  group: string | null;
 }
 
 export interface PlanEdge {
@@ -77,6 +79,22 @@ export interface PlanChart {
 export interface PlanHeading extends PlanSection {
   code: string | null;
   mark: "✅" | "⬜" | null;
+}
+
+/**
+ * A group of nodes: a mermaid `subgraph` in a chart of a milestone plan. A proposal (`P<k>`) is one piece of
+ * work that a person circled; opened as a GitHub issue, it becomes an issue group (`I<N>`).
+ */
+export interface PlanGroup {
+  code: string; // "P1" or "I42"
+  kind: "proposal" | "issue";
+  title: string; // the label without "P1 proposal：" / "P1 Proposal: " / "#42 "
+  issue: number | null; // 42 for an issue group
+  nodes: string[]; // member node codes, chart order
+  line: number; // the `subgraph` line
+  endLine: number; // its `end` line
+  /** Added: the proposal that the issue group was, from its line `%% P<k>`; null for a proposal. */
+  from: string | null;
 }
 
 /** A table row of `index.md` (added to the contract). */
@@ -103,6 +121,9 @@ export interface Plan {
   sections: PlanHeading[];
   rows: PlanRow[]; // index.md only
   nowLine: number | null; // the line of the `Now:` text (index.md)
+  groups: PlanGroup[];
+  /** The proposal codes that a line `%% P<k>` keeps used: a proposal that was opened or removed. */
+  retired: string[];
 }
 
 export interface PlanFinding {
@@ -300,6 +321,23 @@ export function parseChartLine(line: string): ChartLine {
   return out;
 }
 
+/** A `subgraph` line: its indent, id and label (`subgraph P1["P1 proposal：x"]`), or null. */
+export function parseSubgraph(line: string): { indent: string; id: string; label: string | null } | null {
+  const m = /^(\s*)subgraph\s+(.*?)\s*$/.exec(line);
+  if (!m) return null;
+  const r = parseChartLine(m[2]).refs[0];
+  if (r && !parseChartLine(m[2]).edges.length) return { indent: m[1], id: r.id, label: r.label };
+  return { indent: m[1], id: m[2].split(/\s+/)[0] ?? "", label: null };
+}
+
+/** A line `%% P<k>`: the code of a proposal that stays used. */
+export const RETIRED = /^\s*%%\s*(P\d+)\b/;
+
+/** The title of a group label: 「P1 proposal：导出」 -> 「导出」, "#42 export" -> "export". */
+export function groupTitle(label: string): string {
+  return label.replace(/^P\d+\s+(?:proposal|Proposal)\s*[：:]\s*/, "").replace(/^#\d+\s+/, "").trim();
+}
+
 /** The mermaid blocks of the lines (indices from 0): the fence lines and the info. */
 function mermaidBlocks(lines: string[]) {
   return (fences(lines) as { start: number; end: number; info: string }[]).filter((b) => b.info.split(/\s/)[0] === "mermaid");
@@ -399,13 +437,38 @@ export function parsePlan(text: string, file: string): Plan {
   const byId = new Map<string, PlanNode>();
   const firstSeen: string[] = [];
   const edgesById: { from: string; to: string; line: number }[] = [];
+  const groups: (PlanGroup & { ids: string[]; depth: number })[] = [];
+  const retired: string[] = [];
   for (const b of mermaidBlocks(lines)) {
     const top = b.start < firstH2;
     const dir = /^\s*(?:flowchart|graph)\s+(\w+)/.exec(lines.slice(b.start + 1, b.end).find((l) => l.trim()) ?? "");
     charts.push({ start: b.start + 1, end: b.end + 1, direction: dir ? dir[1] : null, section: top ? null : (sectionAt(b.start)?.code ?? null) });
     if (!top) continue;
+    const open: (PlanGroup & { ids: string[]; depth: number })[] = [];
     for (let i = b.start + 1; i < b.end; i++) {
+      const sub = parseSubgraph(lines[i]);
+      if (sub) {
+        const label = sub.label ?? "";
+        const issue = /^I(\d+)$/.exec(sub.id);
+        const g = { code: sub.id, kind: (issue ? "issue" : "proposal") as PlanGroup["kind"], title: groupTitle(label), issue: issue ? Number(issue[1]) : null, nodes: [], line: i + 1, endLine: b.end, from: null, ids: [], depth: open.length };
+        groups.push(g);
+        open.push(g);
+        continue;
+      }
+      if (/^\s*end\s*$/.test(lines[i]) && open.length) {
+        open.pop()!.endLine = i + 1;
+        continue;
+      }
+      const ret = RETIRED.exec(lines[i]);
+      if (ret) {
+        const inner = open.at(-1);
+        if (inner && inner.kind === "issue" && inner.from === null && inner.ids.length === 0) inner.from = ret[1];
+        else retired.push(ret[1]);
+        continue;
+      }
       const parsed = parseChartLine(lines[i]);
+      const inner = open.at(-1);
+      if (inner) for (const r of parsed.refs) if (!inner.ids.includes(r.id)) inner.ids.push(r.id);
       for (const r of parsed.refs) {
         if (!firstSeen.includes(r.id)) firstSeen.push(r.id);
         if (r.label === null) continue;
@@ -431,6 +494,7 @@ export function parsePlan(text: string, file: string): Plan {
           shape: r.shape,
           mark: null,
           labelLines: [i + 1],
+          group: null,
         };
         byId.set(r.id, n);
       }
@@ -458,6 +522,13 @@ export function parsePlan(text: string, file: string): Plan {
   }
   const codeOf = (id: string) => byId.get(id)?.code ?? id;
   const edges = edgesById.map((e) => ({ from: codeOf(e.from), to: codeOf(e.to), line: e.line }));
+  for (const g of groups) {
+    g.nodes = g.ids.map(codeOf);
+    for (const id of g.ids) {
+      const n = byId.get(id);
+      if (n && n.group === null) n.group = g.code;
+    }
+  }
 
   // The notes: the prose after the last chart of the plan, before the first `##`.
   const lastTop = charts.filter((c) => c.section === null).at(-1);
@@ -479,7 +550,24 @@ export function parsePlan(text: string, file: string): Plan {
 
   const labels = nodes.map((n) => n.label);
   const lang = labels.some((l) => l.includes("：")) || (!labels.some((l) => /: /.test(l)) && /[一-鿿]/.test(labels.join(""))) ? "zh" : "en";
-  return { file, kind, title, update, now, log, notes, nodes, edges, lang, charts, sections, rows, nowLine };
+  return {
+    file,
+    kind,
+    title,
+    update,
+    now,
+    log,
+    notes,
+    nodes,
+    edges,
+    lang,
+    charts,
+    sections,
+    rows,
+    nowLine,
+    groups: groups.map(({ ids: _ids, depth: _depth, ...g }) => g),
+    retired,
+  };
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -569,6 +657,8 @@ export function checkPlan(plan: Plan, text: string): PlanFinding[] {
       if (gaps.length) question(byCode.get(`${letter}${max}`)![0].chartLine, `the ${letter} codes skip ${gaps.join(", ")}: number each kind 1, 2, 3, … in the plan`);
     }
   }
+
+  checkGroups(plan, lines, problem, question);
 
   // The arrows: no cycle.
   const next = new Map<string, string[]>();
@@ -666,6 +756,54 @@ export function openUnderDone(plan: Plan, text: string): { line: number; text: s
     if (s.mark === DONE)
       for (let i = s.line; i < s.endLine; i++) if (!code[i] && /^\s*[-*+][ \t]+\[ \][ \t]/.test(lines[i])) out.push({ line: i + 1, text: lines[i].trim().slice(0, 120) });
   return out;
+}
+
+/** The codes of proposals in a plan: each proposal group, each `%% P<k>` line, and the proposal of each issue group. */
+export function proposalCodes(plan: Plan): string[] {
+  return [...plan.groups.map((g) => (g.kind === "proposal" ? g.code : g.from)).filter((c): c is string => !!c && /^P\d+$/.test(c)), ...plan.retired];
+}
+
+/** The rules of the groups (`subgraph`): proposals `P<k>` and issues `I<N>` in a milestone plan. */
+function checkGroups(plan: Plan, lines: string[], problem: (l: number, t: string) => void, question: (l: number, t: string) => void) {
+  const node = (c: string) => plan.nodes.find((n) => n.code === c);
+  const seen = new Map<string, string>();
+  for (const g of plan.groups) {
+    if (plan.kind !== "milestone") {
+      problem(g.line, `the group ${g.code} is in a plan that is not the plan of a milestone: only a milestone plan has groups`);
+      continue;
+    }
+    const label = parseSubgraph(lines[g.line - 1])?.label ?? "";
+    if (g.kind === "proposal" && (!/^P\d+$/.test(g.code) || !new RegExp(`^${g.code}\\s+(?:proposal|Proposal)\\s*[：:]\\s*\\S`).test(label)))
+      problem(g.line, `the group ${g.code} is not in the form ${g.code}["${g.code} proposal：<title>"] (a proposal P<k>, or an issue I<N>["#<N> <title>"])`);
+    if (g.kind === "issue" && !label.startsWith(`#${g.issue} `)) problem(g.line, `the label of the issue group ${g.code} does not start with #${g.issue}`);
+    if (plan.groups.some((h) => h !== g && h.line < g.line && g.endLine < h.endLine)) problem(g.line, `the group ${g.code} is inside another group: groups do not nest`);
+    if (plan.groups.filter((h) => h.code === g.code).length > 1 && plan.groups.find((h) => h.code === g.code) !== g) problem(g.line, `two groups have the code ${g.code}`);
+    if (!g.nodes.length) problem(g.line, `the group ${g.code} has no node`);
+    for (const c of g.nodes) {
+      const n = node(c);
+      if (seen.has(c) && seen.get(c) !== g.code) problem(g.line, `${c} is in two groups: ${seen.get(c)} and ${g.code}`);
+      seen.set(c, g.code);
+      if (!n) continue;
+      if (n.kind !== "A") problem(g.line, `${n.code} is in the group ${g.code}: only A nodes go into an issue (a D, O, E or M node does not)`);
+      if (g.kind === "issue") {
+        const tag = new RegExp(`#${g.issue}(?!\\d)`);
+        if (!tag.test(n.label) || (n.section && !tag.test(n.section.title))) problem(n.chartLine, `${n.code} is in the issue group ${g.code}: its label and its heading carry #${g.issue}`);
+      }
+    }
+    for (let i = g.line; i < g.endLine - 1; i++) if (parseChartLine(lines[i]).edges.length) question(i + 1, `an arrow inside the group ${g.code}: write the arrows outside the subgraph`);
+  }
+  if (plan.kind !== "milestone") return;
+  for (const n of plan.nodes) {
+    const tag = /#(\d+)$/.exec(n.label);
+    if (tag && n.group !== `I${tag[1]}`) problem(n.chartLine, `${n.code} carries #${tag[1]} and is not in the group I${tag[1]}`);
+    if (n.kind === "A" && !n.done && !n.dropped && !n.group) question(n.chartLine, `the open A node ${n.code} is in no group: circle it into a proposal (plan.ts propose) before its work starts`);
+  }
+  const ps = proposalCodes(plan);
+  const nums = ps.map((c) => Number(c.slice(1)));
+  for (const c of new Set(ps)) if (ps.filter((x) => x === c).length > 1) problem(plan.groups.find((g) => g.code === c || g.from === c)?.line ?? 1, `the proposal code ${c} is used two times: a code is not used again`);
+  const gaps = [];
+  for (let k = 1; k <= Math.max(0, ...nums); k++) if (!nums.includes(k)) gaps.push(`P${k}`);
+  if (gaps.length) question(plan.groups[0]?.line ?? 1, `the P codes skip ${gaps.join(", ")}: number the proposals 1, 2, 3, …; a removed proposal keeps a line %% P<k>`);
 }
 
 /** A cycle of the arrows, as a list of codes from its start back to its start; null when there is none. */
@@ -787,6 +925,19 @@ export function checkTransition(before: Plan, after: Plan): PlanFinding[] {
     if (doneBefore.has(e.to) && now.has(e.to) && !afterEdges.has(key(e))) problem(now.get(e.to)!.chartLine, `the arrow ${e.from} --> ${e.to} into the ${DONE} node ${e.to} is removed`);
   for (const e of after.edges)
     if (!beforeEdges.has(key(e)) && doneBefore.has(e.to)) problem(e.line, `the new arrow ${e.from} --> ${e.to} goes into the ${DONE} node ${e.to}`);
+  // The groups: a ✅ node stays in its group; an issue group stays; a proposal code stays used.
+  const sameGroup = (b: string | null, a: string | null) => b === a || (b !== null && after.groups.some((g) => g.code === a && g.from === b));
+  for (const b of before.nodes) {
+    const a = now.get(b.code);
+    if (a && b.done && !sameGroup(b.group, a.group)) problem(a.chartLine, `the ✅ node ${b.code} moved ${b.group ? `out of the group ${b.group}` : ""}${b.group && a.group ? " and " : ""}${a.group ? `into the group ${a.group}` : ""}`);
+  }
+  for (const g of before.groups)
+    if (g.kind === "issue" && !after.groups.some((h) => h.code === g.code)) problem(1, `the issue group ${g.code} is removed: an issue group stays`);
+  const keptP = new Set(proposalCodes(after));
+  const oldP = proposalCodes(before);
+  for (const c of oldP) if (!keptP.has(c)) problem(1, `the proposal code ${c} is gone: a removed or opened proposal keeps a line %% ${c}`);
+  const maxP = Math.max(0, ...oldP.map((c) => Number(c.slice(1))));
+  for (const c of keptP) if (!oldP.includes(c) && Number(c.slice(1)) <= maxP) problem(after.groups.find((g) => g.code === c)?.line ?? 1, `the new proposal ${c} uses a code at or below P${maxP}: take P${maxP + 1}`);
   // A new code takes the next number of its kind.
   if (!isIndex) {
     const max = new Map<string, number>();

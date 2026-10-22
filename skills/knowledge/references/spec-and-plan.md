@@ -102,7 +102,14 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
     - 一行图有几个箭头，整行一起删：不碰它的箭头也没了。所以一行只写一个。
   - 图只存箭头、下一步和 `Now:`。issue 开着还是关了，每次从 GitHub 现读。
   - 谁改：`dev` 的会话里的入口每次对一遍 GitHub，新 issue 加进来，关了的打 ✅；agent 开工、owner 说等或关的时候，顺手改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。
-- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
+- **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（下面的「圈成 proposal，开成 issue」；`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
+  - **圈成 proposal，开成 issue。** 一件能单独做完、单独 review 的活，在图上是圈起来的一组 A 节点：一个 proposal。milestone 本身不用 issue 跟踪，issue 是这些圈。
+    - 画法：mermaid 的 `subgraph P<k>["P<k> proposal：<题目>"]`（英文的 plan：`P<k> Proposal: <题目>`），到 `end` 为止。组里节点带标签的那一行写在 `subgraph` 和 `end` 之间，箭头写在外面，一行一个。D、O、E、M 节点不进组：它们不开 issue。组不嵌套，一个节点只在一个组里，组没有自己的 `##` 节。
+    - `P<k>` 和别的代号一样连续编号，不复用：拆掉的、开成了 issue 的，留一行 `%% P<k>` 占着。
+    - 用 `plan.ts` 改：`propose` 圈（`--title`，后面写节点的代号），`regroup` 加减节点（`--add`、`--remove`），`unpropose` 拆掉圈（节点留着）。
+    - 开工时，`plan.ts open-issue` 把它开成这个 milestone 里的 issue：`gh issue create --milestone <plan 的文件名>`，标题是题目，正文默认是组里每个节点那一节（`--body-file` 换成照 `entry` 的 issue 模板写的正文）。先用 `--dry-run` 看它要跑的命令和 plan 的改动。开了以后，圈变成 `subgraph I<N>["#<N> <题目>"]`，下面一行 `%% P<k>`；组里每个节点的标签和 `##` 标题后面加 ` #<N>`。组里有 ✅ 的节点，不开。
+    - 开着的 A 节点不在组里，检查给一个 question：还没开工的可以先不圈。
+    - 为什么：owner 的原话（2026-10-22）：「还有一个feature是，给node给圈起来，变成proposal=>对应到gh里，就是圈起来变成issue。大的plan对应的milestone本身不会用issue去track。」
 
 ## 图的部分用 `plan.ts` 改
 
@@ -118,6 +125,7 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - `drop`：划掉一个节点（下面的「不做了的划掉，不删」），带 `--reason`。
   - `answer`：记一个 D 的回答，打 ✅：owner 定的（`--option`、`--quote`），或 owner 跳过了（`--skipped`）。
   - `now`：改依赖图的 `Now:` 一行。
+  - `propose`、`regroup`、`unpropose`、`open-issue`：里程碑的 plan 里的圈（proposal）和它开成的 issue（下面的「圈成 proposal，开成 issue」）。
   - `check`：只查，不改。默认查 `knowledge/plan/` 里每份；`--against <git ref>` 再查和那一版比的规矩（做完的节点不删、不改，代号不复用）。`json`：打印解析出的 plan。
 - 脚本拒了，或说改了会加问题：照它说的先改正文，或换一个动词。不绕过它手改图。
 - 手改了 plan 的文件（Claude Code 的 Edit、Write）：plugin 的 hook 跑同一个检查，有新的问题就告诉 agent。知识检查 `knowledge-check.ts` 也跑它。

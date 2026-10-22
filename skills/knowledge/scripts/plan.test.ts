@@ -5,7 +5,29 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { addArrow, addItem, addNode, answerD, applyEdit, checkItem, dropItem, dropNode, EditError, main, markDone, removeArrow, setNow } from "./plan.ts";
+import { parsePlan } from "./plan-graph.ts";
+import {
+  addArrow,
+  addItem,
+  addNode,
+  answerD,
+  applyEdit,
+  checkItem,
+  dropItem,
+  dropNode,
+  EditError,
+  main,
+  markDone,
+  nextProposal,
+  openIssueCommand,
+  openIssueEdit,
+  proposeGroup,
+  regroupGroup,
+  removeArrow,
+  runOpenIssue,
+  setNow,
+  unproposeGroup,
+} from "./plan.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const EXAMPLE = fixture("42-export.txt");
@@ -320,4 +342,118 @@ test("the hook (hooks.json PostToolUse): exit 2 with the problems on stderr for 
   }
   const missing = hook({ cwd: r.root, tool_input: { file_path: ISSUE } }, join(r.root, "no-plugin"));
   assert.deepEqual([missing.status, missing.stderr], [0, ""], "no hook script: silent");
+});
+
+// ---------- groups: proposals and issues in a milestone plan ----------
+
+const ALPHA = fixture("alpha.txt");
+const MS = "knowledge/plan/alpha.md";
+/** ALPHA with no P4: A5 in no group, P4 kept by a line. */
+const LOOSE = patch(ALPHA, ['  subgraph P4["P4 proposal：测试数据"]\n    A5["A5 agent：导出一份测试数据"]\n  end\n', ""], ["  A3 --> A5\n", '  A3 --> A5["A5 agent：导出一份测试数据"]\n'], ["  %% P3\n", "  %% P3\n  %% P4\n"]);
+
+test("propose: the labelled line moves into a new subgraph P<k> before the first line that names the node; its arrow keeps the bare id", () => {
+  assert.equal(nextProposal(LOOSE, MS), "P5");
+  edits(
+    LOOSE,
+    MS,
+    (t) => proposeGroup(t, MS, { title: "测试数据", codes: ["A5"] }),
+    patch(LOOSE, ['  A3 --> A5["A5 agent：导出一份测试数据"]\n', '  subgraph P5["P5 proposal：测试数据"]\n    A5["A5 agent：导出一份测试数据"]\n  end\n  A3 --> A5\n']),
+  );
+  refuses(() => proposeGroup(LOOSE, MS, { title: "x", codes: ["A3"] }), /A3 is in the group P2: use plan.ts regroup/);
+  refuses(() => proposeGroup(LOOSE, MS, { title: "x", codes: ["D1"] }), /D1 is not an A node/);
+  refuses(() => proposeGroup(LOOSE, MS, { title: "x", codes: ["A1"] }), /A1 is ✅/);
+  refuses(() => proposeGroup(LOOSE, MS, { title: "x", codes: ["A5"], code: "P3" }), /already used P3/);
+  refuses(() => proposeGroup(EXAMPLE, ISSUE, { title: "x", codes: ["A3"] }), /not the plan of a milestone/);
+});
+
+test("unpropose and regroup: the nodes stay; a line %% P<k> keeps the code; a node moves in or out", () => {
+  edits(
+    ALPHA,
+    MS,
+    (t) => unproposeGroup(t, MS, "P4"),
+    patch(ALPHA, ['  subgraph P4["P4 proposal：测试数据"]\n    A5["A5 agent：导出一份测试数据"]\n  end\n', '  %% P4\n  A5["A5 agent：导出一份测试数据"]\n']),
+  );
+  refuses(() => unproposeGroup(ALPHA, MS, "I7"), /I7 is an issue group: it stays/);
+  edits(
+    ALPHA,
+    MS,
+    (t) => regroupGroup(t, MS, "P2", { remove: ["A4"] }),
+    patch(ALPHA, ['  subgraph P2["P2 proposal：导出和上传"]\n    A3["A3 agent：导出成文件"]\n    A4["A4 agent：文件传到桶"]\n', '  A4["A4 agent：文件传到桶"]\n  subgraph P2["P2 proposal：导出和上传"]\n    A3["A3 agent：导出成文件"]\n']),
+  );
+  edits(
+    LOOSE,
+    MS,
+    (t) => regroupGroup(t, MS, "P2", { add: ["A5"] }),
+    patch(LOOSE, ['    A4["A4 agent：文件传到桶"]\n  end\n', '    A4["A4 agent：文件传到桶"]\n    A5["A5 agent：导出一份测试数据"]\n  end\n'], ['  A3 --> A5["A5 agent：导出一份测试数据"]\n', "  A3 --> A5\n"]),
+  );
+  refuses(() => regroupGroup(ALPHA, MS, "P4", { remove: ["A5"] }), /the group would have no node: remove the proposal with plan.ts unpropose/);
+  refuses(() => regroupGroup(ALPHA, MS, "I7", { add: ["A5"] }), /I7 is an issue group/);
+  refuses(() => regroupGroup(ALPHA, MS, "P2", { add: ["A5"] }), /A5 is in the group P4/);
+});
+
+/** ALPHA after P2 is opened as issue #8. */
+const OPENED = patch(
+  ALPHA,
+  ['  subgraph P2["P2 proposal：导出和上传"]\n', '  subgraph I8["#8 导出和上传"]\n    %% P2\n'],
+  ['A3["A3 agent：导出成文件"]', 'A3["A3 agent：导出成文件 #8"]'],
+  ['A4["A4 agent：文件传到桶"]', 'A4["A4 agent：文件传到桶 #8"]'],
+  ["## A3 agent：导出成文件 ⬜", "## A3 agent：导出成文件 #8 ⬜"],
+  ["## A4 agent：文件传到桶 ⬜", "## A4 agent：文件传到桶 #8 ⬜"],
+);
+
+test("open-issue: the edit, the gh command, and the runner with an injected gh (never the real one)", () => {
+  edits(ALPHA, MS, (t) => openIssueEdit(t, MS, "P2", 8), OPENED);
+  refuses(() => openIssueEdit(ALPHA, MS, "I7", 8), /I7 is already the issue #7/);
+  const cmd = openIssueCommand(ALPHA, MS, "P2");
+  assert.deepEqual(cmd.slice(0, 6), ["issue", "create", "--title", "导出和上传", "--milestone", "alpha"]);
+  assert.equal(cmd[6], "--body");
+  assert.match(cmd[7], /^P2 of the milestone plan `knowledge\/plan\/alpha\.md`: 导出和上传\.\n\n## A3 agent：导出成文件 ⬜\n\n- \[ \] \*\*A3\.1\*\* 写 `src\/export\.ts`。\n\n## A4 agent：文件传到桶 ⬜/);
+
+  const r = repo({ [MS]: ALPHA });
+  const calls: string[][] = [];
+  const gh = (args: string[], cwd: string) => {
+    calls.push(args);
+    assert.equal(cwd, r.root);
+    return "https://github.com/acme/app/issues/8\n";
+  };
+  const dry = runOpenIssue({ cwd: r.root, file: MS, code: "P2", dryRun: true, gh });
+  assert.deepEqual([calls.length, dry.written, r.read(MS)], [0, false, ALPHA], "a dry run runs nothing and writes nothing");
+  assert.match(dry.text, /subgraph IN\["#N 导出和上传"\]/);
+  const done = runOpenIssue({ cwd: r.root, file: MS, code: "P2", body: "the body", gh });
+  assert.deepEqual([done.issue, done.written, calls.length, calls[0].at(-1)], [8, true, 1, "the body"]);
+  assert.equal(r.read(MS), OPENED);
+
+  const broken = repo({ [MS]: patch(ALPHA, ["## A3 agent：导出成文件 ⬜", "## A3 agent：导出 ⬜"]) });
+  refuses(() => runOpenIssue({ cwd: broken.root, file: MS, code: "P2", gh }), /the plan would get a problem/);
+  assert.equal(calls.length, 1, "a plan that would get a problem runs no gh");
+  refuses(
+    () =>
+      runOpenIssue({
+        cwd: r.root,
+        file: MS,
+        code: "P4",
+        gh: () => {
+          throw Object.assign(new Error("x"), { stderr: "could not add to milestone 'alpha': not found\n" });
+        },
+      }),
+    /gh issue create failed: could not add to milestone 'alpha': not found/,
+  );
+  assert.equal(r.read(MS), OPENED, "a failed gh writes nothing");
+});
+
+test("the command: propose prints the new code; open-issue --dry-run prints the gh command and the diff; nothing runs gh", () => {
+  const r = repo({ [MS]: LOOSE });
+  let c = run("propose", MS, "--title", "测试数据", "A5", "--cwd", r.root);
+  assert.equal(c.status, 0, c.out);
+  assert.match(c.out, /^wrote knowledge\/plan\/alpha\.md\nproposal P5$/m);
+  c = run("open-issue", MS, "P5", "--dry-run", "--cwd", r.root);
+  assert.equal(c.status, 0, c.out);
+  assert.match(c.out, /^gh issue create --title '测试数据' --milestone alpha --body 'P5 of the milestone plan `knowledge\/plan\/alpha\.md`: 测试数据\.\n\n## A5 /m);
+  assert.match(c.out, /^-  subgraph P5\["P5 proposal：测试数据"\]\n-    A5\["A5 agent：导出一份测试数据"\]\n\+  subgraph IN\["#N 测试数据"\]\n\+    %% P5$/m);
+  assert.match(c.out, /dry run: nothing ran, nothing written$/);
+  c = run("unpropose", MS, "P5", "--cwd", r.root);
+  assert.equal(c.status, 0, c.out);
+  c = run("regroup", MS, "P2", "--add", "A5", "--cwd", r.root);
+  assert.equal(c.status, 0, c.out);
+  assert.equal(parsePlan(r.read(MS), MS).nodes.find((n) => n.code === "A5")!.group, "P2");
 });

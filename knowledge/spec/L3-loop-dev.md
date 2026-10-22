@@ -92,7 +92,7 @@ Three scripts of `knowledge` read and change the plans in `knowledge/plan/`: the
 | Script | What it does |
 | --- | --- |
 | `plan-graph.ts` | The parser (`parsePlan`) and the rules (`checkPlan`, `checkTransition`). It reads no file and starts no process: text in, objects out. |
-| `plan.ts` | The command: `check`, `json`, and the edits `add`, `arrow`, `unarrow`, `done`, `item`, `drop`, `answer`, `now`. Each edit is also a function (text in, text out) that the tests call. |
+| `plan.ts` | The command: `check`, `json`, and the edits `add`, `arrow`, `unarrow`, `done`, `item`, `drop`, `answer`, `now`, `propose`, `unpropose`, `regroup`, `open-issue`. Each edit is also a function (text in, text out) that the tests and a server call (§4.5). |
 | `plan-hook.mjs` | The `PostToolUse` hook of the plugin: after an `Edit`, `Write` or `MultiEdit` of a file under `knowledge/plan/`, it runs `plan.ts check <file> --against HEAD --new`. |
 
 - `knowledge-check.ts` runs `checkPlan` on each file in `knowledge/plan/`. `prerelease`'s `cleanup.ts` uses the same parser (§2). `prerelease`'s `markdown.mjs` is the one parser of fenced code; `links.mjs` and `plan-graph.ts` import it.
@@ -105,8 +105,9 @@ Three scripts of `knowledge` read and change the plans in `knowledge/plan/`: the
 - **A node** is a mermaid id with a label, in each shape of mermaid (`ID["text"]`, `ID("text")`, `ID{"text"}`, `ID[text]`, …). Its code is the first word of the label (`A3`, `O3–O4`) in the plan of an issue or a milestone, and the id (`I42`, `alphaO15`) in `index.md`. The kind is the letter: A, D, O, E, M; I for `I<N>` in `index.md`; X for each other code. The first labelled line gives the label. A label that ends with ` ✅` is done.
 - **An arrow** goes from the code of one node to the code of another. A chain (`A --> B --> C`) and `&` give more than one arrow on a line.
 - **A section** is a `##` heading outside fenced code, with its lines up to the next `#` or `##` heading. Its code is the first word of its title. Its mark is the last sign of the title: a ✅ or a ⬜. In a plan with sections, a node is done when its heading has ✅.
+- **A group** is a mermaid `subgraph … end` block in a chart of the plan. `subgraph P<k>["P<k> proposal：<title>"]` is a proposal: a set of A nodes that a person circled as one piece of work. `subgraph I<N>["#<N> <title>"]` is an issue group: the proposal after `open-issue` opened it as issue #N; its first inner line `%% P<k>` names that proposal. A node is in the group when a line inside the block names it. A line `%% P<k>` outside a group keeps the code of a removed proposal used. A group has no `##` section.
 - **An item** is a list line with `[ ]` or `[x]`. Its id is the bold code at its start (`**A3.2 …**`). A struck item starts with `~~`. A node is struck when its heading or label has `~~`, when each top item is struck, or when its first item is the struck line of the node (`- [x] ~~**<label>**~~ …`).
-- **`Plan`** is the object of `parsePlan`, and the JSON of `plan.ts json`. A viewer reads the same JSON. Its fields: `file`, `kind`, `title`, `update` (the line `> **更新 …**` or `> **Updated …**`), `now` and `nowLine` (`index.md`), `log` (the `> - ` lines), `notes` (the text under the charts), `nodes`, `edges`, `lang` (`zh` when a label has 「：」), `charts`, `sections` (each `##` section, also one with no node), `rows` (the table of `index.md`). A node has `code`, `id`, `kind`, `label`, `done`, `dropped`, `mark`, `section`, `items`, `chartLine`, `labelLines` and `shape`. The parser does not throw on the text of a file: a part that it cannot read becomes a finding.
+- **`Plan`** is the object of `parsePlan`, and the JSON of `plan.ts json`. A viewer reads the same JSON. Its fields: `file`, `kind`, `title`, `update` (the line `> **更新 …**` or `> **Updated …**`), `now` and `nowLine` (`index.md`), `log` (the `> - ` lines), `notes` (the text under the charts), `nodes`, `edges`, `lang` (`zh` when a label has 「：」), `charts`, `sections` (each `##` section, also one with no node), `rows` (the table of `index.md`), `groups` and `retired` (the codes of the lines `%% P<k>` outside a group). A group has `code`, `kind` (`proposal` or `issue`), `title`, `issue`, `nodes`, `line`, `endLine` and `from` (the `P<k>` of an issue group). A node has `code`, `id`, `kind`, `label`, `done`, `dropped`, `mark`, `section`, `items`, `chartLine`, `labelLines`, `shape` and `group`. The parser does not throw on the text of a file: a part that it cannot read becomes a finding.
 
 ### 4.2 The rules
 
@@ -143,6 +144,12 @@ A problem makes `plan.ts check`, the knowledge check and the hook fail. A questi
 | A ⬜ D has no 背景, 问题 or 例子 (Context, Question, Example), no list of two options, or its first option is not the recommended one | Question | Plans |
 | An item id of another node (`A4.1` in the section of `A3`) | Question | Plans |
 | No update line | Question | Plans |
+| A group is in a milestone plan only | Problem | All |
+| A proposal is `P<k>["P<k> proposal：<title>"]` (English: `P<k> Proposal: <title>`); the label of `I<N>` starts with `#<N>` | Problem | Milestone plans |
+| No nested group, no empty group, no node in two groups, and no D, O, E or M node in a group | Problem | Milestone plans |
+| Each node of `I<N>` has `#<N>` in its label and its heading; a label that ends with `#<N>` is in the group `I<N>` | Problem | Milestone plans |
+| A `P<k>` code is used one time (a group, the `%% P<k>` of an issue group, or a line `%% P<k>`) | Problem | Milestone plans |
+| An open A node in no group; a gap in the `P<k>` codes; an arrow inside a group | Question | Milestone plans |
 | A `Now:` line | Problem | `index.md` |
 | The label of `I<N>` starts with `#<N>`; ✅ on the label if and only if ✅ on the first cell of the row of `#<N>` | Problem | `index.md` |
 | An open `I<N>` with no row; a `Now:` line that names a ✅ issue | Question | `index.md` |
@@ -157,6 +164,8 @@ A problem makes `plan.ts check`, the knowledge check and the hook fail. A questi
 - A `- [x]` item with an id of an open node stays, and stays `- [x]`.
 - An arrow into a ✅ node stays, and no new arrow goes into a ✅ node.
 - A new node takes a number above each number of its kind in `before`: a code is not used again.
+- An issue group stays. Each `P<k>` code of `before` stays in `after`: as a proposal, as the `%% P<k>` of an issue group, or as a line `%% P<k>`. A new proposal takes a number above each `P<k>` of `before`.
+- A ✅ node does not move into or out of a group. A proposal that becomes an issue group (its `%% P<k>`) is the same group.
 
 ### 4.4 The edits
 
@@ -176,22 +185,36 @@ A problem makes `plan.ts check`, the knowledge check and the hook fail. A questi
 | `drop` | The first line `- [x] ~~**<label>**~~ 不用做了（<date>）：<reason>`, each open item struck, ✅ on the heading and the labels. |
 | `answer` | The body `owner 定的（<date>，「<quote>」）：<option>` (English: `Owner decided (<date>, "<quote>"): <option>`), ✅ on the heading and the labels. With `--skipped`, the body stays under the first line `Agent decided (<date>)：<the recommended option>，因为这个 D 被跳过了。` |
 | `now` | The text after `Now:`. With no such line, `> **Now:** <text>` under the title. |
+| `propose` | A new block `subgraph P<k>["P<k> proposal：<title>"]` … `end` with the labelled lines of the nodes (open A nodes in no group, labelled in one chart). An arrow line that held a label keeps the bare id. The block goes before the first chart line that names one of its nodes. `<k>` is one above each `P<k>` that the plan uses or keeps. It prints `proposal P<k>`. |
+| `regroup` | The labelled lines of `--add` go into the block of a proposal; the lines of `--remove` come out, before the block. It refuses an issue group, a ✅ node, and a block with no node left. |
+| `unpropose` | The line `subgraph P<k>[…]` becomes `%% P<k>`, the line `end` goes, and the lines of the block lose one indent. |
+| `open-issue` | It runs `gh issue create --title <title> --milestone <the file name of the plan> --body <body>`. The body is the sections of the nodes of the group, or `--body-file`. It reads the number from the URL that `gh` prints. Then `subgraph P<k>[…]` becomes `subgraph I<N>["#<N> <title>"]` with the line `%% P<k>` under it, and each node gets ` #<N>` at the end of its labels and its heading. It refuses a group with a ✅ node. Before `gh` runs, it applies the edit with a stand-in number; when that adds a problem, `gh` does not run. `--dry-run` prints the command (quoted for a POSIX shell) and the changed lines, and runs and writes nothing. |
 
 - `--date` gives the date; the default is the date of the local clock.
 - Agent decided: a struck node gets ✅ on its heading and its labels. Without it, a plan with a struck node never has each heading ✅, and the release does not remove it (§2, `planState`).
 
-### 4.5 The hook
+### 4.5 The functions for a server
+
+A viewer or another server calls the edits directly, with no shell. Each edit is a pure function of `plan.ts`: text in, text out, and an `EditError` with the reason when it refuses.
+
+- The edits: `addNode`, `addArrow`, `removeArrow`, `markDone`, `checkItem`, `addItem`, `dropItem`, `dropNode`, `answerD`, `setNow`, `proposeGroup(text, file, {title, codes, code?})`, `unproposeGroup(text, file, code)`, `regroupGroup(text, file, code, {add?, remove?})`, `openIssueEdit(text, file, code, issue)`.
+- `applyEdit(before, file, edit)` gives `{text, findings, ok}`. The caller writes `text` only when `ok` is true: that is the rule of each write (§4.4).
+- `nextProposal(text, file)` gives the code that `proposeGroup` takes.
+- `runOpenIssue({cwd, file, code, body?, dryRun?, gh?})` does all of `open-issue`, and writes the plan. `gh` is a function `(args, cwd) => stdout`; the default `ghCli` runs the `gh` command. A test always gives its own function: no test runs `gh`. `openIssueCommand(text, file, code, body?)` gives the arguments, and `lineDiff(a, b)` the changed lines, for a page that shows the command before it runs.
+
+### 4.6 The hook
 
 - `hooks/hooks.json` runs `plan-hook.mjs` with `node` after `Edit`, `Write` and `MultiEdit`. The hook reads the hook input (JSON) on stdin and takes `tool_input.file_path`, from `cwd` when it is relative.
 - A Markdown file under `knowledge/plan/` that is on disk: the hook runs `plan.ts check <file> --cwd <root> --against HEAD --new`. With a problem, it writes the output to stderr and exits 2: Claude Code gives the text to the agent.
 - In each other case it prints nothing and exits 0: another file, a file that is not there, input that is not JSON, no `node`, no script, a Node that does not run TypeScript, a check that does not finish in 20 seconds.
 - `--new` gives only the findings that the file at `HEAD` does not have, so an old problem of a plan does not come back after each edit.
 
-### 4.6 What the scripts do not decide
+### 4.7 What the scripts do not decide
 
 These rules of `spec-and-plan.md` stay with the agent and the deep-verify:
 
 - Whether an arrow is a real wait, and whether a node has one role and one task.
+- Whether the nodes of a proposal are one piece of work that a person can do and review alone.
 - Whether a D is a choice of direction, and whether its parts say enough. The script finds only the parts and the order of the options.
 - In the plan of an issue, whether a node with no arrow out must block the wrap-up or is work for another issue. The rules permit such a node.
 - Whether the work of a ticked node is on the remote branch. `done` examines only that the commit is in the repo: the tick goes up in the same push as the work.

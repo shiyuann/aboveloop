@@ -110,7 +110,7 @@ test("⬜ #N: closed with no plan fails; closed with an open plan, or open, pass
     "knowledge/spec/L3-x.md": spec,
     "knowledge/plan/11-open.md": '# 11\n\n> **Updated 2026-10-22**\n\n```mermaid\nflowchart TB\n  A1["A1 Agent: x ✅"] --> A2["A2 Agent: y"]\n```\n\n## A1 Agent: x ✅\n\n- [x] x (2026-10-22, `abc1234`)\n\n## A2 Agent: y ⬜\n',
     "knowledge/plan/12-done.md": '# 12\n\n> **Updated 2026-10-22**\n\n```mermaid\nflowchart TB\n  A1["A1 Agent: x ✅"]\n```\n\n## A1 Agent: x ✅\n\n- [x] x (2026-10-22, `abc1234`)\n',
-    "knowledge/plan/alpha.md": '# alpha\n\n> **更新 2026-10-22**\n\n```mermaid\nflowchart TB\n  A2["A2 agent：y ✅"] --> A1["A1 agent：x"]\n  A1 --> O1["O1 owner：发版"]\n```\n\n## A2 agent：y ✅\n\n- [x] y（2026-10-22，`abc1234`）\n\n## A1 agent：x ⬜\n\n## O1 owner：发版 ⬜\n',
+    "knowledge/plan/alpha.md": '# alpha\n\n> **更新 2026-10-22**\n\n```mermaid\nflowchart TB\n  A2["A2 agent：y ✅"]\n  subgraph P1["P1 proposal：x"]\n    A1["A1 agent：x"]\n  end\n  A2 --> A1\n  A1 --> O1["O1 owner：发版"]\n```\n\n## A2 agent：y ✅\n\n- [x] y（2026-10-22，`abc1234`）\n\n## A1 agent：x ⬜\n\n## O1 owner：发版 ⬜\n',
   });
   const r = knowledgeCheck(root, { state: states({ 10: "closed", 11: "closed", 12: "open" }), repo: REPO });
   assert.deepEqual(
