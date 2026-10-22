@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help validate bump sync install-release skills-test loop-test loop-run loop-key loop-secrets
+.PHONY: help validate bump sync install-release skills-test plan-view loop-test loop-run loop-key loop-secrets
 
 help:
 	@echo "make sync       校验，再装最新一版（Claude Code 从 GitHub 钉在 tag 上，Cursor 拷 tag 的树）"
@@ -8,6 +8,7 @@ help:
 	@echo "make validate   校验 plugin 清单、版本、skill reference 链接，和 entry 的会话摘要没漂（digest.md）"
 	@echo "make bump       推版本号（只在发版时，prerelease 第 4 步；约定：当天日期.patch，如 20260920.1）"
 	@echo "make skills-test     各 skill 脚本的测试（不联网）"
+	@echo "make plan-view [CWD=<项目根>] [PORT=4317]  在浏览器里看 knowledge/plan/ 的图（只听 127.0.0.1）"
 	@echo "make loop-test       loop.yml workflow 的测试（不联网）"
 	@echo "make loop-run [STEP=all|explore|implement] [DRY=1]  本机跑一次 loop.yml workflow 做的事（REPO 和钥匙从环境变量读）"
 	@echo "make loop-key NAME=CURSOR_API_KEY|GH_APP_ID_DEV  把这一行存进 ~/.config/aboveloop/loop.env（提示时粘贴，不回显）。NAME=GH_APP_KEY_DEV 不存：私钥是 ~/.config/aboveloop/ 里的一个文件（services/loop/keys.sh）"
@@ -39,6 +40,10 @@ install-release:
 
 skills-test:
 	@node --experimental-strip-types --no-warnings --test 'skills/*/scripts/*.test.ts'
+
+# 看 plan 的图（`knowledge` 的 SKILL.md「看 plan 的图」）。
+plan-view:
+	@node --experimental-strip-types --no-warnings skills/knowledge/scripts/plan-view.ts --cwd "$(or $(CWD),.)" $(if $(PORT),--port "$(PORT)")
 
 # `loop.yml` workflow（knowledge/spec/L3-loop-workflow.md §1）。每个项目仓库的 .github/workflows/loop.yml
 # （setup-app 的 references/loop.yml 原样拷过去）调用 services/loop/action.yml。

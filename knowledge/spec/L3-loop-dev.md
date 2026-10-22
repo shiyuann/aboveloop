@@ -82,3 +82,56 @@ A project can change the rank of §1.2 in its `.agents/dev.md`. The name follows
 
 - Agent decided: the values of `### Urgent` and `### Size` are labels. The session entry already reads the labels of each issue and PR, and the projects already use labels for facts (`Kind:`). A label is a fact that a person or a loop sets; the text of an issue is not, and text from outside can ask to come first (R23).
 - Agent decided: a project writes `.agents/dev.md` only when it wants another rank. With no file, the default rank applies, and a file with the default values is a second copy of the default (P3).
+
+## 4. The plan viewer
+
+✅ The plan viewer is a local web page that draws each plan of `knowledge/plan/` as a graph. It reads the plans and their git history, and it changes no file. The steps to start it are in `knowledge`'s `SKILL.md` (「看 plan 的图」).
+
+- **The script** is `plan-view.ts` in `knowledge`'s `scripts/`. It uses only Node and `git`, with no package to install. The page is `plan-view.html` beside it, with no script or style from another site.
+- **It binds to 127.0.0.1 only.** It answers only a request whose `Host` is `127.0.0.1:<port>` or `localhost:<port>`. Another `Host` gets 403.
+  - Agent decided: a plan can name private work. A page of another site must not read it through a DNS name that points to 127.0.0.1.
+- **The parser is the parser of the plan check** (`parsePlan`, `checkPlan` and `checkTransition` of `plan-graph.ts`). The viewer does not parse a plan itself (P3). The tests give the server a fake parser.
+
+### 4.1 The endpoints
+
+| Path | What it gives |
+| --- | --- |
+| `/` | The page. |
+| `/api/plans` | Each `.md` file of `knowledge/plan/`: `file`, `kind`, `title`, `done` (the nodes that are ✅ or dropped), `open`, and `error` when the parser cannot read it. `index.md` is first, then the plans of a milestone, then the plans of an issue. |
+| `/api/plan?file=<path>` | `plan` (the `Plan` of `plan-graph.ts`, unchanged), `findings` (of `checkPlan`, and of `checkTransition` from the last commit when the file has an uncommitted change; each with the `node` that its line is in), `activity` (§4.2) and `view` (§4.3). |
+| `/api/events` | Server-Sent Events. First `hello`, then `changed` with `{"file": "<path>"}` when a file under `knowledge/plan/` changes on disk, and `{"file": null, "head": "<sha>"}` when `git rev-parse HEAD` changes. |
+
+- A `file` that is not a `.md` file under `knowledge/plan/` gets 400: a path with `..`, an absolute path, another folder, or a symlink to a file outside. A plan file that is not there gets 404.
+- The server waits 150 ms after the last change of a file before it sends `changed`. It reads `HEAD` each 2 seconds, and only while a page listens.
+
+### 4.2 The activity
+
+The activity of one plan comes from git, with no database. The server reads the last 200 commits that changed the file (`git log --follow`, across a rename), parses each version, and compares each version with the version before it. It keeps each parsed version by its blob sha. `plan-activity.ts` does the comparison, with no I/O.
+
+| `kind` | When |
+| --- | --- |
+| `add` | A node is new. In the first version of the file, each node is new. |
+| `done` | A node that is not a D gets ✅. |
+| `answer` | A D gets ✅. `quote` holds the first quote (「…」, “…” or "…") of the line in its section that says the owner decided. When the agent decided, `quote` is null. |
+| `tick` | An item is checked. |
+| `drop` | A node or an item is struck through. |
+| `remove` | A node goes out of the plan. |
+| `arrow-add`, `arrow-remove` | An arrow between two nodes that both stay. The arrows of a new or removed node are part of that node. |
+| `now` | The `Now:` line changes. |
+| `log` | A `> - ` line of the plan (`Plan.log`). Its date is the date at its start. |
+
+- Each event has `id`, `kind`, `node`, `item`, `text`, `quote`, `from`, `to`, `source` (`commit`, `uncommitted` or `log`), `sha`, `date`, `subject` and `author`.
+- An item pairs with its old item by its id, then by the same text, then by its order.
+- The file on disk that differs from its last commit gives the events of `source: "uncommitted"`, with the time of the file.
+- The order is: the uncommitted events first, then the commits and the log lines, newest first by date. The `id` of an event stays the same over reloads, so the page knows which events are new.
+
+### 4.3 The view
+
+| Field | What it holds |
+| --- | --- |
+| `states` | The state of each node: `done` (✅), `dropped` (struck through), `ready` (能做: each node before it is done or dropped, and an agent does it), `waits` (等: each node before it is done or dropped, and it is a D, an O or an E), `blocked` (a node before it is open). |
+| `critical` | The longest path of open nodes, by count, that ends at an open node with no open node after it. |
+| `decisions` | Each D: its question (the line that starts with 「问题」 or "Question"), the line that names the recommended option, and, when it is ✅, who decided, the quote and the date. |
+
+- Agent decided: `waits` names only a D, an O or an E whose turn it is, so the word keeps the meaning of [L2-loop-dev §4](L2-loop-dev.md#4-the-graph-of-open-work). A node after open work is `blocked`, not `waits`.
+- The page follows the newest event: on load, and on each `changed`, it moves the view to the node of the newest new event, and makes that node pulse. A pan, a zoom or a click in a panel stops the follow. The follow button starts it again.

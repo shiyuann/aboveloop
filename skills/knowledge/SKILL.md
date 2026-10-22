@@ -39,3 +39,15 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 | 有自动化或 agent 的 spec：owner 在环里还是环上 | [spec-and-plan.md](references/spec-and-plan.md)「自动化的 spec」 |
 | 一次设计讨论怎么谈成 spec 的例子（不用每次读） | [case-study-design-discussion.md](references/case-study-design-discussion.md) |
 | 只查形式：锚点、⬜ 标记的 issue 还开不开、`index.md` 的「建立在」、plan 的格式、deep-verify 报告的小发现只给数 | 知识检查：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/knowledge-check.ts --cwd <项目根>`（不联网加 `--offline`）。deep-verify 的第 2 步和第 7 步也跑它 |
+| owner 要在浏览器里看 plan 的图：缩放、跟着最新的改动、节点详情、活动（拍板、勾选、日志）、知识检查的发现 | 下面的「看 plan 的图」 |
+
+## 看 plan 的图
+
+`plan-view.ts` 起一个本机的网页，只读 `<项目根>/knowledge/plan/` 和它的 git 历史。文件改了、有了新提交，页面自己刷新。接口、事件和节点的状态在 aboveloop 的 [L3-loop-dev §4](../../knowledge/spec/L3-loop-dev.md#4-the-plan-viewer)。
+
+1. 在后台起它：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/plan-view.ts --cwd <项目根>`。在 aboveloop 的仓库里，也可以用 `make plan-view CWD=<项目根>`。
+2. 把它打印的地址（默认 `http://127.0.0.1:4317/`）给 owner。端口占着，加 `--port <别的端口>`。加 `--open`，它自己开浏览器。
+3. owner 不看了，停掉这个进程。
+
+- 它只听 127.0.0.1，不往外发东西，不改文件。
+- 节点的状态（能做、等、挡着）、关键路径、活动和拍板，都由脚本从 plan 和 git 算出来，页面只画。
