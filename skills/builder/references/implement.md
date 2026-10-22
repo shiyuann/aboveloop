@@ -291,7 +291,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 7. 回报主 agent：代号、落地的 commit（短 sha）、跑了哪些测试和结果。
 
 - 做到一半要停（新的 dependency，6.1；或这一轮要结束）：不带着没 push 的活停。先 commit，把节点的分支 push 上去（`git push -u origin nodes/<N>-<代号>`）。活没做完，不落到 `issues/<N>` 上。把分支名和 commit 回报主 agent：主 agent 写进 plan 这个节点下面，commit，push。节点不打勾。下一个会话从那个分支接着做。
-- 主 agent 收到回报：在这个 issue 的 worktree 里 `git pull --ff-only`，读这个节点落地的 diff，跑它说的检查。审出问题，在 plan 里加一个新节点，不重开打了勾的那个。
+- 主 agent 收到回报：在这个 issue 的 worktree 里 `git pull --ff-only`，读这个节点落地的 diff，跑它说的检查。审出问题，在 plan 里加一个新节点，不重开打了勾的那个（`knowledge` 的 spec-and-plan.md「条目怎么记」的「plan 既是记录，也是计划」）。
 - 收尾（第 7 步）之前，`git worktree list` 里还有这个 issue 的 `nodes/<N>-*`：照第 6 条测，测过了删；测不过，留着，告诉 owner 为什么。
 
 ### 7. 收尾

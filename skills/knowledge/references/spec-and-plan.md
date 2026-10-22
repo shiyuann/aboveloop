@@ -272,7 +272,7 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 - **正文里没有图上没有的 `##` 节。** 图上也没有正文里没有的节点。
 - **节按图上的先后排。** owner 的节点（D、O）排在它挡着的那一节前面。
 - **一个节点里条目多、有先后，可以再给它一张小图。** 小图上的节点，是这一节里的 `###` 小节，标题也是它的标签。
-- **做完的节点压成一两行。** 细节看 git log。
+- **做完的节点压成一两行。** 细节看 git log。在打勾的那次 commit 里压；之后它不再改（「条目怎么记」的「plan 既是记录，也是计划」）。
 - **每种节点那一节写什么：**
   1. **agent（A）。** 一个 A 节点交付一样能用的东西，能单独说「做完了」。
      - 条目的代号是 A2.1 这样。每条写：做什么（路径、做法、命令）；怎样算过。条目多，就按主题分 `###` 小节。
@@ -305,6 +305,12 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
   - 节点不带着没 push 的活停下，这一轮也不带着它结束：先 commit、push。没做完的条目照下面写等谁。
   - 为什么在 aboveloop 的 [L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)。
 - **没做完的条目拆成子项，分别打勾。** 做完的子项写日期和证据。没做完的写等谁：agent、owner，或哪个外部事件。子项全勾完，条目才打勾。
+- **plan 既是记录，也是计划。** 做过的回不去，没做的可以改。
+  - ✅ 的节点不改、不删。在做完的活里发现问题，加一个新节点，不重开旧的。
+  - 开着的节点能改，能划掉（下一条），也能在后面加新的。
+  - owner 说一个 issue 从头来过：每个开着的节点都划掉，理由写 owner 的原话；新的节点加在后面，代号接着编，不复用。还是这一份 plan，不开新文件。
+  - issue 关了、节点全都 ✅ 的 plan 是历史：不加节点。后续的活开一个新 issue。
+  - 为什么：owner 的原话（2026-10-20）：「A graph can't go back: a checked node can't be removed while a unchecked node can be changed or removed. So, the graph is both the execution history path + the plan.」改了做完的节点，plan 就不再记着真的做过什么。
 - **不做了的划掉，不删。** 写成 `- [x] ~~**O2 …**~~ 不用做了（日期）：理由`。
   - agent 因为 owner 的话不做一个节点，也这样划。理由写 owner 的原话。节点留在 plan 里，以后看得到跳过了什么。
   - owner 跳过的 D 不划掉：它取推荐的那一个（上面的「owner 拍板（D）」）。

@@ -103,7 +103,7 @@ flowchart TB
 5. 逐页核对正文。不成立，就改那一页的正文，再从第 4 步查它下面的页。
 6. 再核对默认分支上开着的 plan：`knowledge/plan/` 里 issue 的 plan 和里程碑的 plan，还有没打 ✅ 的节点的那几份。issue 的 plan 不在 `index.md` 里，所以第 4 步找不到它们。
    - 一个开着的节点或条目，照这次的改动做就不对了：在那份 plan 里改它，或加一个节点、一个条目，写清是哪一次改动带来的。
-   - 节点全都 ✅ 的 plan 不加活。这次改动对它还要紧，就照 `entry` 的「owner 说「应该怎么样」」开 issue 或做小改动。
+   - 节点全都 ✅ 的 plan 是历史，不加活（[spec-and-plan.md](spec-and-plan.md)「条目怎么记」的「plan 既是记录，也是计划」）。这次改动对它还要紧，就照 `entry` 的「owner 说「应该怎么样」」开 issue 或做小改动。
    - 只核对默认分支上的 plan。别的 issue 的分支上的 plan（draft PR 里的），不在这一步里。
    - 为什么：开着的 plan 都在 `knowledge/plan/` 里，一次改动就能找出它碰到的别的 plan，没关的 plan 加上活，跟着对齐。不然一个节点去掉了，别的 plan 里还留着它，要 owner 提了才改。只管默认分支上的 plan，改动小。
 7. 这些都在同一次提交里做完。
