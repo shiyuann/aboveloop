@@ -1,0 +1,25 @@
+# Open work of my-app
+
+> **Now:** #44 A1: the agent can do it now. #45 waits on E1.
+
+```mermaid
+flowchart LR
+  REL["O: release 20261101.1 ✅"]
+  REL --> I43["#43 live runs：agent"]
+  I52["#52 release step：agent ✅"] --> I53["#53 next thing：agent"]
+  I44["#44 open plan：agent"] --> I36["#36 issue life：agent ✅"]
+  I44 --> I45["#45 no nodes：agent"]
+  E1["E: an outside event"] --> I45
+  alphaO15["alpha O15 sign the contract：owner"] --> I53
+```
+
+- #45 waits on the outside event: the agent cannot start it.
+
+| Issue | Next step | Who | Plan |
+| --- | --- | --- | --- |
+| #36 ✅ | Done | — | — |
+| #43 | Live runs | The agent | — |
+| #44 | A1 | The agent | — |
+| #45 | Wait for E1 | — | — |
+| #52 ✅ | Done | — | — |
+| #53 | A2 | The agent | — |
