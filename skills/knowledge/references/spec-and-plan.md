@@ -146,7 +146,7 @@ flowchart TB
 - 最后一次 spec review 是 O2。O2 过了，A3、A4 不再等 owner 叫执行。
 - 导出不用桶，上传要等 O3–O4。所以拆成两个节点：A3、A4。
 - 只有 A5 等发版，所以图上画了 O5。别的节点 merge 以后，跟着下一次发版走，不画。
-- A6 是检查，没有节点等它，所以没有出去的箭头。种类不定箭头。
+- A6 是检查。图上没有节点等它，所以没有出去的箭头；它挡着 implement 的收尾：A6 ✅ 之前，PR 不标成 ready。种类不定箭头。
 
 ## A1 agent：调研导出格式 ✅
 
@@ -253,6 +253,15 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 - **一个 A 节点里有的部分等的不一样，就拆成两个 A 节点。** 每个有自己的代号。不画成「A9 的这一块」「A9 的那一块」。
 - **几个 owner 步骤可以合成一个节点。** 条件：它们连着做，解开同一个节点。代号写成一段（O1–O2）。
 - **箭头只画真的等。** 没有前一个，后一个就做不了，才画箭头。
+- **每个节点都挡着关键路径。** 一份 plan 里的活，默认都挡着它的关键路径。
+  - issue 的 plan 的关键路径：spec review 的 O → 写代码的 A 节点 → implement 的收尾（`builder` 的 [implement.md](../../builder/references/implement.md#7-收尾) 第 7 步：PR 标成 ready，它等每个 agent 的节点）→ 画了的话，发版的 O。
+  - 没有出去的箭头的节点，挡着收尾：它 ✅ 之前，PR 不标成 ready。只有一种例外：owner 在 merge 之前做的 O（比如在真机上跑一遍，implement.md 第 8 步），挡着 merge。
+  - 发版的 O 后面的节点，在 main 上等（上面的「发版是 O 节点」）。
+  - 里程碑的 plan：每个节点都有一条路，通到这个里程碑的发版的 O 或 M 节点。
+  - 后来加的节点，画一个箭头到下一个还开着的关键节点（issue 的 plan：spec review 的 O、写代码的 A 节点或发版的 O；里程碑的 plan：发版的 O 或 M）。它的箭头已经通到一个的，不用加。issue 的 plan 里没有合适的，就不画：没有出去的箭头，它挡着收尾。
+  - 一个节点什么都不该挡，它就不是这份 plan 的活：先问 owner 一个 D，以后做（开一个新 issue，或放进另一个里程碑），还是不做。不在 plan 里留一个散着的节点。
+  - 里程碑的 plan 里加 A 节点，写上它进哪个 issue：已有的 `#N`，或开工时开的新 issue（上面的「里程碑的 plan」）。agent 看不出来，问 owner 一个 D。
+  - 为什么：owner 的原话（2026-10-21）：「all the work in the graph should be blocking critical nodes of exploring, researching, coding, reviewing, releasing, etc by default. If not, then you should ask the question: should it be future work or out of the scope of this current nvbug?」散着的节点什么都不挡：PR ready 了、发版了，它还开着，没有人做。
 - **图下几行写为什么这样排。** 写哪些看着要等、其实不等。
 - 一个 A 节点里条目多、有先后，再给它一张小图。
 - **图太宽，就拆成两张：做完的一张，开着的一张。** 开着的那张用 `flowchart LR`：不相连的节点竖着排。开着的节点挂在做完的节点上，就在开着的那张里再画一次那个做完的节点。
