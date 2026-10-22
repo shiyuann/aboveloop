@@ -18,6 +18,8 @@
 | owner 的步骤 | 只有 owner 做得了的一步，比如登录后台建一把 token。 |
 | 检查 | 构建做完之后的线上验收。它不是一种节点：agent 做的是 A 节点，只有 owner 做得了的是 O 节点。 |
 | 外部事件 | 不由 owner 或 agent 决定的事，比如一个源发布了新数据。 |
+| 等 | 一个节点或 issue 被 agent 的活以外的东西挡着：owner 的 D 或 O、外部事件（E）、一次 CI 运行、另一个会话。「等」只这样用。为什么在 aboveloop 的 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。 |
+| 能做 | 指向它的节点都 ✅ 了，agent 现在就能做，只是还没有人在做。它不是「等」。 |
 | in the loop | 每一步都等 owner 批准。 |
 | on the loop | owner 定规则、审永久的改动、看结果，能随时叫停，不逐步批准。 |
 
@@ -86,7 +88,7 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - 共用的项目（比如 aboveloop）的 issue，可以给每个 app 一组节点，写这个 app 要做的活；app 自己的活，开在 app 自己的仓库里。
   - 为什么：一张图只画一个 issue，owner 拿图看得清它到哪了、等谁。代码一个 issue 一个分支，几个 agent 同时干活不撞。
 - **依赖图 `plan/index.md`**：所有开着的活一张图，上次发版以后做完的也在，打 ✅。dev loop 的一部分，在会话里用：给全局（`Now:`、图、谁在等什么）；先做哪件看 `dev` 的排序，它只看事实，不看这张图。只有会话里的 agent 改它，CI 不改。改它是小改动：一个分支、一个 PR，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」），不放在 issue 的分支上等 review。`prerelease` 的 `cleanup.ts` 读的那一部分在 aboveloop 的 [L3-loop-dev §2](../../../knowledge/spec/L3-loop-dev.md#2-the-graph-of-open-work)。格式就写在这里：
-  - 元信息里一行 `Now:`：下一步是什么、等谁。
+  - 元信息里一行 `Now:`：下一步是什么；它在等谁（词表的「等」），或它能做。
   - 一张 mermaid 图：节点是 issue（`I<N>["#<N> …：agent"]`）、发版（`O`）、外部事件（`E`），或里程碑的 plan 的下一个节点（`alphaO15["alpha O15 …：owner"]`，带上 plan 的名字）；箭头是真的在等。节点标上谁做。里程碑的 plan 的节点链着开着的 issue，图上画那个 issue。
     - 节点一律写成 `ID["字"]`。
     - 一行只写一个箭头。
@@ -306,7 +308,7 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
   - 打勾时，节点那一节压成的那一行写上它的活的 commit（短 sha），比如「- [x] 导出成文件（<日期>，`abc1234`，证据）」。下一个会话，在别的机器上也一样，从这个 commit 接着做。
   - 节点不带着没 push 的活停下，这一轮也不带着它结束：先 commit、push。没做完的条目照下面写等谁。
   - 为什么在 aboveloop 的 [L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)。
-- **没做完的条目拆成子项，分别打勾。** 做完的子项写日期和证据。没做完的写等谁：agent、owner，或哪个外部事件。子项全勾完，条目才打勾。
+- **没做完的条目拆成子项，分别打勾。** 做完的子项写日期和证据。没做完的写它在等谁（owner、外部事件、CI、另一个会话；词表的「等」），或写「能做」。子项全勾完，条目才打勾。
 - **plan 既是记录，也是计划。** 做过的回不去，没做的可以改。
   - ✅ 的节点不改、不删。在做完的活里发现问题，加一个新节点，不重开旧的。
   - 开着的节点能改，能划掉（下一条），也能在后面加新的。

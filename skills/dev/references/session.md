@@ -124,7 +124,7 @@ Written in a session of the owner
    - 打了 ✅ 的不删：发版时 `prerelease` 删。
      - 为什么：和 issue 的 plan 是同一条规矩：做完的留到发版，由 `prerelease` 一次删掉。
    - 每个 issue 在表里写下一步和谁做。
-   - 写 `Now:` 一行：下一步是什么、等谁。不写打了 ✅ 的项。
+   - 写 `Now:` 一行：下一步是什么；它在等谁，或它能做（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md) 词表的「等」「能做」）。不写打了 ✅ 的项。
 3. 有改动，照小改动做（`entry` 的「小改动」）：从最新的 `origin/<默认分支>` 开一个分支，只提交这一个文件，信息写 `plan index: <改了什么>`，push，开 PR，检查过了当场 merge。不放在一个 issue 的分支上：下一个会话从默认分支上读它。
    - 这个文件 merge 冲突了：取 `origin/<默认分支>` 上的那份，再做一遍自己的改动。那份的每个节点、每个箭头都留着。
 4. 照 [SKILL.md](../SKILL.md) 的「排序」排，不按图排。去掉另一个会话在做的（第 2 步）。draft 分支上的 plan 和里程碑的 plan 的下一个节点（第 2 步 c 的输入二、三）排在 `started` 那一组的最后。
@@ -187,7 +187,7 @@ Written in a session of the owner
 - **不是 owner 做的推送、失败的 `loop.yml` 运行**：给 owner 链接，owner 读提交或日志。agent 只报，不改什么。
 - **implement 写过的分支**：照 [spec.md](../../builder/references/spec.md) 最后一节的「先审 implement 写过的东西」（R23）。
 
-做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。然后照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「每一轮回复，只用三种方式之一结束」收尾。「接着看下 5 件，还是停」也照「怎么问 owner」写成一个问题。
+做完 5 件，照依赖图说一遍：还剩什么、各等谁（owner、CI、发版、外部事件、另一个会话）。agent 现在就能做、只是没人在做的，说「能做」，不说「等」。然后照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「每一轮回复，只用三种方式之一结束」收尾。「接着看下 5 件，还是停」也照「怎么问 owner」写成一个问题。
 
 ## 5. 写 GitHub 之前
 
