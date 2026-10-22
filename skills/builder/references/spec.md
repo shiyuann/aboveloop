@@ -185,7 +185,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 
 里程碑的 plan（没有号的 plan）里的 D、O 没有 issue，也照 6.4、6.5 带；打勾和 owner 的原话照 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「里程碑的 plan」写进那份 plan。只有 6.4 第 3 条不一样：会改 spec 的回答不当场改 spec，照那一条变成一个新的 A 节点。
 
-1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」写。顺序在那一节，这里不另写。只有方向问题是 D（`entry` 的「拍板只问方向」）。
+1. 一个 D 一个问题，照 `entry` 的「怎么问 owner」写。顺序在那一节，这里不另写。几个问题必须一起定的例外，在 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「每个节点一节」的「owner 拍板（D）」。只有方向问题是 D（`entry` 的「拍板只问方向」）。
 2. 背景里用白话写：它改的是什么，它挡着什么。plan 那一节的链接和节点的代号，跟在白话后面。
 3. owner 答了：在 plan 里打勾，写日期和 owner 的原话。这个决定改了 spec，就当场改 spec 的正文。不改页头。
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。
