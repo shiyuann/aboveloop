@@ -1,0 +1,55 @@
+# my-app #7 plan: the export
+
+> **Updated <date>** · the open work of issue #7.
+
+```mermaid
+flowchart TB
+  A1["A1 Agent: one ✅"] --> O1["O1 Owner: spec review ✅"]
+```
+
+```mermaid
+flowchart LR
+  O1["O1 Owner: spec review ✅"] --> A2["A2 Agent: export to a file"]
+  D1["D1 Owner decides: the format"] --> A2
+  A2 --> E1["E1 Event: the store accepts the app"]
+```
+
+- A2 waits on D1 and O1.
+
+## A1 Agent: one ✅
+
+- [x] One (2026-10-20, `abc1234`)
+
+## O1 Owner: spec review ✅
+
+- [x] The owner read the spec (2026-10-21, "go").
+
+## D1 Owner decides: the format ⬜
+
+Context: the format of the file of A2. It blocks A2.
+
+Question: CSV or JSON?
+
+Example: with CSV, the owner opens the file in a spreadsheet.
+
+- **Recommended: CSV.** The agent does it; no cost; it can be undone.
+- JSON: the agent does it; no cost. A spreadsheet does not open it.
+
+## A2 Agent: export to a file ⬜
+
+```mermaid
+flowchart LR
+  A2a["A2.1 write the file"] --> A2b["A2.2 test the file"]
+```
+
+### A2.1 write the file
+
+- [ ] **A2.1** Write `src/export.ts`.
+
+### A2.2 test the file
+
+- [ ] **A2.2** Run `make test`.
+
+## E1 Event: the store accepts the app ⬜
+
+The store sends a mail. Then: nothing waits.

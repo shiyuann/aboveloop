@@ -1,0 +1,72 @@
+# alpha plan：导出
+
+> **更新 2026-10-22** · alpha 里程碑的整张图。
+
+```mermaid
+flowchart TB
+  O1["O1 owner：spec review ✅"] --> A1["A1 agent：调研 ✅"]
+  subgraph I7["#7 调研格式"]
+    %% P1
+    A2["A2 agent：调研格式 #7"]
+  end
+  subgraph P2["P2 proposal：导出和上传"]
+    A3["A3 agent：导出成文件"]
+    A4["A4 agent：文件传到桶"]
+  end
+  %% P3
+  subgraph P4["P4 proposal：测试数据"]
+    A5["A5 agent：导出一份测试数据"]
+  end
+  O1 --> A2
+  O1 --> A3
+  A3 --> A4
+  D1["D1 owner 拍板：桶在哪"] --> A4
+  A3 --> A5
+  A2 --> O2["O2 owner：发版"]
+  A4 --> O2
+  A5 --> O2
+  A1 --> O2
+```
+
+- A3、A4 一起做：一个 issue。
+
+## O1 owner：spec review ✅
+
+- [x] owner 读完（2026-10-20，「go」）
+
+## A1 agent：调研 ✅
+
+- [x] 调研（2026-10-21，`abc1234`）
+
+## A2 agent：调研格式 #7 ⬜
+
+- [ ] **A2.1** 比 CSV 和 JSON。
+
+## A3 agent：导出成文件 ⬜
+
+- [ ] **A3.1** 写 `src/export.ts`。
+
+## D1 owner 拍板：桶在哪 ⬜
+
+背景：A4 上传到哪个桶。它挡着 A4。
+
+问题：用哪个云？
+
+例子：选 S3，owner 在 AWS 控制台看到桶。
+
+- **推荐：S3。** agent 做，不花钱，能撤回。
+- GCS：agent 做，要另开账号。
+
+## A4 agent：文件传到桶 ⬜
+
+- [ ] **A4.1** 上传。
+
+## A5 agent：导出一份测试数据 ⬜
+
+- [ ] **A5.1** 跑 `make export`。
+
+## O2 owner：发版 ⬜
+
+agent 做不了：只有 owner 叫 `prerelease`。
+
+- 做完的样子：tag 在 origin 上。

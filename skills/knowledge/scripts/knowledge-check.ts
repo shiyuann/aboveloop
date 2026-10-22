@@ -25,9 +25,9 @@
  *   plan on disk passes with no `gh` call. The states come from `gh api repos/{owner}/{repo}/issues/N`, one call for each issue, with the
  *   cwd of `--cwd`; a failed call prints "could not read #N" and that mark counts as offline, not as a problem.
  *   `--offline` skips the states, and says so.
- * - Plans in `knowledge/plan/` (not `index.md`): a `##` heading with ✅ has no `- [ ]` under it; a `##`
- *   heading with ⬜ whose items are all `- [x]` is a question; the mermaid label of each node has ✅ when its
- *   heading has ✅, and only then.
+ * - Plans: each file in `knowledge/plan/`, also `index.md`, gets `checkPlan` of `plan-graph.ts`: the rules of
+ *   spec-and-plan.md that a script can decide (the list is in L3-loop-dev §4). It is the same check as
+ *   `plan.ts check`.
  * - Deep-verify reports `knowledge/reference/deep-verify-<date>*.md` (the owner's choice): the small
  *   part (a heading, an item or a table row that names the small findings, and each sentence that counts small
  *   ones) holds only counts and IDs, no problem and no repair of each (`checkReport`). A report whose file
@@ -40,6 +40,7 @@ import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { planState } from "../../prerelease/scripts/cleanup.ts";
+import { checkPlan as planRules, codesOf, parsePlan } from "./plan-graph.ts";
 import { brokenAnchors, fenced, markdownFiles, maskCode } from "../../prerelease/scripts/links.mjs";
 import { repoOf, run } from "../../prerelease/scripts/scope.ts";
 
@@ -209,59 +210,21 @@ export function refsOf(range: string, repo: string): { issues: number[]; otherRe
   return { issues: [...new Set(issues)], otherRepo, oldPlan: plan ? (plan[1] ?? plan[0]).trim() : null, nodes };
 }
 
-/** The `##` nodes of a plan: the code of each heading (`A3`) -> true when the heading ends with ✅. */
-export function nodesOf(text: string): Map<string, boolean> {
-  const lines = text.split("\n");
-  const code = fenced(lines);
+/**
+ * The nodes of a plan (`plan-graph.ts`): each code (`O3` and `O4` of `O3–O4`) -> true when the node is ✅. A `##`
+ * section with a code and no node in the chart counts too (the plan check reports it).
+ */
+export function nodesOf(text: string, file = "knowledge/plan/plan.md"): Map<string, boolean> {
+  const plan = parsePlan(text, file);
   const out = new Map<string, boolean>();
-  lines.forEach((line, i) => {
-    const h = code[i] ? null : /^##[ \t]+(([A-Z]\d+(?:\.\d+)?)\b.*?)[ \t]*$/.exec(line);
-    if (h) out.set(h[2], h[1].endsWith(DONE));
-  });
+  for (const s of plan.sections) if (s.code) for (const c of codesOf(s.code)) out.set(c, s.mark === DONE);
+  for (const n of plan.nodes) for (const c of codesOf(n.code)) out.set(c, n.done);
   return out;
 }
 
-/** The plan checks of one plan file. */
-export function checkPlan(text: string, file: string): Result {
-  const findings: Finding[] = [];
-  const lines = text.split("\n");
-  const code = fenced(lines);
-  for (const w of planState(text).warnings) findings.push({ kind: "problem", where: `${file}:${w.line}`, text: `a "- [ ]" under a ${DONE} heading: ${w.text}` });
-  const headings = nodesOf(text);
-  let current: { line: number; text: string; items: number; checked: number } | null = null;
-  const close = () => {
-    if (current && current.text.includes(OPEN) && current.items > 0 && current.items === current.checked)
-      findings.push({ kind: "question", where: `${file}:${current.line}`, text: `the heading has ${OPEN} and each of its ${current.items} item(s) is "- [x]": done?` });
-  };
-  lines.forEach((line, i) => {
-    if (code[i]) return;
-    const h = /^##[ \t]+(.+?)[ \t]*$/.exec(line);
-    if (h) {
-      close();
-      current = { line: i + 1, text: h[1], items: 0, checked: 0 };
-      return;
-    }
-    const item = /^\s*[-*+][ \t]+\[([ xX])\][ \t]/.exec(line);
-    if (item && current) {
-      current.items++;
-      if (item[1] !== " ") current.checked++;
-    }
-  });
-  close();
-  let mermaid = false;
-  lines.forEach((line, i) => {
-    if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\b/.test(line)) mermaid = true;
-    else if (mermaid && /^ {0,3}(`{3,}|~{3,})\s*$/.test(line)) mermaid = false;
-    else if (mermaid)
-      for (const m of line.matchAll(/\b([A-Z]\d+(?:\.\d+)?)\s*(?:\[\[|\[\(|\(\(|\{\{|[[({>])\s*"([^"]*)"/g)) {
-        const done = headings.get(m[1]);
-        if (done === undefined) continue;
-        const label = m[2].includes(DONE);
-        if (label !== done)
-          findings.push({ kind: "problem", where: `${file}:${i + 1}`, text: `the mermaid label of ${m[1]} ${label ? "has" : "has no"} ${DONE}, and its heading ${done ? "has" : "has no"} ${DONE}` });
-      }
-  });
-  return { findings, notes: [] };
+/** The plan checks of one plan file: `checkPlan` of `plan-graph.ts` (the same check as `plan.ts check`). */
+export function checkPlanFile(text: string, file: string): Result {
+  return { findings: planRules(parsePlan(text, file), text), notes: [] };
 }
 
 /**
@@ -497,7 +460,7 @@ function nodeProblem(root: string, nodes: PlanNode[], cache: Map<string, Map<str
   for (const { plan, node } of nodes) {
     if (!cache.has(plan)) {
       const file = join(root, "knowledge/plan", `${plan}.md`);
-      cache.set(plan, existsSync(file) ? nodesOf(readFileSync(file, "utf8")) : null);
+      cache.set(plan, existsSync(file) ? nodesOf(readFileSync(file, "utf8"), `knowledge/plan/${plan}.md`) : null);
     }
     const map = cache.get(plan);
     const done = map?.get(node) ?? map?.get(node.split(".")[0]);
@@ -543,7 +506,9 @@ export function knowledgeCheck(root: string, opts: { state: IssueState | null; r
       repo = "";
     }
   add(checkMarks(root, repo, opts.state));
-  for (const file of mdUnder(root, "knowledge/plan").filter((f) => basename(f) !== "index.md")) add(checkPlan(readFileSync(join(root, file), "utf8"), file));
+  const plans = mdUnder(root, "knowledge/plan");
+  for (const file of plans) add(checkPlanFile(readFileSync(join(root, file), "utf8"), file));
+  if (plans.length) notes.push(`Plans: ${plans.length} file(s) in knowledge/plan/ examined.`);
   const reports = mdUnder(root, "knowledge/reference").filter((f) => /^deep-verify-/.test(basename(f)));
   // Only a date that the file name gives skips a report; a report with no date in its name is examined.
   const older = reports.filter((f) => {

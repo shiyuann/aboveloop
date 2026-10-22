@@ -13,13 +13,14 @@
  * - `/api/events`: Server-Sent Events. `changed` with `{"file": …}` when a file under `knowledge/plan/` changes
  *   on disk, and with `{"file": null, "head": …}` when `git rev-parse HEAD` changes.
  * - POST `/api/propose`, `/api/unpropose`, `/api/regroup`, `/api/open-issue`: edit the groups of a milestone plan
- *   (a proposal: nodes in a circle; an issue: a proposal opened with `gh issue create`). A POST must carry the
- *   page's Origin and the token of this start (`X-Plan-View-Token`, in the page), a JSON body of at most 64 KiB,
- *   and a file under `knowledge/plan/`. `/api/open-issue` without `confirm` only gives the `gh` command; with
- *   `confirm` and the same command in `expect`, it runs it.
+ *   (a proposal: nodes in a circle; an issue: a proposal opened with `gh issue create`), with the edits of
+ *   `plan.ts`. A POST must carry the page's Origin and the token of this start (`X-Plan-View-Token`, in the page),
+ *   a JSON body of at most 64 KiB, and a file under `knowledge/plan/`. A write happens only when `applyEdit` says
+ *   ok (the edit adds no problem). `/api/open-issue` without `confirm` is the dry run: the `gh` command and the
+ *   changed lines; with `confirm` and the same command in `expect`, it runs it.
  *
  * The parser and the edits are injected (`startPlanView({ parse, check, transition, edit, gh })`): the command
- * line imports `plan-graph.ts`; the tests give fakes and never run the real `gh`.
+ * line imports `plan-graph.ts` and `plan.ts`; the tests give a fake `gh` and never run the real one.
  */
 import { execFile, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -35,25 +36,33 @@ export type ParseFn = (text: string, file: string) => Plan;
 export type CheckFn = (plan: Plan, text: string) => PlanFinding[];
 export type TransitionFn = (before: Plan, after: Plan) => PlanFinding[];
 
+/** A finding of an edit (`plan.ts`). */
+type EditFinding = PlanFinding;
+
 /**
- * The edits of the groups of a milestone plan. Each is pure: the text of the plan file in, the new text out; it
- * throws on a request that it refuses (a D node in a proposal, a code that is not there). The server reads and
- * writes the file. The command line takes them from `plan-graph.ts`.
+ * The edits of the groups of a milestone plan: the functions of `plan.ts`, with their names. Each edit is pure
+ * (text in, text out) and throws its `EditError` with the reason when it refuses. The server reads the file, runs
+ * the edit through `applyEdit`, and writes the text only when `ok` is true.
  */
 export interface PlanEdits {
-  /** A new proposal `P<k>` with these nodes. */
-  propose(text: string, file: string, codes: string[], title: string): { text: string; code: string };
-  /** Remove the proposal; its nodes stay, and its code stays used. */
-  unpropose(text: string, file: string, code: string): string;
-  regroup(text: string, file: string, code: string, add: string[], remove: string[]): string;
-  /** The command that opens the proposal as an issue in the milestone of the plan: argv, `gh` first. */
-  issueCommand(text: string, file: string, code: string): string[];
-  /** The text after the proposal opened as issue `#issue`: the group `I<issue>`, ` #<issue>` on each node. */
-  openIssueEdit(text: string, file: string, code: string, issue: number): string;
+  proposeGroup(text: string, file: string, o: { title: string; codes: string[]; code?: string }): string;
+  unproposeGroup(text: string, file: string, code: string): string;
+  regroupGroup(text: string, file: string, code: string, o: { add?: string[]; remove?: string[] }): string;
+  nextProposal(text: string, file: string): string;
+  applyEdit(before: string, file: string, edit: (text: string) => string): { text: string; findings: EditFinding[]; ok: boolean };
+  /** Open a proposal as an issue; `dryRun` runs and writes nothing. `command` is the `gh` arguments, with no `gh`. */
+  runOpenIssue(o: { cwd: string; file: string; code: string; dryRun?: boolean; gh?: GhRunner }): {
+    command: string[];
+    issue: number | null;
+    text: string;
+    findings: EditFinding[];
+    written: boolean;
+  };
+  lineDiff(a: string, b: string): string[];
 }
 
-/** Runs a command (argv, `gh` first) in the repo and gives its stdout. */
-export type GhRunner = (argv: string[], cwd: string) => Promise<string>;
+/** Runs `gh` with these arguments in the repo and gives its stdout (`plan.ts`). */
+export type GhRunner = (args: string[], cwd: string) => string;
 
 export interface PlanViewOptions {
   cwd: string;
@@ -68,6 +77,7 @@ export interface PlanViewOptions {
   debounceMs?: number;
   /** With no edits, the page is read-only and each POST gets 501. */
   edit?: PlanEdits;
+  /** The `gh` of `/api/open-issue`; with none, `runOpenIssue` runs the `gh` command. */
   gh?: GhRunner;
 }
 
@@ -469,21 +479,16 @@ export async function startPlanView(o: PlanViewOptions): Promise<PlanViewServer>
   } catch {
     github = null; // no remote: the page shows #N with no link
   }
-  const runGh: GhRunner =
-    o.gh ??
-    ((argv, cwd) =>
-      new Promise((ok, fail) => {
-        execFile(argv[0], argv.slice(1), { cwd, maxBuffer: 16 << 20 }, (err, out, errOut) =>
-          err ? fail(new Error(String(errOut || err.message).trim())) : ok(out),
-        );
-      }));
-
-  /** Edit a plan file: `fn` gets its text; the new text must parse, then it is written. */
-  const editFile = (file: string, fn: (text: string) => string) => {
+  /** Edit a plan file through the write gate of `plan.ts`: the text goes to disk only when the edit adds no problem. */
+  const editFile = (edit: PlanEdits, file: string, fn: (text: string) => string) => {
     const abs = resolve(root, file);
-    const next = fn(readFileSync(abs, "utf8"));
-    o.parse(next, file);
-    writeFileSync(abs, next);
+    const r = edit.applyEdit(readFileSync(abs, "utf8"), file, fn);
+    if (!r.ok) {
+      const problems = r.findings.filter((f) => f.kind === "problem").map((f) => f.text);
+      throw new HttpError(422, `not written: the edit adds a problem: ${problems.join("; ")}`);
+    }
+    writeFileSync(abs, r.text);
+    return r.findings;
   };
 
   async function post(path: string, body: Record<string, unknown>): Promise<object> {
@@ -492,9 +497,6 @@ export async function startPlanView(o: PlanViewOptions): Promise<PlanViewServer>
     const file = planFileOf(root, typeof body.file === "string" ? body.file : "");
     if (!file) throw new HttpError(400, "not a plan file under knowledge/plan/");
     if (!existsSync(resolve(root, file))) throw new HttpError(404, "no such plan");
-    if (o.parse(readFileSync(resolve(root, file), "utf8"), file).kind !== "milestone") {
-      throw new HttpError(400, "only the plan of a milestone has proposals");
-    }
     const str = (v: unknown, what: string) => {
       if (typeof v !== "string" || !v.trim()) throw new HttpError(400, `${what} must be a text`);
       return v.trim();
@@ -504,46 +506,32 @@ export async function startPlanView(o: PlanViewOptions): Promise<PlanViewServer>
       if (!Array.isArray(v) || !v.every((x) => typeof x === "string")) throw new HttpError(400, "codes must be a list of texts");
       return v as string[];
     };
+    const text = () => readFileSync(resolve(root, file), "utf8");
     switch (path) {
       case "/api/propose": {
         const list = codes(body.codes);
-        if (!list.length) throw new HttpError(400, "select one node or more");
         const title = str(body.title, "title");
-        let code = "";
-        editFile(file, (t) => {
-          const r = edit.propose(t, file, list, title);
-          code = r.code;
-          return r.text;
-        });
-        return { code };
+        const code = edit.nextProposal(text(), file);
+        const findings = editFile(edit, file, (t) => edit.proposeGroup(t, file, { title, codes: list, code }));
+        return { code, findings };
       }
       case "/api/unpropose":
-        editFile(file, (t) => edit.unpropose(t, file, str(body.code, "code")));
-        return { ok: true };
+        return { findings: editFile(edit, file, (t) => edit.unproposeGroup(t, file, str(body.code, "code"))) };
       case "/api/regroup":
-        editFile(file, (t) => edit.regroup(t, file, str(body.code, "code"), codes(body.add), codes(body.remove)));
-        return { ok: true };
+        return { findings: editFile(edit, file, (t) => edit.regroupGroup(t, file, str(body.code, "code"), { add: codes(body.add), remove: codes(body.remove) })) };
       case "/api/open-issue": {
         const code = str(body.code, "code");
-        const command = edit.issueCommand(readFileSync(resolve(root, file), "utf8"), file, code);
-        if (body.confirm !== true) return { command };
+        const before = text();
+        // The dry run: the command and the changed lines (with the number "N"); it refuses an edit that adds a problem.
+        const dry = edit.runOpenIssue({ cwd: root, file, code, dryRun: true });
+        const command = ["gh", ...dry.command];
+        if (body.confirm !== true) return { command, diff: edit.lineDiff(before, dry.text) };
         // Run only the command that the page showed: the plan can change between the two requests.
         if (JSON.stringify(body.expect) !== JSON.stringify(command)) throw new HttpError(409, "the plan changed: look at the command again");
-        let out: string;
-        try {
-          out = await runGh(command, root);
-        } catch (e) {
-          throw new HttpError(502, `gh failed: ${(e as Error).message}`);
-        }
-        const url = /https?:\/\/\S+\/issues\/(\d+)/.exec(out);
-        if (!url) throw new HttpError(502, `gh gave no issue URL: ${out.trim()}`);
-        const issue = Number(url[1]);
-        try {
-          editFile(file, (t) => edit.openIssueEdit(t, file, code, issue));
-        } catch (e) {
-          throw new HttpError(500, `issue ${url[0]} is open, but the plan was not changed: ${(e as Error).message}`);
-        }
-        return { issue, url: url[0] };
+        const r = edit.runOpenIssue({ cwd: root, file, code, gh: o.gh });
+        const url = github && r.issue ? `https://github.com/${github}/issues/${r.issue}` : null;
+        // gh made the issue, but the edit added a problem: the plan is not written. The page says so.
+        return { issue: r.issue, url, written: r.written, findings: r.findings };
       }
     }
     throw new HttpError(404, "not found");
@@ -616,20 +604,7 @@ async function main() {
   });
   // The parser is the one of the knowledge check (`plan-graph.ts`), imported here only: the tests inject theirs.
   const graph = await import("./plan-graph.ts");
-  // The edits of the groups. With one of them not there, the page is read-only.
-  const names = ["proposeEdit", "unproposeEdit", "regroupEdit", "issueCommand", "openIssueEdit"] as const;
-  const g = graph as unknown as Record<string, unknown>;
-  const missing = names.filter((n) => typeof g[n] !== "function");
-  if (missing.length) console.log(`read-only: plan-graph.ts has no ${missing.join(", ")}`);
-  const edit: PlanEdits | undefined = missing.length
-    ? undefined
-    : {
-        propose: g.proposeEdit as PlanEdits["propose"],
-        unpropose: g.unproposeEdit as PlanEdits["unpropose"],
-        regroup: g.regroupEdit as PlanEdits["regroup"],
-        issueCommand: g.issueCommand as PlanEdits["issueCommand"],
-        openIssueEdit: g.openIssueEdit as PlanEdits["openIssueEdit"],
-      };
+  const edit: PlanEdits = await import("./plan.ts");
   const s = await startPlanView({
     cwd: values.cwd ?? process.cwd(),
     port: Number(values.port),

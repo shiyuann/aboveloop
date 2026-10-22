@@ -169,7 +169,10 @@ function groupChanges(before: Plan | null, after: Plan): Change[] {
     const b = old.get(g.code);
     const first = g.nodes[0] ?? null;
     if (!b && g.kind === "issue") {
-      const from = gone.find((p) => p.kind === "proposal" && p.nodes.some((c) => g.nodes.includes(c)));
+      // The proposal that it was: its line `%% P<k>` (`from`), else a gone proposal with a node of it.
+      const from =
+        gone.find((p) => p.kind === "proposal" && p.code === g.from) ??
+        gone.find((p) => p.kind === "proposal" && p.nodes.some((c) => g.nodes.includes(c)));
       if (from) gone.splice(gone.indexOf(from), 1);
       const text = from ? `${from.code} opened as #${g.issue}: ${plain(g.title)}` : `#${g.issue} added: ${plain(g.title)}`;
       out.push(change("issue", first, text, { group: g.code }));

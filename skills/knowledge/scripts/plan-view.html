@@ -26,6 +26,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; display: flex; flex-direction: column; }
 button, select, input { font: inherit; color: inherit; }
@@ -86,9 +87,11 @@ aside { width: 400px; max-width: 45vw; border-left: 1px solid var(--line); backg
 .node.pulse .box { animation: pulse 1.6s ease-out 2; }
 @keyframes pulse { 0% { stroke: var(--accent); stroke-width: 8; } 100% { stroke-width: 1.5; } }
 
-.group .gbox { fill: color-mix(in srgb, var(--link) 6%, transparent); stroke: var(--link); stroke-width: 1.5; stroke-dasharray: 7 4; }
-.group.issue .gbox { fill: color-mix(in srgb, var(--ok) 7%, transparent); stroke: var(--ok); stroke-dasharray: none; }
-.group.sel .gbox { stroke-width: 3; }
+.group .gline { fill: none; stroke: var(--link); stroke-width: 3; stroke-dasharray: 7 4; }
+.group .gbox { fill: color-mix(in srgb, var(--link) 7%, var(--bg)); stroke: none; }
+.group.issue .gline { stroke: var(--ok); stroke-dasharray: none; }
+.group.issue .gbox { fill: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
+.group.sel .gline { stroke-width: 6; }
 .group .glabel { font-size: 11px; font-weight: 650; color: var(--link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 8px; cursor: pointer; }
 .group.issue .glabel { color: var(--ok); }
 .group .glabel a { color: inherit; }
@@ -164,7 +167,7 @@ a { color: var(--link); }
         <marker id="arrowCrit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
         <marker id="arrowHl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--link)"/></marker>
       </defs>
-      <g id="viewport"><g id="groups"></g><g id="edges"></g><g id="nodes"></g><rect id="lasso" class="lasso" hidden></rect></g>
+      <g id="viewport"><g id="groups"></g><g id="edges"></g><g id="nodes"></g><rect id="lasso" class="lasso" style="display:none"></rect></g>
     </svg>
     <div class="tools">
       <button id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
@@ -363,19 +366,21 @@ function layout(plan) {
     for (let l = 1; l < L; l++) order(l, (c) => bary(c, pred));
     for (let l = L - 2; l >= 0; l--) order(l, (c) => bary(c, succ));
   }
+  // Between two nodes of different groups: room for the box of each, and for the label above the lower one.
+  const gap = (a, b) => H + GY + (groupOf.get(a) !== groupOf.get(b) ? (groupOf.get(a) ? 14 : 0) + (groupOf.get(b) ? 30 : 0) : 0);
   const y = new Map();
-  layers.forEach((l) => l.forEach((c, i) => y.set(c, i * (H + GY))));
+  layers.forEach((l) => { let at = 0; l.forEach((c, i) => { if (i) at += gap(l[i - 1], c); y.set(c, at); }); });
   const place = (l, nb) => {
     const want = l.map((c) => { const ns = nb(c); return ns.length ? ns.reduce((s, x) => s + y.get(x), 0) / ns.length : y.get(c); });
-    for (let i = l.length - 2; i >= 0; i--) want[i] = Math.min(want[i], want[i + 1] - H - GY);
-    for (let i = 1; i < l.length; i++) want[i] = Math.max(want[i], want[i - 1] + H + GY);
+    for (let i = l.length - 2; i >= 0; i--) want[i] = Math.min(want[i], want[i + 1] - gap(l[i], l[i + 1]));
+    for (let i = 1; i < l.length; i++) want[i] = Math.max(want[i], want[i - 1] + gap(l[i - 1], l[i]));
     l.forEach((c, i) => y.set(c, want[i]));
   };
   for (let it = 0; it < 4; it++) {
     for (let l = 1; l < L; l++) place(layers[l], (c) => pred.get(c));
     for (let l = L - 2; l >= 0; l--) place(layers[l], (c) => succ.get(c));
   }
-  const minY = Math.min(0, ...y.values());
+  const minY = Math.min(0, ...y.values()) - 30;
   const pos = new Map();
   for (const c of codes) pos.set(c, { x: (layer.get(c) ?? 0) * (W + GX), y: y.get(c) - minY });
   const maxY = Math.max(0, ...[...pos.values()].map((p) => p.y)) + H;
@@ -392,20 +397,40 @@ function renderGraph() {
   const edgesG = $("edges"), nodesG = $("nodes"), groupsG = $("groups");
   edgesG.replaceChildren(); nodesG.replaceChildren(); groupsG.replaceChildren();
   for (const gr of plan.groups ?? []) {
-    const ps = gr.nodes.map((c) => pos.get(c)).filter(Boolean);
-    if (!ps.length) continue;
-    const x0 = Math.min(...ps.map((p) => p.x)) - 12, y0 = Math.min(...ps.map((p) => p.y)) - 28;
-    const x1 = Math.max(...ps.map((p) => p.x)) + W + 12, y1 = Math.max(...ps.map((p) => p.y)) + H + 12;
-    const g = svgEl("g", { class: `group ${gr.kind}`, transform: `translate(${x0},${y0})` });
+    // One piece for each layer (the nodes of a group are next to each other in a layer), and a bridge between
+    // the pieces of two next layers: so the box never covers a node of another group.
+    const cols = new Map();
+    for (const c of gr.nodes) { const p = pos.get(c); if (p) cols.set(p.x, [...(cols.get(p.x) ?? []), p]); }
+    if (!cols.size) continue;
+    const pieces = [...cols.entries()].sort((a, z) => a[0] - z[0]).map(([x, ps]) => ({
+      x0: x - 12, x1: x + W + 12, y0: Math.min(...ps.map((p) => p.y)) - 12, y1: Math.max(...ps.map((p) => p.y)) + H + 12,
+    }));
+    const rects = [], heads = [pieces[0]];
+    pieces.forEach((p, i) => {
+      const q = pieces[i + 1];
+      if (!q) return;
+      if (q.x0 - p.x1 > GX) { heads.push(q); return; } // not the next layer: a piece of its own, with its label
+      const top = Math.max(p.y0, q.y0), bottom = Math.min(p.y1, q.y1);
+      rects.push(top < bottom ? { x0: p.x1 - 1, x1: q.x0 + 1, y0: top, y1: bottom }
+        : { x0: p.x1 - 1, x1: q.x0 + 1, y0: Math.min(p.y1, q.y1) - 24, y1: Math.max(p.y0, q.y0) + 24 });
+    });
+    for (const h of heads) h.y0 -= 18; // room for the label
+    const all = [...pieces, ...rects];
+    const g = svgEl("g", { class: `group ${gr.kind}` });
     g.dataset.group = gr.code;
-    g.append(svgEl("rect", { class: "gbox", width: x1 - x0, height: y1 - y0, rx: 12 }));
-    const fo = svgEl("foreignObject", { width: x1 - x0, height: 24 });
+    // The outline of the union: each piece with a wide stroke, then each piece filled over the strokes inside.
+    const box = (r, cls) => svgEl("rect", { class: cls, x: r.x0, y: r.y0, width: r.x1 - r.x0, height: r.y1 - r.y0, rx: rects.includes(r) ? 3 : 12 });
+    for (const r of all) g.append(box(r, "gline"));
+    for (const r of all) g.append(box(r, "gbox"));
+    for (const h of heads) {
+    const fo = svgEl("foreignObject", { x: h.x0, y: h.y0, width: h.x1 - h.x0, height: 24 });
     const label = el("div", { class: "glabel", title: gr.title });
     if (gr.kind === "issue") {
       label.append(S.data.github ? el("a", { href: `https://github.com/${S.data.github}/issues/${gr.issue}`, target: "_blank", rel: "noopener noreferrer" }, `#${gr.issue}`) : `#${gr.issue}`, ` ${gr.title}`);
     } else label.append(`${gr.code} proposal · ${gr.title}`);
     fo.append(label);
     g.append(fo);
+    }
     groupsG.append(g);
   }
   for (const e of plan.edges) {
@@ -531,7 +556,7 @@ svg.addEventListener("pointermove", (e) => {
     lasso.b = b;
     r.setAttribute("x", Math.min(lasso.a.x, b.x)); r.setAttribute("y", Math.min(lasso.a.y, b.y));
     r.setAttribute("width", Math.abs(b.x - lasso.a.x)); r.setAttribute("height", Math.abs(b.y - lasso.a.y));
-    r.hidden = false;
+    r.style.display = "";
     return;
   }
   if (!drag) return;
@@ -548,7 +573,7 @@ svg.addEventListener("pointerup", () => {
     } else if (lasso.code) {
       S.picked.has(lasso.code) ? S.picked.delete(lasso.code) : S.picked.add(lasso.code);
     }
-    lasso = null; $("lasso").hidden = true;
+    lasso = null; $("lasso").style.display = "none";
     paintMarks(); renderPane();
     return;
   }
@@ -736,7 +761,7 @@ function renderGroup(pane, g) {
     if (adds.length) actions.append(el("button", { class: "btn", onclick: () => act("/api/regroup", { code: g.code, add: adds }, () => S.picked.clear()) }, `Add ${adds.join(", ")}`));
     actions.append(
       el("button", { class: "btn primary", onclick: async () => {
-        try { S.confirm = { code: g.code, command: (await edit("/api/open-issue", { code: g.code })).command }; S.msg = null; }
+        try { const d = await edit("/api/open-issue", { code: g.code }); S.confirm = { code: g.code, command: d.command, diff: d.diff }; S.msg = null; }
         catch (err) { S.msg = { err: true, text: String(err.message || err) }; }
         renderPane();
       } }, "Open as issue…"),
@@ -746,10 +771,19 @@ function renderGroup(pane, g) {
     ? el("div", { class: "confirm" },
         el("div", {}, "This runs, in the repo of the plan:"),
         el("pre", {}, S.confirm.command.map(shq).join(" ")),
+        el("div", {}, "Then the plan changes (N is the number of the new issue):"),
+        el("pre", {}, (S.confirm.diff ?? []).join("\n")),
         el("div", { class: "actions" },
           el("button", { class: "btn primary", onclick: (e) => {
             e.target.disabled = true;
-            act("/api/open-issue", { code: g.code, confirm: true, expect: S.confirm.command }, (d) => { S.confirm = null; S.selGroup = `I${d.issue}`; S.msg = { text: `Opened #${d.issue}: ${d.url}` }; });
+            act("/api/open-issue", { code: g.code, confirm: true, expect: S.confirm.command }, (d) => {
+              S.confirm = null;
+              const where = d.url ?? `#${d.issue}`;
+              if (d.written) { S.selGroup = `I${d.issue}`; S.msg = { text: `Opened #${d.issue}: ${where}` }; return; }
+              // gh made the issue, but the edit of the plan added a problem: the plan is not written.
+              const problems = (d.findings ?? []).filter((f) => f.kind === "problem").map((f) => f.text).join("; ");
+              S.msg = { err: true, text: `The issue ${where} is open on GitHub, but the plan was NOT written: ${problems}. Record #${d.issue} in the plan (plan.ts open-issue cannot run again: the issue exists).` };
+            });
           } }, "Run it"),
           el("button", { class: "btn", onclick: () => { S.confirm = null; renderPane(); } }, "Cancel")))
     : null;
