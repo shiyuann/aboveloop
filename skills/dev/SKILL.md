@@ -29,7 +29,7 @@ owner 叫 `dev`，或说 start、work、dev loop、开工、今天做什么、�
 | 等 owner 选的 issue | 状态是 `to_decide` 的 issue（下一节），不管多久以前 explore 的 |
 | 问题 | 最新一条评论的第一行一字不差是 `<!-- builder-resolve:question -->`：`builder` 的问题和拒绝（explore 和 implement 都用这一个第一行）。issue 有关联的 PR 的，多半是 implement 停了；没有的，多半是 explore 的问题：owner 回答以后去掉 `explored`，explore 再做一遍。还有一种也算问题：issue 没有 label、有自己的 draft，最新的问题评论之后有 owner 的评论：owner 回答了 implement 停下的问题，没打回 label |
 | 停了的 implement | 带 `ready-for-auto-builder` 的 issue，它的 draft PR 最新的 commit 是一天多以前的：implement 没写评论就停了 |
-| plan 的节点 | 默认分支上的 plan 里下一个节点（「plan 的节点」一节）。D、O 是 owner 的，A、E 是 agent 和外部事件的 |
+| plan 的节点 | 默认分支上的 plan 里下一个节点（「plan 的节点」一节）。D、O 等 owner，E 等外部事件；A 节点是「能做」，不是等（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 词表的「等」「能做」） |
 | 失败的运行 | 最近 24 小时里失败的 `loop.yml` 运行 |
 | 不是 owner 做的推送 | 最近 24 小时里别的账号推 `main` 的提交；和不是发版的发版 tag（「plan 的节点」一节的发版变量）：版本号比最新一版大的，比它小、却不在把 `VERSION` 改成它的那个提交上的，和发版变量指的 tag 没了、或不在变量的 SHA 上 |
 | 没读到的 | 请求失败、权限不够的那一样。没读到的不当成「没有」：给 owner 的第一行写它 |

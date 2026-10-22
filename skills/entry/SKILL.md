@@ -257,7 +257,7 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 
 1. 把还开着的每一项分成三类：等 owner；等一个外部事件；现在就能做。哪些 A 节点等 spec review，照 `builder` 的 [spec.md](../builder/references/spec.md) 6.1。
 2. 做完第三类。
-3. 把剩下的写进 plan，写清等谁：agent、owner，或哪个外部事件。
+3. 把剩下的写进 plan，写清等谁：owner、外部事件、CI 或另一个会话；agent 现在就能做的，写「能做」（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 词表的「等」）。
 4. 照「每一轮回复，只用三种方式之一结束」收尾：剩下的有要 owner 的，问第一个；没有，说哪几个节点在跑。链到 plan。
 
 执行 plan 时，plan 里还有没勾的子项，就不说做完了。还有 agent 能做的条目，就不停。日子不算外部事件（`knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md) 的「验收不等日子」）。
