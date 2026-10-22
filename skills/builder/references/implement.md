@@ -236,7 +236,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
   2. 在原来那一条下面，写清卡在哪一步。
   3. 停下被它挡住的那一部分。同一个节点里不等它的部分，照样做完。节点拆到依赖一样：一部分等 owner、一部分不等，就拆成两个节点，不等的那个先做完。
   4. 新的 D、O：会话照 [spec.md](spec.md) 第 6 节带 owner 过；CI 按第 4 步停（第 1 种）。
-- **做完一个节点，就在 plan 里打勾、记证据、提交，并 push。** CI 的 deep-verify 同一步：每个阶段做完就 push（[spec.md](spec.md) 3.3）。状态在 plan 里，不只在回复里。条目怎么记，见 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」。
+- **做完一个节点，就在 plan 里打勾、记证据和活的 commit、提交，并 push。** 活上了 remote 的分支，节点才算做完；只在本地提交的不打勾。CI 的 deep-verify 同一步：每个阶段做完就 push（[spec.md](spec.md) 3.3）。状态在 plan 里，不只在回复里。并发的节点照 6.3 落地。条目怎么记，见 `knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」。
 
 ### 6.2 什么挡路，什么不挡
 
@@ -269,7 +269,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
    - 分支名不以 `issues/` 开头：git 不能同时有 `issues/<N>` 和 `issues/<N>/A3`，脚本和 7.1 的清理只认 `issues/<N>` 和 `issues/<N>-<k>`。
    - 新的 worktree 自己装依赖（项目的安装命令）。**CAUTION:** 不把主目录的 `node_modules` 链过来：worktree 里的包管理器会改坏主目录的链接。
 2. 做节点：写代码，跑改到的部分的测试。commit 在节点的分支上，每个 commit 带一行 trailer，写这个节点：`git commit -m "<一句话>" --trailer "Node: #<N> <代号>"`。
-3. 在 plan 里给这个节点打勾、记证据（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」），commit（带 trailer）。plan 里只改自己这个节点。
+3. 在 plan 里给这个节点打勾、记证据和它的活的 commit（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」），commit（带 trailer）。plan 里只改自己这个节点：它那一节，和图上它的标签。
 4. 跟上 issue 的分支，merge 的 commit 也带 trailer：
 
    ```bash
@@ -286,8 +286,11 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
    git -C <issue 的 worktree> fetch origin
    git -C <issue 的 worktree> merge-base --is-ancestor nodes/<N>-<代号> origin/issues/<N> && git -C <issue 的 worktree> worktree remove ../<仓库名>-issues-<N>-<代号> && git -C <issue 的 worktree> branch -D nodes/<N>-<代号>
    ```
+
+   节点的分支 push 过（下面的「做到一半要停」），也删推上去的那一个：`git push origin --delete nodes/<N>-<代号>`。
 7. 回报主 agent：代号、落地的 commit（短 sha）、跑了哪些测试和结果。
 
+- 做到一半要停（新的 dependency，6.1；或这一轮要结束）：不带着没 push 的活停。先 commit，把节点的分支 push 上去（`git push -u origin nodes/<N>-<代号>`）。活没做完，不落到 `issues/<N>` 上。把分支名和 commit 回报主 agent：主 agent 写进 plan 这个节点下面，commit，push。节点不打勾。下一个会话从那个分支接着做。
 - 主 agent 收到回报：在这个 issue 的 worktree 里 `git pull --ff-only`，读这个节点落地的 diff，跑它说的检查。审出问题，在 plan 里加一个新节点，不重开打了勾的那个。
 - 收尾（第 7 步）之前，`git worktree list` 里还有这个 issue 的 `nodes/<N>-*`：照第 6 条测，测过了删；测不过，留着，告诉 owner 为什么。
 

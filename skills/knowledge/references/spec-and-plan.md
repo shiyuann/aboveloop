@@ -291,6 +291,10 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
 
 ## 条目怎么记
 
+- **活上了 remote 的分支，节点才算做完。** 两种模式一样：节点的活的 commit 在这个 issue 推上去的分支上了（`origin/issues/<N>`，或 `issues/<N>-<k>`），才给它打勾。只在本地提交的，不打勾。打勾和活在同一次 push 里上去。
+  - 打勾时，节点那一节压成的那一行写上它的活的 commit（短 sha），比如「- [x] 导出成文件（<日期>，`abc1234`，证据）」。下一个会话，在别的机器上也一样，从这个 commit 接着做。
+  - 节点不带着没 push 的活停下，这一轮也不带着它结束：先 commit、push。没做完的条目照下面写等谁。
+  - 为什么在 aboveloop 的 [L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)。
 - **没做完的条目拆成子项，分别打勾。** 做完的子项写日期和证据。没做完的写等谁：agent、owner，或哪个外部事件。子项全勾完，条目才打勾。
 - **不做了的划掉，不删。** 写成 `- [x] ~~**O2 …**~~ 不用做了（日期）：理由`。
   - agent 因为 owner 的话不做一个节点，也这样划。理由写 owner 的原话。节点留在 plan 里，以后看得到跳过了什么。
