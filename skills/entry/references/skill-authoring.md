@@ -88,6 +88,17 @@ plugin 运行要用的方法和实现，都在 plugin 里：
 - 背景和取舍的历史不进运行路径。要保留，就放进 spec 或 reference，只在相关的任务里读。
 - 删掉过时的内容，不在旁边加「新版」。入口里同时有两套说法，比没有说明更坏。
 
+## 会话摘要
+
+`entry` 的最后一节有一块摘要，在 `<!-- digest:begin -->` 和 `<!-- digest:end -->` 之间。`skills/entry/digest.md` 是它的拷贝，plugin 的 SessionStart hook（`hooks/hooks.json`）在每次会话开始时打印它。为什么：[L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)。
+
+1. 改了 `entry` 里一条每轮都守的规矩，或「要办具体的事，先读那一份」那张表：同一次提交里改这一块。
+2. 只改标记之间的字。不手改 `digest.md`：它是生成的。
+3. 一条一行，写短版本，后面写「」里 `entry` 的那一节。不写 `entry` 里没有的规矩。不超过 60 行，测试会查。
+4. 重新生成：`node --experimental-strip-types --no-warnings skills/entry/scripts/digest.ts`。
+5. 跑 `make validate` 和 `make skills-test`。`--check` 报漂移，就是第 4 步没跑。
+6. 改了 hook 的命令：用 `CLAUDE_PLUGIN_ROOT=<仓库根> sh -c '<命令>'` 手跑一遍，看它打印摘要，最后一行是 `entry` 的路径。
+
 ## 写完，照这张清单查
 
 1. 使用者要记住几个入口？能不能合成一个自然的任务？
@@ -98,4 +109,4 @@ plugin 运行要用的方法和实现，都在 plugin 里：
 6. 项目的知识写进 plugin 了吗？运行的数据被打包进 plugin 了吗？
 7. 外部写入和撤不回的动作之前，有明确的审批门吗？
 8. 文字守 [SKILL.md](../SKILL.md) 的 ASD-STE100 一节吗？有没有写进具体项目的名字？
-9. 改了一条规则：同一页的例子，和别的页里说同一件事的地方，在同一次提交里跟着改了吗？
+9. 改了一条规则：同一页的例子，和别的页里说同一件事的地方（`entry` 的会话摘要也是），在同一次提交里跟着改了吗？

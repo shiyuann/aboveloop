@@ -1,0 +1,15 @@
+{
+  "description": "Puts the digest of the entry skill into each Claude Code session: at startup, resume, clear and compact (L2-plugin §2).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/skills/entry/digest.md\" 2>/dev/null; echo \"entry 全文：${CLAUDE_PLUGIN_ROOT}/skills/entry/SKILL.md\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -5,7 +5,7 @@
 help:
 	@echo "make sync       校验，再装最新一版（Claude Code 从 GitHub 钉在 tag 上，Cursor 拷 tag 的树）"
 	@echo "make install-release [TAG=…]  装某一版（默认最新一版）"
-	@echo "make validate   校验 plugin 清单、版本和 skill reference 链接"
+	@echo "make validate   校验 plugin 清单、版本、skill reference 链接，和 entry 的会话摘要没漂（digest.md）"
 	@echo "make bump       推版本号（只在发版时，prerelease 第 4 步；约定：当天日期.patch，如 20260920.1）"
 	@echo "make skills-test     各 skill 脚本的测试（不联网）"
 	@echo "make loop-test       loop.yml workflow 的测试（不联网）"
@@ -19,6 +19,7 @@ validate:
 	@claude plugin validate .
 	@bash bump.sh --check
 	@node scripts/validate-skill-links.mjs
+	@node --experimental-strip-types --no-warnings skills/entry/scripts/digest.ts --check
 
 bump:
 	@bash bump.sh

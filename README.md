@@ -117,10 +117,14 @@ marketplace 的 `source` 写 `"./"`。
 两家清单能并存，是因为**都自动发现根下的 `skills/`**，格式也都是标准 SKILL.md。
 一份 skill 两家都认，不用维护两套内容。
 
-## 约定做成 skill，不做 hook
+## 约定做成 skill，hook 只送一份摘要
 
-hook 能把约定注进每次会话，但**每家 coding agent 的 hook 都不一样**，维护三套触发器
-换一点「自动」不划算。项目的 `AGENTS.md` 里一句「先读 `entry` skill」，三家都跟得上。
+**每家 coding agent 的 hook 都不一样**，维护三套触发器换一点「自动」不划算。项目的 `AGENTS.md`
+里一句「先读 `entry` skill」，三家都跟得上。
+
+例外只有一个：Claude Code 的 SessionStart hook（`hooks/hooks.json`）把 `entry` 的摘要放进每次会话，
+因为模型会跳过 `AGENTS.md` 的那一句，总结上下文也会丢掉规矩。摘要不是第二份规矩：它是 `entry`
+里的一块，脚本拷出来，`make validate` 查漂移。为什么：[L2-plugin §2](knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)。
 
 ## `setup-dev` 进 aboveloop，第一次装留在外面
 
