@@ -139,7 +139,7 @@ description: >-
 
 ### 小改动
 
-小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。主会话不自己改，交给一个 worker（下面的「主会话只对话，活交给子 agent 或别的会话」）。worker 照这几步做：
+小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。主会话不自己改，交给一个 worker（下面的「主会话只对话，活先交给别的会话」）。worker 照这几步做：
 
 1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。worker 是别的会话，它的 worktree 本来就在自己的分支上、还没有提交，就用它。
 2. 改，commit，push，开一个 PR（`builder` 的 [implement.md](../builder/references/implement.md) 第 5 步第 6 条的命令，去掉 `-F draft=true`；再照第 7 条打 PR 的 label），正文一两句：改了什么，为什么。不写 `Fixes`：小改动没有 issue。
@@ -204,18 +204,19 @@ description: >-
 **问是一个一个，活是并发。** 「一次只问一个」只管问 owner 的问题，不管活。
 
 - owner 在想一个问题时，用不着这个回答的 agent 活都接着做。比如 plan 里能做的 A 节点（指向它的节点都 ✅ 了）、dev loop 里别的几件、deep-verify。
-- 先在后台开子 agent 做这些活，再问 owner。不为用不着的回答停活，也不等活做完才问。
+- 先在后台开 worker 做这些活（下面「主会话只对话，活先交给别的会话」），再问 owner。不为用不着的回答停活，也不等活做完才问。
 - 准备这个问题的活，也在问之前开始：找候选、排好、写清每个要什么。比如「挑一个 issue 来试」是一个 D，选项是子 agent 找到、排好的候选，最好的放第一个。
-- 子 agent 回来，主 agent 先核对：读它的 diff，跑它说的检查，再告诉 owner。子 agent 的报告是说法，不是证据（L1 P2）。
-- 两件活改同一批文件，就是一件：给一个子 agent，或排成一个接一个（[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
+- worker 回来，主 agent 先核对：读它的 diff，跑它说的检查，再告诉 owner。worker 的报告是说法，不是证据（L1 P2）。
+- 两件活改同一批文件，就是一件：给一个 worker，或排成一个接一个（[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
 - 为什么：owner 拍板时 agent 不停。owner 一答，只有被这个 D 挡着的节点才开始，别的早在跑。半自动的模式也一样：一边和 owner 谈拍板，一边并发做节点，对话不挡活。
 
-**主会话只对话，活交给子 agent 或别的会话。** owner 说话的那个会话是主会话。它只带路、问 owner、开 worker、核对 worker 交回的活（上一条），再告诉 owner。
+**主会话只对话，活先交给别的会话。** owner 说话的那个会话是主会话。它只带路、问 owner、开 worker、核对 worker 交回的活（上一条），再告诉 owner。worker 是别的会话或后台子 agent，照下面的顺序选。
 
-- 改文件的活、跑得久的活，都交给一个后台子 agent 或别的会话（worker）。每个 worker 在自己的 worktree 里做。一个 issue 的节点照 `builder` 的 [implement.md](../builder/references/implement.md#63-并发的节点自己的-worktree自己落地) 6.3。小改动也一样。
+- 改文件的活、跑得久的活，交给别的会话。agent 的工具能开会话，就开一个（Claude 桌面 app 里是 `start_session`），它在自己的 worktree 里做。工具不能开会话，才交给一个后台子 agent，也在自己的 worktree 里做。一个 issue 的节点照 `builder` 的 [implement.md](../builder/references/implement.md#63-并发的节点自己的-worktree自己落地) 6.3。小改动也一样。
+- 主会话这一轮就要用结果的活（大范围的搜索、审、跑测试），交给子 agent。
 - 答 owner 的问题用的只读小查询，留在主会话里做。
 - worker 自己落地，自己删它的 worktree 和分支（6.3 第 6 条：先测是不是祖先）。别的会话的活落地了，主会话 archive 它（下面「会话里的每样改动都开 PR」的清理）。
-- 为什么：[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
+- 为什么先用别的会话：owner 比过两种 worker（2026-10-22）：「我看了之后感觉是比subagent更好的」。更多在 [L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
 
 **还没定的设计，先做 spec 那一步。** 下一步是还没定的产品、数据模型或架构，就先停下写代码，照 [spec.md](../builder/references/spec.md) 做 spec 那一步。不先做一版再问。谁定，照上面的「拍板只问方向」。
 
@@ -399,8 +400,8 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 - owner 在环上：能查的自己查，能定的自己定。只交五种事：owner 本人的登录、owner 的设备、花钱、拍板、撤不回的动作。拍板只问方向（「什么时候问 owner，什么时候直接做」）。
 - 工具权限拦住了：请 owner 放开那一条，写清哪个设置文件、加哪条规则。
 - 问 owner：一次一个问题，写在回复正文里，不用提问的工具或表单。先一句写在哪：哪个 loop，issue 的哪一步，哪个节点。再分段：Context、Question、Example、Options（推荐的放第一，各说谁做、花不花钱、能不能撤回）、Why。不单独用内部代号。发之前自查：只看得到这一问的 owner，30 秒内能不能选（「怎么问 owner」）。
-- 问是一个一个，活是并发：问之前，先在后台开子 agent，做用不着这个回答的活和准备这个问题的活。子 agent 的报告是说法：读它的 diff、跑它说的检查，再告诉 owner。改同一批文件的两件活是一件（「问是一个一个，活是并发」）。
-- 主会话只对话：改文件、跑得久的活，交给后台子 agent 或别的会话，各在自己的 worktree（issue 的节点：implement.md 6.3）。只读的小查询留在主会话。worker 自己落地、自己清理（「主会话只对话，活交给子 agent 或别的会话」）。
+- 问是一个一个，活是并发：问之前，先在后台开 worker，做用不着这个回答的活和准备这个问题的活。worker 的报告是说法：读它的 diff、跑它说的检查，再告诉 owner。改同一批文件的两件活是一件（「问是一个一个，活是并发」）。
+- 主会话只对话：改文件、跑得久的活，先交给别的会话（工具能开会话时，比如 `start_session`），不能才交给后台子 agent，各在自己的 worktree（issue 的节点：implement.md 6.3）。这一轮就要用结果的活（搜索、审、跑测试）交给子 agent。只读的小查询留在主会话。worker 自己落地、自己清理（「主会话只对话，活先交给别的会话」）。
 - 下一步是还没定的产品、数据模型或架构：停下写代码，先做 spec 那一步（「还没定的设计，先做 spec 那一步」）。
 - 直接做，不问：plan 里定了的事，明显的 bug，只有一个合理做法，owner 说了「你定」「继续」，plan 里能撤回、不花钱的操作，前面的节点都完成了的 agent 节点（「下面这些直接做，不问」）。
 - owner 的「它」「那个」拿不准指什么，问一句，不猜着改。

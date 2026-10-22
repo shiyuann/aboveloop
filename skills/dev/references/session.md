@@ -146,8 +146,8 @@ Written in a session of the owner
 
 - 问 owner 一件之前，先在后台开不等这个回答的 agent 活：各份 plan 里能做的 A 节点、排序里别的几件、spec 那一步的 deep-verify。
 - 准备这个问题的活也先开。比如：一个子 agent 找出候选、排好序，它们就是一个 D 的选项。
-- owner 选了、轮到 agent 做的活，开一个后台子 agent 去做。主 agent 接着带 owner 看下一件，不等它做完。
-- 依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A 节点），同一条消息里各开一个子 agent。一份 plan 里的子 agent 怎么分、谁 commit、谁落地，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 6 步的「节点并发」和 6.3。
+- owner 选了、轮到 agent 做的活，开一个 worker 去做（`entry` 的「主会话只对话，活先交给别的会话」）。主 agent 接着带 owner 看下一件，不等它做完。
+- 依赖图上互不等的 agent 活（几个 issue，或一份 plan 里几个 A 节点），同一条消息里各开一个 worker。一份 plan 里的 worker 怎么分、谁 commit、谁落地，照 `builder` 的 [implement.md](../../builder/references/implement.md) 第 6 步的「节点并发」和 6.3。
 - 每个 issue 一个 worktree（`issues/<N>`），不在主目录切分支。git 不让一个分支同时开在两个 worktree 里。和别的活同时跑的节点，再各开一个自己的 worktree（implement.md 6.3）。
 - 一个 issue 的 spec，同一时间只派一个子 agent 改。节点的子 agent 在 plan 里只改自己那个节点。依赖图同一时间也只派一个子 agent 改。这样不会撞。
 - 两件活改同一批文件，就有先后：排成一个接一个。
@@ -155,7 +155,7 @@ Written in a session of the owner
 - 为什么：依赖图上互不等的活，并发做更快。一份 plan 里的节点也一样。
 - 为什么先开活再问：owner 想一个问题时，子 agent 已经在做不等这个回答的活，对话和活同时走。
 
-主 agent 只对话，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「主会话只对话，活交给子 agent 或别的会话」。dev loop 里交给 worker 的活还有：审 PR 和写审的记录，deep-verify 的修补和报告，解冲突的 merge，依赖图的更新。主 agent 只留：拉下一个节点落地的活、审它（读 diff，跑它说的检查），owner 批了的 merge。节点的测试、打勾、commit 和落地，是做节点的子 agent 的活（implement.md 6.3）。
+主 agent 只对话，照 `entry` 的 [SKILL.md](../../entry/SKILL.md)「主会话只对话，活先交给别的会话」。dev loop 里交给 worker 的活还有：审 PR 和写审的记录，deep-verify 的修补和报告，解冲突的 merge，依赖图的更新。主 agent 只留：拉下一个节点落地的活、审它（读 diff，跑它说的检查），owner 批了的 merge。节点的测试、打勾、commit 和落地，是做节点的子 agent 的活（implement.md 6.3）。
 - 为什么审留给主 agent：子 agent 的报告只是一句话（P2），读落地的 diff、跑检查才验它的结果。一个 worktree 只有一个人 commit，commit 才不乱（[L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
 
 子 agent 做活，不等活。要等的事不会很快来（一个外部事件，比如 CI 跑完、一次发版、别人的 review），不开子 agent 去等它：在 plan 里加一个外部事件的节点（`E`），照 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md) 的「外部事件（E）」写等什么、怎么知道到了、到了做什么，依赖图上画它挡着谁。事件到了，下一次扫描从图上接着做。

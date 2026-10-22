@@ -25,7 +25,7 @@ The terms that all loops share (the owner, agent, inner loop, outer loop, builde
 | Briefing | A daily email to the owner: the entry of the dev loop with no session. A design that aboveloop does not implement (§2). |
 | Session entry | The entry of `dev` in a session (§3; its steps: `dev`'s `references/session.md`). "start" is one of its trigger words, not its name. |
 | Main session | The session that the owner talks in. Its agent is the main agent. It only talks with the owner; workers do the work (§3). |
-| Worker | A background subagent or another session that does one piece of work in its own worktree (§3). |
+| Worker | Another session, or else a background subagent, that does one piece of work in its own worktree (§3). |
 | Rank | The one order of the items that wait for the owner: urgent work, then started work, then the other issues from small to large (§3, [L3-loop-dev §1.2](L3-loop-dev.md#12-the-rank)). |
 | Graph of open work | `knowledge/plan/index.md` on `main`: all open work of the repo in one chart, and the items that finished since the last release, with ✅ (§4, [L3-loop-dev §2](L3-loop-dev.md#2-the-graph-of-open-work)). |
 
@@ -136,9 +136,9 @@ flowchart TB
   - Why: a question with no context cannot get a good answer. The agent follows `entry` to lead the conversation, and gives the context with each question.
   - Why: two levels. `entry` holds how to ask, the page of each loop holds where the owner acts, and the dev loop holds which comes first. A session that does not go through `dev`, and CI that asks in an issue comment, obey the same rules (L2-loops §4).
 - **Questions go one at a time; the work goes in parallel.** The rule is in `entry` (「问是一个一个，活是并发」), for every session. The steps of the dev loop are in `session.md` §4.
-  - Before the agent asks the owner about an item, it starts in background subagents all agent work that does not need the answer: the ready agent nodes of the plans, the agent work of the other items, and the work that prepares the choice (for example, the candidates of a D). When the owner chooses agent work, the agent starts a subagent for it and goes on to the next item.
-    - Why: one question at a time is a rule for the questions of the owner, not for the work. The conversation with the owner goes on while the subagents work in parallel.
-  - Agent work that does not wait for other work in the graph (several issues, or several A nodes of one plan) starts in parallel, one subagent each. The subagents of one plan follow `builder`'s `implement.md` §6 (「节点并发」) and §6.3. A subagent of a node can start subagents for its items, within the nesting limit of the runtime; at the limit, it does the items itself. The subagents of its items share the worktree of the node. Measured: a background subagent of a Claude Code session had no tool to start one.
+  - Before the agent asks the owner about an item, it starts workers in the background for all agent work that does not need the answer: the ready agent nodes of the plans, the agent work of the other items, and the work that prepares the choice (for example, the candidates of a D). When the owner chooses agent work, the agent starts a worker for it and goes on to the next item.
+    - Why: one question at a time is a rule for the questions of the owner, not for the work. The conversation with the owner goes on while the workers work in parallel.
+  - Agent work that does not wait for other work in the graph (several issues, or several A nodes of one plan) starts in parallel, one worker each. The workers of one plan follow `builder`'s `implement.md` §6 (「节点并发」) and §6.3. A subagent of a node can start subagents for its items, within the nesting limit of the runtime; at the limit, it does the items itself. The subagents of its items share the worktree of the node. Measured: a background subagent of a Claude Code session had no tool to start one.
   - **A node that runs at the same time as other work has its own worktree, and its worker lands the node.** The other work is another node, or the subagent that changes the spec or the plan in the worktree of the issue.
     - The worktree is on a node branch `nodes/<N>-<code>` from `origin/issues/<N>`, next to the worktree of the issue. It installs its own dependencies.
     - The worker commits on the node branch. Each commit names the node in a trailer `Node: #<N> <code>`.
@@ -151,9 +151,13 @@ flowchart TB
     - Why no link to the `node_modules` of the main folder: a package manager in such a worktree changed the links of the main folder (measured in a project).
     - Why the trailer: the worker then tells the commits of its own session from a commit of someone else, with no question to the owner.
   - One subagent at a time changes the spec of one issue. The worker of a node changes only its own node in the plan. One subagent at a time changes the graph. Two pieces of work that change the same files go one after the other.
-  - Why: work that does not wait for other work, by the graph or inside one plan, goes faster in parallel subagents.
-- **The main session only talks with the owner. Workers do the work, each in its own worktree.** The main session is the session that the owner talks in. It routes, asks the owner, starts workers, reviews what each worker landed, and tells the owner. A worker is a background subagent or another session. The steps are in `entry` (「主会话只对话，活交给子 agent 或别的会话」).
+  - Why: work that does not wait for other work, by the graph or inside one plan, goes faster in parallel workers.
+- **The main session only talks with the owner. Workers do the work, each in its own worktree.** The main session is the session that the owner talks in. It routes, asks the owner, starts workers, reviews what each worker landed, and tells the owner. A worker is another session or a background subagent, in this order. The steps are in `entry` (「主会话只对话，活先交给别的会话」).
   - Each piece of work that changes files or runs long goes to a worker. A small lookup that only reads, and that answers a question of the owner, stays in the main session.
+  - **The first worker is another session; a subagent is the fallback.** Where the agent tool can start sessions (in the Claude desktop app: `start_session`), work that changes files or runs long goes to another session in its own worktree. Where it cannot, the work goes to a background subagent in its own worktree.
+    - Work whose result the main session must have in the same turn goes to a subagent: a wide search, a review, a test run.
+    - Why: the owner compared the two workers (2026-10-22): 「我看了之后感觉是比subagent更好的」, then 「好」.
+    - Why: the owner can open another session, talk to it and stop it. The session reports to the main session when its turn ends. Only the main session sees a subagent.
   - The worker lands its own work. Then it deletes its own worktree and branch, by the ancestor test ([L2-loop-builder §5](L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)).
   - Why: the owner (2026-10-22): 「所以目前主session纯对话，永远用sub agent/session来工作，并且都在各自的worktree，merge完之后自动cleanup（archive session、branch、worktree）」.
   - Why: when the main session does the work itself, its context fills and the owner waits.

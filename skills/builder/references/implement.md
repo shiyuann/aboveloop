@@ -255,7 +255,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 
 只在会话里（第 6 步的「节点并发」）。为什么在 [L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
 
-主 agent 开一个节点的子 agent 时，brief 里给：issue 号 `<N>`、节点的代号、这个 issue 的 worktree 的目录，和这个会话写 `issues/<N>` 的节点代号的单子（它开的每个子 agent 在做的节点）。主 agent 自己不改文件（`entry` 的「主会话只对话，活交给子 agent 或别的会话」）。它派去改 spec 或 plan 的子 agent 推到 `issues/<N>` 的 commit，也带它在做的那个节点的 trailer（比如 `Node: #<N> D2`）。
+主 agent 开一个节点的子 agent 时，brief 里给：issue 号 `<N>`、节点的代号、这个 issue 的 worktree 的目录，和这个会话写 `issues/<N>` 的节点代号的单子（它开的每个子 agent 在做的节点）。主 agent 自己不改文件（`entry` 的「主会话只对话，活先交给别的会话」）。它派去改 spec 或 plan 的子 agent 推到 `issues/<N>` 的 commit，也带它在做的那个节点的 trailer（比如 `Node: #<N> D2`）。
 
 子 agent 照这几步做：
 
