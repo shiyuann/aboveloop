@@ -167,7 +167,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 2. 上一次 deep-verify 之后没改过意思，就跳过：这个节点打勾，写一句「deep-verify 过了（日期），跳过」。
 3. 范围：这个 issue 改过的页（分支的 diff），和建立在这些页上的页（往下，直到 plan）；往上的页只当依据读。加上这个 issue 的 plan。以后几轮，照 deep-verify-knowledge.md 第 1 节的「以后几轮」。上一次 deep-verify 之后（一个 issue 的第一次：L1 的标记之后）L1 改过：验全量，不问 owner。
 4. 记下它验的那一个 commit，写进报告。审查的子 agent 读那个 commit 的 detached worktree，不读工作区（deep-verify-knowledge.md 第 1 节第 0 条）。跑的时候，owner 可以接着谈，agent 接着改 spec、commit。
-5. 跑完，一个修的子 agent 在最新的 spec 上修：别的子 agent 不在改这个 issue 的 spec 和 plan 时才开始；主 agent commit（L2-loop-dev §3）。一条发现落在那个 commit 之后改过的行上：先对着现在的字再验一遍。
+5. 跑完，一个修的子 agent 在最新的 spec 上修：别的子 agent 不在改这个 issue 的 spec 和 plan 时才开始；它自己 commit（L2-loop-dev §3：主会话不改文件，一个 worktree 一个写的人）。一条发现落在那个 commit 之后改过的行上：先对着现在的字再验一遍。
 6. 小的冲突，照 knowledge-base 的「两页说的不一样」直接修。方向问题：当场在 plan 里加一个新的 D 节点，和别的 D 一样带 owner 拍板。plan 的图跟着长，不预先画。
 7. spec review 给 owner 看：整份 diff，和 deep-verify 的小结（几条发现、改了意思的修改、新的 D、那个 commit 之后改过的页（下一次验它们）、报告的链接）。owner 只在 D、最后一次 spec review 和 merge 时出场。
 

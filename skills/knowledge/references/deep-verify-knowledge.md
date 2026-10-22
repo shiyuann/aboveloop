@@ -214,7 +214,7 @@ flowchart TB
 
 ## 5 修
 
-主 agent 自己修，不交给别的子 agent：几处修改要互相对得上。会话里，spec review 之前的那一次，「主 agent」是一个修的子 agent：别的子 agent 不在改这个 issue 的 spec 和 plan 时才开始，在最新的 spec 上修，第 6 步（只开复查的子 agent）和第 7 步也是它做；会话的主 agent commit（[L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)：一个 worktree 一个写的人）。
+主 agent 自己修，不交给别的子 agent：几处修改要互相对得上。会话里，spec review 之前的那一次，「主 agent」是一个修的子 agent：别的子 agent 不在改这个 issue 的 spec 和 plan 时才开始，在最新的 spec 上修，第 6 步（只开复查的子 agent）和第 7 步也是它做，commit 也是它做（[L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)：主会话不改文件，一个 worktree 一个写的人）。
 
 **直接修：**
 

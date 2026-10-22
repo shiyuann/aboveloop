@@ -139,9 +139,9 @@ description: >-
 
 ### 小改动
 
-小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。照这几步做：
+小改动是错字、链接、规矩里的一段，不改 L1（L1 只有 owner 改，写成 plan 里的拍板，见 `knowledge` 的 knowledge-base）。主会话不自己改，交给一个 worker（下面的「主会话只对话，活交给子 agent 或别的会话」）。worker 照这几步做：
 
-1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。会话的 worktree 本来就在自己的分支上、还没有提交，就用它。
+1. 从最新的 `origin/<默认分支>` 开一个分支。名字不以 `issues/` 开头：那是 issue 的分支。worker 是别的会话，它的 worktree 本来就在自己的分支上、还没有提交，就用它。
 2. 改，commit，push，开一个 PR（`builder` 的 [implement.md](../builder/references/implement.md) 第 5 步第 6 条的命令，去掉 `-F draft=true`；再照第 7 条打 PR 的 label），正文一两句：改了什么，为什么。不写 `Fixes`：小改动没有 issue。
 3. 跑检查：改动碰到的部分的测试（项目配置的命令），和 PR 上 GitHub 的检查（仓库有的话）。都过了，agent 当场 merge（`gh pr merge <M> --merge`）。merge 了，当场删这个分支和它的 worktree（下面「会话里的每样改动都开 PR」的清理）。owner 不审它。没过，修好再跑；修不好，告诉 owner。
 4. 改的是 aboveloop 的规矩（小改动或 issue 的 PR 都一样）：merge 以后，下一版才到 owner 的会话里：告诉 owner，不替 owner 发版。
@@ -209,6 +209,13 @@ description: >-
 - 子 agent 回来，主 agent 先核对：读它的 diff，跑它说的检查，再告诉 owner。子 agent 的报告是说法，不是证据（L1 P2）。
 - 两件活改同一批文件，就是一件：给一个子 agent，或排成一个接一个（[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)）。
 - 为什么：owner 拍板时 agent 不停。owner 一答，只有被这个 D 挡着的节点才开始，别的早在跑。半自动的模式也一样：一边和 owner 谈拍板，一边并发做节点，对话不挡活。
+
+**主会话只对话，活交给子 agent 或别的会话。** owner 说话的那个会话是主会话。它只带路、问 owner、开 worker、核对 worker 交回的活（上一条），再告诉 owner。
+
+- 改文件的活、跑得久的活，都交给一个后台子 agent 或别的会话（worker）。每个 worker 在自己的 worktree 里做。一个 issue 的节点照 `builder` 的 [implement.md](../builder/references/implement.md#63-并发的节点自己的-worktree自己落地) 6.3。小改动也一样。
+- 答 owner 的问题用的只读小查询，留在主会话里做。
+- worker 自己落地，自己删它的 worktree 和分支（6.3 第 6 条：先测是不是祖先）。别的会话的活落地了，主会话 archive 它（下面「会话里的每样改动都开 PR」的清理）。
+- 为什么：[L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
 
 **还没定的设计，先做 spec 那一步。** 下一步是还没定的产品、数据模型或架构，就先停下写代码，照 [spec.md](../builder/references/spec.md) 做 spec 那一步。不先做一版再问。谁定，照上面的「拍板只问方向」。
 
@@ -342,6 +349,7 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
   - 每次 merge 以后当场清理，issue 的 PR 和小改动都一样。owner 说留着，才留。删本地分支、它的 worktree，和推上去的分支（仓库没开「Automatically delete head branches」时）。
     - 删之前，先跑 `git fetch origin`，再跑 `git merge-base --is-ancestor <分支> origin/<默认分支>`。分支不是 `origin/<默认分支>` 的祖先，就不删，告诉 owner 为什么：squash merge 了，或 merge 以后本地又提交了。agent 自己 merge 用 `gh pr merge --merge`。
     - 会话自己干活的 worktree 和它的分支，留到会话离开它，再删（[L2-loop-builder §5](../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。git 不删 worktree 占着的分支。删了这个 worktree，会话的目录也没了。
+    - 别的会话的活落地了（主会话开的边会话，比如在 Claude 桌面 app 里开的；它的 PR merge 了，或它的节点推上了 issue 的分支）：agent 的工具里有能 archive 的会话，主会话就 archive 那个会话。owner 说留着，才留。archive 了，那个会话离开了它的 worktree：主会话照上面的测，删它的 worktree 和分支。工具 archive 时已经删了的，算已经删了。为什么在 [L2-loop-dev §3](../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
     - merge 在 GitHub 上、没有会话：下一次会话开头清理（上面「每次会话开头」第 4 步）。
     - 命令照 [implement.md](../builder/references/implement.md#7-收尾) 第 7 步的「每次 merge 以后，删分支」。
 
@@ -392,6 +400,7 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 - 工具权限拦住了：请 owner 放开那一条，写清哪个设置文件、加哪条规则。
 - 问 owner：一次一个问题，写在回复正文里，不用提问的工具或表单。先一句写在哪：哪个 loop，issue 的哪一步，哪个节点。再分段：Context、Question、Example、Options（推荐的放第一，各说谁做、花不花钱、能不能撤回）、Why。不单独用内部代号。发之前自查：只看得到这一问的 owner，30 秒内能不能选（「怎么问 owner」）。
 - 问是一个一个，活是并发：问之前，先在后台开子 agent，做用不着这个回答的活和准备这个问题的活。子 agent 的报告是说法：读它的 diff、跑它说的检查，再告诉 owner。改同一批文件的两件活是一件（「问是一个一个，活是并发」）。
+- 主会话只对话：改文件、跑得久的活，交给后台子 agent 或别的会话，各在自己的 worktree（issue 的节点：implement.md 6.3）。只读的小查询留在主会话。worker 自己落地、自己清理（「主会话只对话，活交给子 agent 或别的会话」）。
 - 下一步是还没定的产品、数据模型或架构：停下写代码，先做 spec 那一步（「还没定的设计，先做 spec 那一步」）。
 - 直接做，不问：plan 里定了的事，明显的 bug，只有一个合理做法，owner 说了「你定」「继续」，plan 里能撤回、不花钱的操作，前面的节点都完成了的 agent 节点（「下面这些直接做，不问」）。
 - owner 的「它」「那个」拿不准指什么，问一句，不猜着改。
@@ -405,6 +414,6 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 - 断言之前，先读到或跑到。不改没读过的东西。不加没人要过的功能。同一件事只留一套实现。
 - 提交只带本轮的改动。CAUTION：不用 stash、restore、checkout、reset 挪走或丢掉别的改动。
 - 会话里的每样改动都开 PR。只在自己的 worktree 和分支上改，不在 main 上提交。merge 不是发版。
-- 每次 merge 以后当场删本地分支、它的 worktree 和推上去的分支；会话自己在用的 worktree，留到会话离开它。先 `git fetch origin`；`git merge-base --is-ancestor <分支> origin/<默认分支>` 不通过，就不删，告诉 owner 为什么。
+- 每次 merge 以后当场删本地分支、它的 worktree 和推上去的分支；会话自己在用的 worktree，留到会话离开它。别的会话的活落地了，工具能 archive，主会话就 archive 它。先 `git fetch origin`；`git merge-base --is-ancestor <分支> origin/<默认分支>` 不通过，就不删，告诉 owner 为什么。
 - 界面文件只画界面，不取数、不算业务。
 <!-- digest:end -->

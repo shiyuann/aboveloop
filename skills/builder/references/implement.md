@@ -255,7 +255,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 
 只在会话里（第 6 步的「节点并发」）。为什么在 [L2-loop-dev §3](../../../knowledge/spec/L2-loop-dev.md#3-the-session-entry)。
 
-主 agent 开一个节点的子 agent 时，brief 里给：issue 号 `<N>`、节点的代号、这个 issue 的 worktree 的目录，和这个会话写 `issues/<N>` 的节点代号的单子（它开的节点，和它自己在做的节点）。主 agent 自己这期间推到 `issues/<N>` 的 commit，也带它在做的那个节点的 trailer（比如 `Node: #<N> D2`）。
+主 agent 开一个节点的子 agent 时，brief 里给：issue 号 `<N>`、节点的代号、这个 issue 的 worktree 的目录，和这个会话写 `issues/<N>` 的节点代号的单子（它开的每个子 agent 在做的节点）。主 agent 自己不改文件（`entry` 的「主会话只对话，活交给子 agent 或别的会话」）。它派去改 spec 或 plan 的子 agent 推到 `issues/<N>` 的 commit，也带它在做的那个节点的 trailer（比如 `Node: #<N> D2`）。
 
 子 agent 照这几步做：
 
@@ -279,7 +279,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 
    冲突自己解，plan 也算；解完 `git commit --no-edit`。再跑一遍改到的部分的测试。
 5. 先跑会话的脚本（第 0 步；打印了 `labelled`，不 push，告诉主 agent），再 push，只快进：`git push origin HEAD:issues/<N>`。
-   - 被拒：`git fetch origin`，再看新来的 commit 带的 trailer：`git log --format='%h %(trailers:key=Node,valueonly,separator=%x2C)' HEAD..origin/issues/<N>`。每一个都写着单子上的节点：回到第 4 步。有一个不是：是别人也在写这个分支（R23）。不 merge 那些 commit，不 push，停下告诉主 agent；主 agent 告诉 owner。这个 commit 其实是主 agent 自己的，主 agent 给出新的单子，子 agent 接着做。
+   - 被拒：`git fetch origin`，再看新来的 commit 带的 trailer：`git log --format='%h %(trailers:key=Node,valueonly,separator=%x2C)' HEAD..origin/issues/<N>`。每一个都写着单子上的节点：回到第 4 步。有一个不是：是别人也在写这个分支（R23）。不 merge 那些 commit，不 push，停下告诉主 agent；主 agent 告诉 owner。这个 commit 其实是这个会话的另一个子 agent 的，主 agent 给出新的单子，子 agent 接着做。
 6. 落地了，删 worktree 和节点的分支。只在节点的分支是 `origin/issues/<N>` 的祖先时删：
 
    ```bash
@@ -291,7 +291,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
 7. 回报主 agent：代号、落地的 commit（短 sha）、跑了哪些测试和结果。
 
 - 做到一半要停（新的 dependency，6.1；或这一轮要结束）：不带着没 push 的活停。先 commit，把节点的分支 push 上去（`git push -u origin nodes/<N>-<代号>`）。活没做完，不落到 `issues/<N>` 上。把分支名和 commit 回报主 agent：主 agent 写进 plan 这个节点下面，commit，push。节点不打勾。下一个会话从那个分支接着做。
-- 主 agent 收到回报：在这个 issue 的 worktree 里 `git pull --ff-only`，读这个节点落地的 diff，跑它说的检查。审出问题，在 plan 里加一个新节点，不重开打了勾的那个（`knowledge` 的 spec-and-plan.md「条目怎么记」的「plan 既是记录，也是计划」）。
+- 主 agent 收到回报：在这个 issue 的 worktree 里 `git pull --ff-only`，读这个节点落地的 diff，跑它说的检查。审出问题，派一个子 agent 在 plan 里加一个新节点，不重开打了勾的那个（`knowledge` 的 spec-and-plan.md「条目怎么记」的「plan 既是记录，也是计划」）。 做节点的是别的会话：它落地了，主会话 archive 它（`entry` 的「会话里的每样改动都开 PR」的清理）。
 - 收尾（第 7 步）之前，`git worktree list` 里还有这个 issue 的 `nodes/<N>-*`：照第 6 条测，测过了删；测不过，留着，告诉 owner 为什么。
 
 ### 7. 收尾
@@ -319,7 +319,7 @@ agent 的节点都做完了（发版的 O 和它后面的不算），照这个�
 
 CI：label 留着：PR 不再是 draft，下一轮就不挑这个 issue。会话：issue 本来就没有 label，不加。merge 了，GitHub 关掉 issue（`Refs #<N>` 的 PR 不关）。会话在回复里链到 PR。
 
-**每次 merge 以后，删分支。** issue 的 PR 和小改动都一样（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。merge 了，agent 马上删本地分支和 worktree。GitHub 上的分支由仓库设置「Automatically delete head branches」删（`setup-app` 打开它）；仓库没开，agent 删 push 上去的分支。owner 说留着，就留着。
+**每次 merge 以后，删分支。** issue 的 PR 和小改动都一样（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。merge 了，agent 马上删本地分支和 worktree。GitHub 上的分支由仓库设置「Automatically delete head branches」删（`setup-app` 打开它）；仓库没开，agent 删 push 上去的分支。owner 说留着，就留着。这个 PR 是别的会话做的：主会话还 archive 那个会话（`entry` 的「会话里的每样改动都开 PR」的清理）。
 
 1. 先测分支，测过了再删 worktree 和分支：
 

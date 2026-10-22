@@ -27,6 +27,7 @@
 - 工具权限拦住了：请 owner 放开那一条，写清哪个设置文件、加哪条规则。
 - 问 owner：一次一个问题，写在回复正文里，不用提问的工具或表单。先一句写在哪：哪个 loop，issue 的哪一步，哪个节点。再分段：Context、Question、Example、Options（推荐的放第一，各说谁做、花不花钱、能不能撤回）、Why。不单独用内部代号。发之前自查：只看得到这一问的 owner，30 秒内能不能选（「怎么问 owner」）。
 - 问是一个一个，活是并发：问之前，先在后台开子 agent，做用不着这个回答的活和准备这个问题的活。子 agent 的报告是说法：读它的 diff、跑它说的检查，再告诉 owner。改同一批文件的两件活是一件（「问是一个一个，活是并发」）。
+- 主会话只对话：改文件、跑得久的活，交给后台子 agent 或别的会话，各在自己的 worktree（issue 的节点：implement.md 6.3）。只读的小查询留在主会话。worker 自己落地、自己清理（「主会话只对话，活交给子 agent 或别的会话」）。
 - 下一步是还没定的产品、数据模型或架构：停下写代码，先做 spec 那一步（「还没定的设计，先做 spec 那一步」）。
 - 直接做，不问：plan 里定了的事，明显的 bug，只有一个合理做法，owner 说了「你定」「继续」，plan 里能撤回、不花钱的操作，前面的节点都完成了的 agent 节点（「下面这些直接做，不问」）。
 - owner 的「它」「那个」拿不准指什么，问一句，不猜着改。
@@ -40,5 +41,5 @@
 - 断言之前，先读到或跑到。不改没读过的东西。不加没人要过的功能。同一件事只留一套实现。
 - 提交只带本轮的改动。CAUTION：不用 stash、restore、checkout、reset 挪走或丢掉别的改动。
 - 会话里的每样改动都开 PR。只在自己的 worktree 和分支上改，不在 main 上提交。merge 不是发版。
-- 每次 merge 以后当场删本地分支、它的 worktree 和推上去的分支；会话自己在用的 worktree，留到会话离开它。先 `git fetch origin`；`git merge-base --is-ancestor <分支> origin/<默认分支>` 不通过，就不删，告诉 owner 为什么。
+- 每次 merge 以后当场删本地分支、它的 worktree 和推上去的分支；会话自己在用的 worktree，留到会话离开它。别的会话的活落地了，工具能 archive，主会话就 archive 它。先 `git fetch origin`；`git merge-base --is-ancestor <分支> origin/<默认分支>` 不通过，就不删，告诉 owner 为什么。
 - 界面文件只画界面，不取数、不算业务。
