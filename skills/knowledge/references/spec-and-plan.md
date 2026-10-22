@@ -104,6 +104,26 @@ plan 写改哪些文件、谁做、按什么顺序做。spec 和代码之间差�
   - 谁改：`dev` 的会话里的入口每次对一遍 GitHub，新 issue 加进来，关了的打 ✅；agent 开工、owner 说等或关的时候，顺手改。为什么在 [L2-loop-dev §4](../../../knowledge/spec/L2-loop-dev.md#4-the-graph-of-open-work)。
 - **里程碑的 plan**：`plan/<里程碑>.md`，没有号，一个 GitHub milestone 一份，名字和 milestone 一样（比如 `plan/alpha.md`）。它装一个发版目标的整张图，和不是 issue 的节点（D、O、E、M）；照这一页的格式写，在 `index.md` 里登记一行，`prerelease` 不删它。plan 是记录，milestone 只是显示它。A 节点开工时开成 milestone 里的 issue，一个 issue 装一件能单独做完、单独 review 的活（一个节点或几个），节点写上 `#N`（`builder` 的 [explore.md](../../builder/references/explore.md) 第 7 节）。D、O 节点不开 issue，照 `builder` 的 [spec.md](../../builder/references/spec.md) 6.4、6.5 带 owner 过；会改 spec 的回答，变成一个新的 A 节点（一个 issue）。它没有 issue，也没有 `issues/<N>` 分支，它在 main 上，issue 的 PR 不改它。改它也走自己的分支（名字不以 `issues/` 开头）和 PR，不放在 issue 的分支上。记状态的改动（打 ✅、节点开成 issue 后写上 `#N`、owner 在会话里给的 D、O 的回答）是小改动，agent 当场 merge（[entry 的 SKILL.md](../../entry/SKILL.md)「小改动」）。改内容（新的 plan、加或删节点、改箭头、新的目标）等 owner merge：这个 PR 就是 owner 的审，代替 spec review。
 
+## 图的部分用 `plan.ts` 改
+
+图的部分不手改，用本 skill 的 `scripts/plan.ts` 改。图的部分是：图上的节点和箭头，`##` 标题和它的 ✅ ⬜，条目的勾，划掉的节点和条目，D 的回答，依赖图的 `Now:` 一行。图下的说明、每节的正文（做什么、怎样算过、D 的背景和选项）照旧手写。
+
+- 命令：`node --experimental-strip-types --no-warnings <本 skill 目录>/scripts/plan.ts <动词> --cwd <项目根> <文件> …`。`help` 打印全部参数。
+- 每次写之前，脚本查这一页里脚本能查的规矩；改完再查一遍，和改之前比。加了新的问题，就不写，退出码 1。只改它动到的那几行，别的字节不动。
+- 动词：
+  - `add`：加一个节点（`--code`、`--label`，`--after` 它等的节点，`--before` 等它的节点，`--item` 或 `--body-file`）。图上加带标签的一行和箭头，一行一个；正文里照图的先后加一节。
+  - `arrow`、`unarrow`：加、去一个箭头 `X --> Y`。成环的不加；指向 ✅ 节点的箭头不加，也不去。
+  - `done`：给节点打 ✅，那一节压成一行，带日期和活的 commit（`--commit`，A 节点必给；`--summary`）。还有没勾的条目，不打。依赖图里，节点和表里那一行一起打 ✅。
+  - `item`：勾一个条目，带证据（`--check`、`--evidence`）；加一个条目（`--add`）；划掉一个条目（`--drop`、`--reason`）。
+  - `drop`：划掉一个节点（下面的「不做了的划掉，不删」），带 `--reason`。
+  - `answer`：记一个 D 的回答，打 ✅：owner 定的（`--option`、`--quote`），或 owner 跳过了（`--skipped`）。
+  - `now`：改依赖图的 `Now:` 一行。
+  - `check`：只查，不改。默认查 `knowledge/plan/` 里每份；`--against <git ref>` 再查和那一版比的规矩（做完的节点不删、不改，代号不复用）。`json`：打印解析出的 plan。
+- 脚本拒了，或说改了会加问题：照它说的先改正文，或换一个动词。不绕过它手改图。
+- 手改了 plan 的文件（Claude Code 的 Edit、Write）：plugin 的 hook 跑同一个检查，有新的问题就告诉 agent。知识检查 `knowledge-check.ts` 也跑它。
+- 脚本查哪几条、哪几条查不了，在 aboveloop 的 [L3-loop-dev §4](../../../knowledge/spec/L3-loop-dev.md#4-the-plan-scripts)。
+- 为什么：owner 的原话（2026-10-22）：「can have a modified version to use scripts edit md (assuming md is strongly following rules)」。手改图，✅、箭头和代号容易错，错了要到下一次检查才看见。
+
 ## 例子
 
 一份 plan 有三块，顺序固定：
@@ -315,7 +335,7 @@ agent 做不了：只有 owner 叫 `prerelease`。做完解开 A5。
   - owner 说一个 issue 从头来过：每个开着的节点都划掉，理由写 owner 的原话；新的节点加在后面，代号接着编，不复用。还是这一份 plan，不开新文件。
   - issue 关了、节点全都 ✅ 的 plan 是历史：不加节点。后续的活开一个新 issue。
   - 为什么：owner 的原话（2026-10-20）：「A graph can't go back: a checked node can't be removed while a unchecked node can be changed or removed. So, the graph is both the execution history path + the plan.」改了做完的节点，plan 就不再记着真的做过什么。
-- **不做了的划掉，不删。** 写成 `- [x] ~~**O2 …**~~ 不用做了（日期）：理由`。
+- **不做了的划掉，不删。** 写成 `- [x] ~~**O2 …**~~ 不用做了（日期）：理由`。划掉的节点算做完：标题和图上的标签打 ✅，开着的条目也划掉（`plan.ts drop`）。
   - agent 因为 owner 的话不做一个节点，也这样划。理由写 owner 的原话。节点留在 plan 里，以后看得到跳过了什么。
   - owner 跳过的 D 不划掉：它取推荐的那一个（上面的「owner 拍板（D）」）。
   - 为什么：跳过一个节点，plan 里要留下记号，以后才看得到跳过了什么；跳过的 D 有推荐，就取推荐的那一个，活不停。

@@ -4,7 +4,7 @@ description: >-
   knowledge loop 的 skill：让 `<项目根>/knowledge/` 一直是真的。知识库的规矩（三层 L1、L2、L3，文件名，
   `index.md` 的依赖图，改了一页之后核对哪些页、更新记录、核对过的日期，两页说的不一样），spec 怎么写、
   plan 怎么写（节点、条目、依赖图 `plan/index.md`），deep-verify（深查 spec 和 plan，多人或单人，页头的标记），
-  知识检查的脚本 `knowledge-check.ts`，一条规矩或 feedback 放进哪一份、记在哪、写什么，和自动化的 spec（owner 在环里
+  知识检查的脚本 `knowledge-check.ts`，改 plan 的图的脚本 `plan.ts`，一条规矩或 feedback 放进哪一份、记在哪、写什么，和自动化的 spec（owner 在环里
   还是环上）。词和每次会话都守的规矩在 `entry`。
   Use when the user says 知识库, 记一下, 加进知识库, deep-verify, 深查, 核对, 核对过, spec 怎么写, plan 怎么写,
   依赖图, 更新记录, 改了一页, 两页说的不一样, knowledge check, 记在哪, 放在哪, 在环里还是环上,
@@ -33,7 +33,7 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 | 要做的事 | 读 |
 | --- | --- |
 | 读、写 `<项目根>/knowledge/`，给新项目建知识库，改成分层；改了一页要核对哪些页；两页说的不一样 | [knowledge-base.md](references/knowledge-base.md) |
-| 写、改 spec 和 plan：正文、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式。页头在发版时写 | [spec-and-plan.md](references/spec-and-plan.md) |
+| 写、改 spec 和 plan：正文、⬜ 标记、plan 的依赖图和节点、条目怎么记、依赖图 `plan/index.md` 的格式。页头在发版时写 | [spec-and-plan.md](references/spec-and-plan.md)。plan 的图（节点、箭头、✅、条目的勾、D 的回答、`Now:`）用脚本 `scripts/plan.ts` 改，不手改：它的「图的部分用 `plan.ts` 改」 |
 | deep-verify：深查 plan 做完到不到得了 spec、spec 在现在的代码上做不做得出来、spec 有没有矛盾和大的设计问题 | [deep-verify-knowledge.md](references/deep-verify-knowledge.md) |
 | 一条规矩或 feedback 该放进哪一份（规矩什么时候要用，就放在那时读得到的文字里）；feedback 记在哪、写什么 | [placement.md](references/placement.md) |
 | 有自动化或 agent 的 spec：owner 在环里还是环上 | [spec-and-plan.md](references/spec-and-plan.md)「自动化的 spec」 |

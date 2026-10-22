@@ -20,7 +20,7 @@ Other terms, and "cloud agent": [L2-loops §0](L2-loops.md#0-terms).
 
 - **The `AGENTS.md` of each project says one thing: read `aboveloop:entry` first.** aboveloop has one too: a session that changes aboveloop obeys the same rules.
   - Why: one start for every project and every coding agent. A rule changes in one place (P3).
-- **A hook puts a digest of `entry` into each Claude Code session.** The plugin has one `SessionStart` hook (`hooks/hooks.json`, with no matcher). At startup, resume, clear and compact, the hook prints `skills/entry/digest.md`, then the path of the full `entry`. The `AGENTS.md` pointer stays.
+- **A hook puts a digest of `entry` into each Claude Code session.** The plugin has one `SessionStart` hook (`hooks/hooks.json`, with no matcher; the second hook of the file is the plan check below). At startup, resume, clear and compact, the hook prints `skills/entry/digest.md`, then the path of the full `entry`. The `AGENTS.md` pointer stays.
   - The digest is one block of `entry`, between `<!-- digest:begin -->` and `<!-- digest:end -->`. A person writes it. It holds the table of tasks and the rules that each turn obeys, each with the name of its section in `entry`, in 60 lines or fewer. It tells the agent to read the full `entry` when a task needs the detail, and again after a summary of the context.
   - A script copies the block to `digest.md`. `make validate` and `make skills-test` fail when the copy is not a fresh build. The procedure is in `entry`'s `references/skill-authoring.md`, 「会话摘要」.
   - Why: the pointer works only when the model decides to obey it. In another project, the model did not read such a skill for four turns. A summary of the context also removes the rules. The hook puts the rules in context before the first reply, and again after a compaction. The model makes no decision about it.
@@ -29,6 +29,12 @@ Other terms, and "cloud agent": [L2-loops §0](L2-loops.md#0-terms).
   - Why the pointer stays: the hook does not run in all cases. In another project, the hook was measured on Claude Code 2.1.265 and later; an older version can fail to run it. A subagent gets no `SessionStart` hook. A cloud agent does not install plugins (§3).
   - Cursor gets no hook. Cursor has a `sessionStart` hook, but its output is a JSON field (`additional_context`), and the Cursor docs do not tell how a plugin declares a hook. That is not measured (E5). Thus Cursor stays on the `AGENTS.md` pointer.
   - Why only one hook: each coding agent has a different hook, and three triggers cost too much to keep. Claude Code gets the hook because its plugin hook is documented and was measured. The other agents keep the pointer.
+- **A second hook examines each change of a plan.** The plugin has one `PostToolUse` hook for `Edit`, `Write` and `MultiEdit`. When the tool wrote a file under `knowledge/plan/`, the hook runs the plan check of `knowledge` against `HEAD`, and gives each new problem to the agent. For each other file it does nothing. The script and its contract are in [L3-loop-dev §4](L3-loop-dev.md#4-the-plan-scripts).
+  - An agent changes the graph parts of a plan with the script `plan.ts` of `knowledge`, not by hand. The script examines the rules before and after each edit, and writes only when the edit adds no problem. The steps are in `knowledge`'s `spec-and-plan.md`.
+  - Why: the owner (2026-10-22): 「can have a modified version to use scripts edit md (assuming md is strongly following rules)」. A ✅, an arrow or a code that an agent writes by hand can be wrong, and the error shows only at the next knowledge check or at the release.
+  - Why a hook too: the script works only when the agent uses it. The hook finds a hand edit in the same turn, and the model makes no decision about it.
+  - Why it is silent when it cannot run (no `node`, an old Node, no git): the hook is a help, not a gate. The gates are the check of each write and the knowledge check.
+  - Cursor gets no such hook, for the reason of the digest hook above.
 - **Where a rule lives depends on when it must fire.** Four facts:
   1. Each session reads all of `entry` (the `AGENTS.md` of each project, also of aboveloop, names it). A Claude Code session also gets the digest of `entry` from the hook above.
   2. A skill loads only when the words of its description match.

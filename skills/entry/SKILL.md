@@ -54,7 +54,7 @@ description: >-
 
 | 要做的事 | 读 |
 | --- | --- |
-| 知识库：读、写 `<项目根>/knowledge/`，给新项目建知识库；改了一页要核对哪些页；两页说的不一样；写、改 spec 和 plan（正文、⬜、plan 的节点和依赖图；页头在发版时写）；deep-verify（深查 spec 和 plan）；知识检查 | `knowledge` skill：[knowledge-base.md](../knowledge/references/knowledge-base.md)、[spec-and-plan.md](../knowledge/references/spec-and-plan.md)、[deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md)，脚本 `knowledge-check.ts`。knowledge loop 在 [L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop) |
+| 知识库：读、写 `<项目根>/knowledge/`，给新项目建知识库；改了一页要核对哪些页；两页说的不一样；写、改 spec 和 plan（正文、⬜、plan 的节点和依赖图；页头在发版时写）；deep-verify（深查 spec 和 plan）；知识检查 | `knowledge` skill：[knowledge-base.md](../knowledge/references/knowledge-base.md)、[spec-and-plan.md](../knowledge/references/spec-and-plan.md)、[deep-verify-knowledge.md](../knowledge/references/deep-verify-knowledge.md)，脚本 `knowledge-check.ts`；plan 的图用脚本 `plan.ts` 改，不手改。knowledge loop 在 [L2-loops §2.2](../../knowledge/spec/L2-loops.md#22-the-knowledge-loop) |
 | 讨论还没定的设计 | 下面的「还没定的设计，先做 spec 那一步」 |
 | 有自动化或 agent 时，owner 在环里还是环上 | `knowledge` 的 [spec-and-plan.md](../knowledge/references/spec-and-plan.md)「自动化的 spec」 |
 | owner 说做一个 issue：写 spec 和 plan、过 deep-verify、带 owner 过 D 和 O、spec review | spec 那一步：`builder` 的 [spec.md](../builder/references/spec.md)，会话的部分在它最后一节 |
@@ -384,7 +384,7 @@ owner 的话里有「它」「那个」，多半指上一轮在谈的东西。�
 ## 要办的事，读哪一份（「要办具体的事，先读那一份」）
 - 「start」「开工」「dev loop」，排下一件：`dev` skill（session.md）。
 - 做一个 issue：调研（explore）、写 spec 和 plan（spec）、写代码开 PR（implement）：`builder` skill（explore.md、spec.md、implement.md）。里程碑的 plan 里的节点：explore.md 第 7 节。
-- 知识库，spec 和 plan 的写法，deep-verify，知识检查，一条规矩放进哪一份：`knowledge` skill（knowledge-base.md、spec-and-plan.md、placement.md）。
+- 知识库，spec 和 plan 的写法，deep-verify，知识检查，一条规矩放进哪一份：`knowledge` skill（knowledge-base.md、spec-and-plan.md、placement.md）。plan 的图用它的 `plan.ts` 改，不手改。
 - owner 说一样东西应该怎么样：下面的 feedback 一条。开了 issue，走 `builder` 的 issue-in-session.md。
 - 开 issue 的正文：references/issue-template.md。写测试、引入没验过的新能力：references/testing.md。
 - 写或改 skill、plugin：references/skill-authoring.md。配环境、改 Makefile：references/project-layout.md。

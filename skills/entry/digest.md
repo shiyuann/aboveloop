@@ -10,7 +10,7 @@
 ## 要办的事，读哪一份（「要办具体的事，先读那一份」）
 - 「start」「开工」「dev loop」，排下一件：`dev` skill（session.md）。
 - 做一个 issue：调研（explore）、写 spec 和 plan（spec）、写代码开 PR（implement）：`builder` skill（explore.md、spec.md、implement.md）。里程碑的 plan 里的节点：explore.md 第 7 节。
-- 知识库，spec 和 plan 的写法，deep-verify，知识检查，一条规矩放进哪一份：`knowledge` skill（knowledge-base.md、spec-and-plan.md、placement.md）。
+- 知识库，spec 和 plan 的写法，deep-verify，知识检查，一条规矩放进哪一份：`knowledge` skill（knowledge-base.md、spec-and-plan.md、placement.md）。plan 的图用它的 `plan.ts` 改，不手改。
 - owner 说一样东西应该怎么样：下面的 feedback 一条。开了 issue，走 `builder` 的 issue-in-session.md。
 - 开 issue 的正文：references/issue-template.md。写测试、引入没验过的新能力：references/testing.md。
 - 写或改 skill、plugin：references/skill-authoring.md。配环境、改 Makefile：references/project-layout.md。

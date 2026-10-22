@@ -269,7 +269,7 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
    - 分支名不以 `issues/` 开头：git 不能同时有 `issues/<N>` 和 `issues/<N>/A3`，脚本和 7.1 的清理只认 `issues/<N>` 和 `issues/<N>-<k>`。
    - 新的 worktree 自己装依赖（项目的安装命令）。**CAUTION:** 不把主目录的 `node_modules` 链过来：worktree 里的包管理器会改坏主目录的链接。
 2. 做节点：写代码，跑改到的部分的测试。commit 在节点的分支上，每个 commit 带一行 trailer，写这个节点：`git commit -m "<一句话>" --trailer "Node: #<N> <代号>"`。
-3. 在 plan 里给这个节点打勾、记证据和它的活的 commit（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」），commit（带 trailer）。plan 里只改自己这个节点：它那一节，和图上它的标签。
+3. 在 plan 里给这个节点打勾、记证据和它的活的 commit（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「条目怎么记」；用 `plan.ts item --check` 和 `plan.ts done`，它的「图的部分用 `plan.ts` 改」），commit（带 trailer）。plan 里只改自己这个节点：它那一节，和图上它的标签。
 4. 跟上 issue 的分支，merge 的 commit 也带 trailer：
 
    ```bash
@@ -306,7 +306,7 @@ agent 的节点都做完了（发版的 O 和它后面的不算），照这个�
    - aboveloop 本身：一个步骤补进它的 skill；代码或数据的契约补进 L3（[L2-plugin §2](../../../knowledge/spec/L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)）。
    - 要改 L1 或 L2 的内容才补得进去（aboveloop 的 skill 里的规矩也算）：CI 按第 4 步停（第 2 种）；会话在分支上补，要改 L1 的先带 owner 拍板。
    - 自查：这个分支改过的每一条 skill 规矩，都守它在 L2 的决定（[L2-loop-builder §5](../../../knowledge/spec/L2-loop-builder.md#5-the-branch-the-pr-and-the-plan-of-an-issue-)）。
-5. 给做完的节点打 ✅：标题末尾的 ⬜ 换成 ✅，条目打勾。plan 留着，不删：merge 以后它在默认分支上，发版的 O 和它后面的节点在里面等。全部 ✅ 的 plan，发版时由 `prerelease` 删掉。commit，push。
+5. 给做完的节点打 ✅：用 `plan.ts done`，不手改（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「图的部分用 `plan.ts` 改」）。plan 留着，不删：merge 以后它在默认分支上，发版的 O 和它后面的节点在里面等。全部 ✅ 的 plan，发版时由 `prerelease` 删掉。commit，push。
 6. 写 PR 正文，过检查（第 8 步），换上：`gh api -X PATCH repos/<owner>/<repo>/pulls/<M> -F body=@<文件>`。
 7. 把 PR 标成 ready。两种模式都用这一条。REST 改不了 draft，这是唯一一次用 GraphQL：
 
