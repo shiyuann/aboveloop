@@ -46,9 +46,9 @@ test("extract: the text between the markers, with one final newline; wrong marke
   assert.throws(() => extract(`${END}\nx\n${BEGIN}`), /wrong order/);
 });
 
-test("hooks.json: one SessionStart group with no matcher, one command hook that is not async", () => {
+test("hooks.json: one SessionStart group with no matcher, one command hook that is not async (the PostToolUse hook is knowledge's plan check)", () => {
   const hooks = JSON.parse(readFileSync(HOOKS, "utf8")).hooks;
-  assert.deepEqual(Object.keys(hooks), ["SessionStart"]);
+  assert.deepEqual(Object.keys(hooks), ["SessionStart", "PostToolUse"]);
   assert.equal(hooks.SessionStart.length, 1);
   const group = hooks.SessionStart[0];
   assert.equal(group.matcher, undefined, "no matcher: the hook runs at startup, resume, clear and compact");

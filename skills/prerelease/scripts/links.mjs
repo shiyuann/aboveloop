@@ -23,28 +23,10 @@ import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { fenced, maskCode } from "./markdown.mjs";
 
-/** For each line of a Markdown text: true when it is a fence line or inside fenced code. */
-export function fenced(lines) {
-  const out = [];
-  let open = null; // the fence that opened the block: its character and length
-  for (const line of lines) {
-    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if (open) {
-      out.push(true);
-      if (m && m[1][0] === open[0] && m[1].length >= open.length && !m[2].trim()) open = null;
-    } else if (m && !(m[1][0] === "`" && m[2].includes("`"))) {
-      out.push(true);
-      open = m[1];
-    } else out.push(false);
-  }
-  return out;
-}
-
-/** The line with each inline code span made into spaces; the length and the positions stay. */
-export function maskCode(line) {
-  return line.replace(/(`+)(?!`)(.+?)(?<!`)\1(?!`)/g, (m) => " ".repeat(m.length));
-}
+// The fence parser is shared with the TypeScript scripts: one copy, in `markdown.mjs`.
+export { fenced, maskCode } from "./markdown.mjs";
 
 const INLINE = /!?\[(?:[^[\]]|\[[^[\]]*\])*\]\(\s*([^\s()<>]+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/dg;
 const DEFINITION = /^ {0,3}\[[^\]]+\]:\s*([^\s<>]+)/d;

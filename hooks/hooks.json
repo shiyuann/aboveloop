@@ -1,5 +1,5 @@
 {
-  "description": "Puts the digest of the entry skill into each Claude Code session: at startup, resume, clear and compact (L2-plugin §2).",
+  "description": "Puts the digest of the entry skill into each Claude Code session: at startup, resume, clear and compact. After an Edit, Write or MultiEdit of a file under knowledge/plan/, runs the plan check and gives its problems to the agent (L2-plugin §2).",
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +7,18 @@
           {
             "type": "command",
             "command": "cat \"${CLAUDE_PLUGIN_ROOT}/skills/entry/digest.md\" 2>/dev/null; echo \"entry 全文：${CLAUDE_PLUGIN_ROOT}/skills/entry/SKILL.md\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"${CLAUDE_PLUGIN_ROOT}/skills/knowledge/scripts/plan-hook.mjs\"; command -v node >/dev/null 2>&1 && [ -f \"$f\" ] || exit 0; node \"$f\"",
+            "timeout": 30
           }
         ]
       }

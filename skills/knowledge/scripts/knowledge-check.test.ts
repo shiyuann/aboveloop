@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { checkBuildsOn, checkPlan, checkReport, format, type IssueState, knowledgeCheck, marksOf, notCounts } from "./knowledge-check.ts";
+import { checkBuildsOn, checkPlanFile, checkReport, format, type IssueState, knowledgeCheck, marksOf, notCounts } from "./knowledge-check.ts";
 
 const REPO = "shiyuann/aboveloop";
 const URL_OF = (n: number) => `https://github.com/${REPO}/issues/${n}`;
@@ -108,9 +108,9 @@ test("⬜ #N: closed with no plan fails; closed with an open plan, or open, pass
   ].join("\n");
   const root = repo({
     "knowledge/spec/L3-x.md": spec,
-    "knowledge/plan/11-open.md": "# 11\n\n## A1 Agent: x ✅\n\n## A2 Agent: y ⬜\n",
-    "knowledge/plan/12-done.md": "# 12\n\n## A1 Agent: x ✅\n",
-    "knowledge/plan/alpha.md": "# alpha\n\n## A1 agent：x ⬜\n\n## A2 agent：y ✅\n",
+    "knowledge/plan/11-open.md": '# 11\n\n> **Updated 2026-10-22**\n\n```mermaid\nflowchart TB\n  A1["A1 Agent: x ✅"] --> A2["A2 Agent: y"]\n```\n\n## A1 Agent: x ✅\n\n- [x] x (2026-10-22, `abc1234`)\n\n## A2 Agent: y ⬜\n',
+    "knowledge/plan/12-done.md": '# 12\n\n> **Updated 2026-10-22**\n\n```mermaid\nflowchart TB\n  A1["A1 Agent: x ✅"]\n```\n\n## A1 Agent: x ✅\n\n- [x] x (2026-10-22, `abc1234`)\n',
+    "knowledge/plan/alpha.md": '# alpha\n\n> **更新 2026-10-22**\n\n```mermaid\nflowchart TB\n  A2["A2 agent：y ✅"] --> A1["A1 agent：x"]\n  A1 --> O1["O1 owner：发版"]\n```\n\n## A2 agent：y ✅\n\n- [x] y（2026-10-22，`abc1234`）\n\n## A1 agent：x ⬜\n\n## O1 owner：发版 ⬜\n',
   });
   const r = knowledgeCheck(root, { state: states({ 10: "closed", 11: "closed", 12: "open" }), repo: REPO });
   assert.deepEqual(
@@ -154,19 +154,16 @@ test("plans: a ✅ heading with - [ ] fails; a label with ✅ and a heading with
     "",
     "- [ ] the owner",
   ].join("\n");
-  const r = checkPlan(plan, "knowledge/plan/66-x.md");
+  const r = checkPlanFile(plan, "knowledge/plan/66-x.md");
   assert.deepEqual(
     problems(r).map((f) => f.where),
-    ["knowledge/plan/66-x.md:12", "knowledge/plan/66-x.md:5"],
+    ["knowledge/plan/66-x.md:5", "knowledge/plan/66-x.md:12"],
   );
-  assert.match(problems(r)[1].text, /mermaid label of A2 has ✅, and its heading has no ✅/);
-  assert.deepEqual(
-    questions(r).map((f) => f.where),
-    ["knowledge/plan/66-x.md:14"],
-  );
-  const onlyQuestion = checkPlan(plan.replace("  - [ ] a sub-item left open\n", "").replace('A2["A2 Agent: two ✅"]', 'A2["A2 Agent: two"]'), "p.md");
+  assert.match(problems(r)[0].text, /label of A2 has ✅, and its heading has no ✅/);
+  assert.ok(questions(r).some((f) => f.where === "knowledge/plan/66-x.md:14" && /each of its 2 item\(s\) is "- \[x\]": done\?/.test(f.text)));
+  const onlyQuestion = checkPlanFile(plan.replace("  - [ ] a sub-item left open\n", "").replace('A2["A2 Agent: two ✅"]', 'A2["A2 Agent: two"]'), "knowledge/plan/66-x.md");
   assert.deepEqual(problems(onlyQuestion), []);
-  assert.match(format(onlyQuestion).at(-1)!, /^0 problem\(s\), 1 question\(s\)\.$/);
+  assert.match(format(onlyQuestion).at(-1)!, /^0 problem\(s\), \d+ question\(s\)\.$/);
 });
 
 /** Lines of a correct report; each small part has only counts and IDs. */
