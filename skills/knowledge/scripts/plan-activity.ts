@@ -3,22 +3,39 @@
  * The server `plan-view.ts` reads the versions of the file with git and gives them here, oldest first.
  *
  * - `diffPlans(before, after)`: the events of one change. A node added, ✅, dropped, removed; an item checked
- *   or dropped; a D answered (with the quote of its section); an arrow added or removed; `Now:` changed.
+ *   or dropped; a D answered (with the quote of its section); an arrow added or removed; `Now:` changed; a group
+ *   (`Plan.groups`) proposed, changed, removed, or opened as an issue.
  *   An arrow from or to a node that the same change adds or removes is part of that node, not an event.
  * - `planActivity(versions, working, plan)`: every event, newest first: the uncommitted change, then the
  *   commits, then the `> - ` log lines of the plan (`Plan.log`) by their date.
  * - `answerOf(node)`: who answered a D, and the quote, from its section.
  */
-import type { Plan, PlanItem, PlanNode } from "./plan-graph.ts";
+import type { Plan, PlanGroup, PlanItem, PlanNode } from "./plan-graph.ts";
 
-export type ActivityKind = "add" | "done" | "answer" | "tick" | "drop" | "remove" | "arrow-add" | "arrow-remove" | "now" | "log";
+export type ActivityKind =
+  | "add"
+  | "done"
+  | "answer"
+  | "tick"
+  | "drop"
+  | "remove"
+  | "arrow-add"
+  | "arrow-remove"
+  | "now"
+  | "log"
+  | "propose"
+  | "regroup"
+  | "unpropose"
+  | "issue";
 
 export interface ActivityEvent {
   /** Stable over reloads: the page knows which events are new. */
   id: string;
   kind: ActivityKind;
-  /** The node code, or null (a `Now:` line or a log line that names no node). */
+  /** The node code, or null (a `Now:` line or a log line that names no node). For a group event: its first node. */
   node: string | null;
+  /** The group code ("P1", "I42") of a group event, else null. */
+  group: string | null;
   /** The item id ("A3.2"), else the start of its text; null for an event of a node. */
   item: string | null;
   /** One line for the list. */
@@ -46,11 +63,12 @@ export interface PlanVersion {
 }
 
 /** What `diffPlans` gives: an event with no commit facts yet. */
-export type Change = Pick<ActivityEvent, "kind" | "node" | "item" | "text" | "quote" | "from" | "to">;
+export type Change = Pick<ActivityEvent, "kind" | "node" | "group" | "item" | "text" | "quote" | "from" | "to">;
 
 const change = (kind: ActivityKind, node: string | null, text: string, extra: Partial<Change> = {}): Change => ({
   kind,
   node,
+  group: null,
   item: null,
   text,
   quote: null,
@@ -139,6 +157,39 @@ export function nodeIn(text: string, codes: string[]): string | null {
   return best?.code ?? null;
 }
 
+/** The group events of one change. A proposal that goes out in the same change as a new issue group with a
+ *  node of it is one event: the proposal opened as that issue. */
+function groupChanges(before: Plan | null, after: Plan): Change[] {
+  const old = new Map((before?.groups ?? []).map((g) => [g.code, g]));
+  const now = new Map((after.groups ?? []).map((g) => [g.code, g]));
+  const gone = [...old.values()].filter((g) => !now.has(g.code));
+  const name = (g: PlanGroup) => (g.kind === "issue" ? `#${g.issue}` : g.code);
+  const out: Change[] = [];
+  for (const g of after.groups ?? []) {
+    const b = old.get(g.code);
+    const first = g.nodes[0] ?? null;
+    if (!b && g.kind === "issue") {
+      const from = gone.find((p) => p.kind === "proposal" && p.nodes.some((c) => g.nodes.includes(c)));
+      if (from) gone.splice(gone.indexOf(from), 1);
+      const text = from ? `${from.code} opened as #${g.issue}: ${plain(g.title)}` : `#${g.issue} added: ${plain(g.title)}`;
+      out.push(change("issue", first, text, { group: g.code }));
+    } else if (!b) {
+      out.push(change("propose", first, `${g.code} proposed: ${plain(g.title)} (${g.nodes.join(", ")})`, { group: g.code }));
+    } else {
+      const plus = g.nodes.filter((c) => !b.nodes.includes(c));
+      const minus = b.nodes.filter((c) => !g.nodes.includes(c));
+      if (plus.length || minus.length) {
+        const parts = [...plus.map((c) => `+${c}`), ...minus.map((c) => `−${c}`)].join(" ");
+        out.push(change("regroup", plus[0] ?? first, `${name(g)}: ${parts}`, { group: g.code }));
+      }
+    }
+  }
+  for (const g of gone) {
+    out.push(change("unpropose", g.nodes[0] ?? null, `${name(g)} removed: ${plain(g.title)}`, { group: g.code }));
+  }
+  return out;
+}
+
 /** The events of one change of a plan. `before` null: the file is new, and each node is added. */
 export function diffPlans(before: Plan | null, after: Plan): Change[] {
   const old = new Map((before?.nodes ?? []).map((n) => [n.code, n]));
@@ -193,7 +244,7 @@ export function diffPlans(before: Plan | null, after: Plan): Change[] {
       }
     }
   }
-  const out = [...ends, ...drops, ...ticks, ...adds, ...removes, ...arrows];
+  const out = [...ends, ...drops, ...ticks, ...adds, ...removes, ...groupChanges(before, after), ...arrows];
   const line = (p: Plan | null) => p?.now ?? null;
   if (before && line(after) !== line(before) && line(after)) {
     out.push(change("now", nodeIn(line(after) ?? "", after.nodes.map((n) => n.code)), `Now: ${plain(line(after) ?? "", 200)}`));

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import type { Plan, PlanNode } from "./plan-graph.ts";
-import { criticalPath, nodeStates, startPlanView } from "./plan-view.ts";
+import { criticalPath, githubRepoOf, nodeStates, type PlanEdits, startPlanView } from "./plan-view.ts";
 
 // The tests do not use `plan-graph.ts`: a plan file here holds the Plan as JSON, and the fake parser reads it.
 const parse = (text: string, file: string): Plan => ({ ...JSON.parse(text), file });
@@ -185,4 +185,131 @@ test("the event stream sends `changed` when a plan file changes on disk", async 
     ac.abort();
     await s.close();
   }
+});
+
+// --- the edits of the groups: fakes on the JSON plans; no test runs the real `gh` ---
+
+const fakeEdits: PlanEdits = {
+  propose(text, file, codes, title) {
+    const p = parse(text, file);
+    for (const c of codes) if (p.nodes.find((n) => n.code === c)?.kind !== "A") throw new Error(`${c} is not an A node`);
+    const code = `P${(p.groups ?? []).length + 1}`; // codes are not reused
+    p.groups = [...(p.groups ?? []), { code, kind: "proposal", title, issue: null, nodes: codes, line: 3, endLine: 5 }];
+    return { text: JSON.stringify(p), code };
+  },
+  unpropose(text, file, code) {
+    const p = parse(text, file);
+    p.groups = (p.groups ?? []).filter((g) => g.code !== code);
+    return JSON.stringify(p);
+  },
+  regroup(text, file, code, add, remove) {
+    const p = parse(text, file);
+    const g = (p.groups ?? []).find((x) => x.code === code);
+    if (!g) throw new Error(`no group ${code}`);
+    g.nodes = [...g.nodes.filter((c) => !remove.includes(c)), ...add];
+    return JSON.stringify(p);
+  },
+  issueCommand(text, file, code) {
+    const g = (parse(text, file).groups ?? []).find((x) => x.code === code);
+    if (!g) throw new Error(`no group ${code}`);
+    return ["gh", "issue", "create", "--title", g.title, "--milestone", "alpha", "--body", `${g.nodes.join(", ")}\n\n${file}`];
+  },
+  openIssueEdit(text, file, code, issue) {
+    const p = parse(text, file);
+    p.groups = (p.groups ?? []).map((g) => (g.code === code ? { ...g, code: `I${issue}`, kind: "issue", issue } : g));
+    return JSON.stringify(p);
+  },
+};
+
+const alpha = plan(
+  [
+    { code: "A3", label: "A3 agent：导出" },
+    { code: "A4", label: "A4 agent：上传" },
+    { code: "D2", kind: "D", label: "D2 owner 拍板：格式" },
+  ],
+  [["D2", "A3"]],
+  { kind: "milestone", title: "alpha", groups: [] },
+);
+
+test("the edits: a POST needs the origin, the token and JSON; a proposal is made, changed, opened as an issue and removed", async () => {
+  const { root, write } = repo();
+  write("knowledge/plan/alpha.md", JSON.stringify(alpha));
+  const runs: string[][] = [];
+  const s = await startPlanView({
+    cwd: root,
+    port: 0,
+    parse,
+    edit: fakeEdits,
+    gh: async (argv) => {
+      runs.push(argv);
+      return "https://github.com/o/r/issues/42\n";
+    },
+  });
+  const page = await (await fetch(s.url)).text();
+  const token = /name="plan-view-token" content="([0-9a-f]{48})"/.exec(page)?.[1] ?? "";
+  assert.ok(token, "the page holds the token");
+  const origin = s.url.slice(0, -1);
+  const post = async (path: string, body: object, headers: Record<string, string> = {}) => {
+    const r = await fetch(`${s.url}${path.slice(1)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin, "x-plan-view-token": token, ...headers },
+      body: JSON.stringify(body),
+    });
+    return { status: r.status, body: await r.json() };
+  };
+  const groups = () => JSON.parse(readFileSync(join(root, "knowledge/plan/alpha.md"), "utf8")).groups;
+  const file = "knowledge/plan/alpha.md";
+  try {
+    // The safety of a write.
+    assert.equal((await post("/api/propose", { file, codes: ["A3"], title: "x" }, { "x-plan-view-token": "0" })).status, 403);
+    assert.equal((await post("/api/propose", { file, codes: ["A3"], title: "x" }, { origin: "http://evil.example" })).status, 403);
+    assert.equal((await post("/api/propose", { file, codes: ["A3"], title: "x" }, { "content-type": "text/plain" })).status, 415);
+    assert.equal((await post("/api/propose", { file, codes: ["A3"], title: "x".repeat(70_000) })).status, 413);
+    assert.equal((await post("/api/propose", { file: "../AGENTS.md", codes: ["A3"], title: "x" })).status, 400);
+    assert.equal((await post("/api/propose", { file: "knowledge/plan/42-export.md", codes: ["A2"], title: "x" })).status, 400, "not a milestone plan");
+    assert.equal((await post("/api/propose", { file, codes: ["D2"], title: "x" })).status, 400, "the edit refuses a D node");
+    assert.deepEqual(groups(), []);
+
+    const made = await post("/api/propose", { file, codes: ["A3"], title: "导出和上传" });
+    assert.deepEqual(made, { status: 200, body: { code: "P1" } });
+    assert.equal((await post("/api/regroup", { file, code: "P1", add: ["A4"] })).status, 200);
+    assert.deepEqual(groups().map((g: { code: string; nodes: string[] }) => [g.code, g.nodes]), [["P1", ["A3", "A4"]]]);
+
+    // Open as an issue: first the command only, with no run.
+    const preview = await post("/api/open-issue", { file, code: "P1" });
+    assert.deepEqual(preview.body.command.slice(0, 5), ["gh", "issue", "create", "--title", "导出和上传"]);
+    assert.equal(runs.length, 0);
+    assert.equal((await post("/api/open-issue", { file, code: "P1", confirm: true, expect: ["gh", "other"] })).status, 409);
+    assert.equal(runs.length, 0);
+    const opened = await post("/api/open-issue", { file, code: "P1", confirm: true, expect: preview.body.command });
+    assert.deepEqual(opened.body, { issue: 42, url: "https://github.com/o/r/issues/42" });
+    assert.deepEqual(runs, [preview.body.command]);
+    assert.deepEqual(groups().map((g: { code: string; issue: number }) => [g.code, g.issue]), [["I42", 42]]);
+
+    await post("/api/propose", { file, codes: ["A3"], title: "second" });
+    assert.equal((await post("/api/unpropose", { file, code: "P2" })).status, 200);
+    assert.deepEqual(groups().map((g: { code: string }) => g.code), ["I42"]);
+  } finally {
+    await s.close();
+  }
+  // With no edits, the page is read-only.
+  const ro = await startPlanView({ cwd: root, port: 0, parse });
+  try {
+    const t = /name="plan-view-token" content="([0-9a-f]+)"/.exec(await (await fetch(ro.url)).text())?.[1] ?? "";
+    const r = await fetch(`${ro.url}api/unpropose`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: ro.url.slice(0, -1), "x-plan-view-token": t },
+      body: JSON.stringify({ file, code: "I42" }),
+    });
+    assert.equal(r.status, 501);
+  } finally {
+    await ro.close();
+  }
+});
+
+test("the GitHub repo of the origin remote", () => {
+  assert.equal(githubRepoOf("https://github.com/shiyuann/aboveloop.git"), "shiyuann/aboveloop");
+  assert.equal(githubRepoOf("git@github.com:me/my-app.git\n"), "me/my-app");
+  assert.equal(githubRepoOf("ssh://git@github.com/me/my.app"), "me/my.app");
+  assert.equal(githubRepoOf("https://gitlab.com/me/x.git"), null);
 });

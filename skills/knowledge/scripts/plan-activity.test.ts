@@ -150,3 +150,26 @@ test("the activity is newest first: the uncommitted change, then the commits and
   assert.equal(events[2].id, "bbb:0");
   assert.equal(events[0].id, "work:add:A2:::");
 });
+
+test("groups: a proposal added, changed and removed; a proposal opened as an issue is one event", () => {
+  const g = (code: string, nodes: string[], issue: number | null = null) => ({
+    code,
+    kind: issue ? ("issue" as const) : ("proposal" as const),
+    title: "导出和上传",
+    issue,
+    nodes,
+    line: 3,
+    endLine: 6,
+  });
+  const nodes = [{ code: "A3" }, { code: "A4" }, { code: "A5" }, { code: "A6" }];
+  const v0 = plan(nodes, [], { groups: [] });
+  const v1 = plan(nodes, [], { groups: [g("P1", ["A3", "A4"]), g("P2", ["A6"])] });
+  const v2 = plan(nodes, [], { groups: [g("P1", ["A3", "A5"])] });
+  const v3 = plan(nodes, [], { groups: [g("I42", ["A3", "A5"], 42)] });
+  const show = (cs: { kind: string; group: string | null; text: string }[]) => cs.map((c) => `${c.kind} ${c.group} ${c.text}`);
+  assert.deepEqual(show(diffPlans(v0, v1)), ["propose P1 P1 proposed: 导出和上传 (A3, A4)", "propose P2 P2 proposed: 导出和上传 (A6)"]);
+  assert.deepEqual(show(diffPlans(v1, v2)), ["regroup P1 P1: +A5 −A4", "unpropose P2 P2 removed: 导出和上传"]);
+  assert.deepEqual(show(diffPlans(v2, v3)), ["issue I42 P1 opened as #42: 导出和上传"]);
+  // A plan from a parser with no groups gives no group events.
+  assert.deepEqual(diffPlans(plan(nodes), plan(nodes)), []);
+});
