@@ -318,6 +318,7 @@ Each PR that an agent opens tells who opened it, in three labels. They describe 
   - The first push opens a draft PR with `Fixes #N`: the PR links the branch to the issue.
   - The PR workflows of a project skip drafts, and run when the PR is ready and at each push after that. Why: in a private repo each run costs minutes, and the work of a session goes into PRs.
   - A second try after a closed PR uses the next free `issues/<N>-<k>`, from `issues/<N>-2`. One rule serves both modes, in `scripts/loop.ts`.
+  - In a session, a node that runs at the same time as other work has a short node branch `nodes/<N>-<code>`. Its worker lands it on `issues/<N>` with a fast-forward push; the node branch has no PR ([L2-loop-dev §3](L2-loop-dev.md#3-the-session-entry)).
   - Why: in both modes, the draft PR shows on the issue that the work has started. A session works only on an issue with no label, and implement only on an issue with the label (§3), so a session and CI do not do the same issue.
   - The implement run marks its PR ready with one GraphQL call (`markPullRequestReadyForReview`); REST cannot change a draft (connection point W11, measured: [L3-loop-workflow §5](L3-loop-workflow.md#5-connection-points-how-much-is-verified)).
 - **The spec change of the issue** is the diff of its PR under `knowledge/spec/`, in both modes. Nothing else records it.
