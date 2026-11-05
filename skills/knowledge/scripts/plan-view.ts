@@ -33,7 +33,7 @@ import { parseArgs } from "node:util";
 import { type ActivityEvent, answerOf, plain, planActivity, type PlanVersion } from "./plan-activity.ts";
 import type { Plan, PlanFinding } from "./plan-graph.ts";
 import { planLayout } from "./plan-layout.ts";
-import { finished, type IssueFact, issueStage, type NodeState, nextNodes, nodeStates, openBefore, planStages } from "./plan-stages.ts";
+import { finished, type IssueFact, issueStage, type NodeState, nextNodes, nodeStates, openBefore, planStages, progressOf } from "./plan-stages.ts";
 
 export type ParseFn = (text: string, file: string) => Plan;
 export type CheckFn = (plan: Plan, text: string) => PlanFinding[];
@@ -229,6 +229,7 @@ export function viewOf(plan: Plan, activity: ActivityEvent[], issues: Map<number
     decisions: decisionsOf(plan, activity),
     openBefore: openBefore(plan),
     stages,
+    progress: progressOf(plan, stages),
     layout,
   };
 }

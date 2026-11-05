@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parsePlan } from "./plan-graph.ts";
-import { type IssueFact, issueStage, nextNodes, openBefore, planStages, stagesOf } from "./plan-stages.ts";
+import { type IssueFact, issueStage, nextNodes, openBefore, planStages, progressOf, stagesOf } from "./plan-stages.ts";
 
 const fixture = (name: string, file: string) => parsePlan(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"), file);
 /** The fixture with these nodes ticked ✅ on their labels and headings, and their open items checked. */
@@ -109,4 +109,20 @@ test("what an open node waits on: the open nodes right before it", () => {
     A5: ["A3"],
     O2: ["A2", "A4", "A5"],
   });
+});
+
+test("the progress of a plan: the chain of its stages around the stage now, and its counts", () => {
+  const plan = ticked("42-export.txt", "knowledge/plan/42-export.md", ["A2", "O2", "D2", "O3–O4"]);
+  const p = progressOf(plan, planStages(plan));
+  assert.deepEqual(p.steps.map((s) => [s.stage, s.position, s.done, s.total]), [
+    ["spec", "past", 7, 7],
+    ["implement", "current", 0, 3],
+    ["merge", "future", 0, 0],
+    ["release", "future", 0, 3],
+  ]);
+  assert.equal(p.done, 7);
+  assert.equal(p.total, 13);
+  assert.deepEqual(p.waits.map((n) => n.code), ["E1"]);
+  assert.deepEqual(p.ready.map((n) => n.code), ["A3"]);
+  assert.equal(p.blocked, 4);
 });

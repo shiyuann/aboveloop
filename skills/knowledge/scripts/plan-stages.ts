@@ -284,3 +284,38 @@ export function planStages(plan: Plan, issues: Map<number, IssueFact> = new Map(
   const current = plan.kind === "issue" ? issueStage(plan, true) : stages[open.length ? Math.min(...open) : stages.length - 1];
   return { stages, current, nodes, groups };
 }
+
+export interface Progress {
+  /** The chain of the stages: before the stage of the plan now, the stage now, after it; with the nodes in each. */
+  steps: { stage: Stage; position: "past" | "current" | "future"; done: number; total: number }[];
+  done: number;
+  total: number;
+  /** The open nodes whose turn it is, in chart order: a D, an O or an E (等), and the agent's (能做). */
+  waits: { code: string; label: string; kind: string }[];
+  ready: { code: string; label: string }[];
+  /** The open nodes that wait on open work. */
+  blocked: number;
+}
+
+/** Where a plan is on its way: the chain of its stages, and its counts. */
+export function progressOf(plan: Plan, stages: PlanStages): Progress {
+  const states = nodeStates(plan);
+  const now = stages.stages.indexOf(stages.current);
+  const steps = stages.stages.map((stage, i) => {
+    const mine = plan.nodes.filter((n) => stages.nodes[n.code] === stage);
+    return {
+      stage,
+      position: (i < now ? "past" : i === now ? "current" : "future") as Progress["steps"][number]["position"],
+      done: mine.filter(finished).length,
+      total: mine.length,
+    };
+  });
+  return {
+    steps,
+    done: plan.nodes.filter(finished).length,
+    total: plan.nodes.length,
+    waits: plan.nodes.filter((n) => states[n.code] === "waits").map((n) => ({ code: n.code, label: n.label, kind: n.kind })),
+    ready: plan.nodes.filter((n) => states[n.code] === "ready").map((n) => ({ code: n.code, label: n.label })),
+    blocked: plan.nodes.filter((n) => states[n.code] === "blocked").length,
+  };
+}

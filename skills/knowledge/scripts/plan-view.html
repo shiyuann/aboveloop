@@ -30,7 +30,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--text); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; display: flex; flex-direction: column; }
+body { background: var(--bg); color: var(--text); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; display: flex; flex-direction: column; overflow-x: hidden; }
 button, select, input { font: inherit; color: inherit; }
 header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
 header select { max-width: 340px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
@@ -46,11 +46,26 @@ header select { max-width: 340px; padding: 4px 6px; border: 1px solid var(--line
 .badge.question { background: var(--wait); border-color: var(--wait); color: #000; }
 .live { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
 .live.on { background: var(--ok); }
-main { flex: 1; display: flex; min-height: 0; }
-#graphWrap { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+/* Top to bottom: the metadata and the progress, the graph, the tabs. */
+main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 24px; min-width: 0; }
+h2.sub { margin: 0; font-size: 11px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+#progress { display: flex; align-items: flex-start; gap: 12px; }
+#progress h2 { width: 76px; flex: none; padding-top: 3px; }
+#progressBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.chain li { display: flex; align-items: center; gap: 4px; }
+.chain .sep { color: var(--muted); }
+.step { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); }
+.step i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.step small { font-size: 10.5px; }
+.step.past { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 9%, transparent); }
+.step.current { color: var(--text); font-weight: 650; border-color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: 0 0 0 1px var(--c); }
+.counts { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); }
+.counts b { color: var(--text); font-weight: 600; }
+#graphWrap { position: relative; height: clamp(340px, 62vh, 900px); min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 #graph { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 #graph.panning { cursor: grabbing; }
-.tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 3px; }
+.tools { position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; gap: 3px; }
 .tools button { position: relative; width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); cursor: pointer; font-size: 13px; line-height: 1; }
 .tools button:hover { background: color-mix(in srgb, var(--link) 18%, var(--soft)); }
 .tools button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -59,16 +74,22 @@ main { flex: 1; display: flex; min-height: 0; }
 .legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 4px 8px; border-radius: 6px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; border: 2px solid var(--line); }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
-aside { width: 400px; max-width: 45vw; border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+/* The detail of the selected node or area: over the right 30% of the graph. */
+#detail { position: absolute; top: 0; right: 0; bottom: 0; width: 30%; min-width: 256px; max-width: 100%; z-index: 4; background: var(--panel); border-left: 1px solid var(--line); box-shadow: -4px 0 14px rgba(0,0,0,.12); overflow: auto; padding: 10px 12px 16px; }
+#detail .close { position: sticky; top: 0; float: right; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); cursor: pointer; }
+#detail:not([hidden]) ~ .tools { right: max(calc(30% + 8px), 264px); }
+#below { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
-.tabs button { flex: 1; padding: 8px 4px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); }
+.tabs button { padding: 8px 14px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); }
 .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
-#pane { flex: 1; overflow: auto; padding: 10px 12px 24px; }
+#pane { padding: 10px 12px 16px; overflow-wrap: anywhere; }
+.only { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--muted); }
 @media (max-width: 800px) {
-  main { flex-direction: column; }
-  #graphWrap { flex: none; height: 58vh; }
-  aside { width: auto; max-width: none; border-left: 0; border-top: 1px solid var(--line); flex: 1; }
+  main { padding: 8px; }
+  #progress { flex-direction: column; gap: 4px; }
+  #graphWrap { height: 58vh; }
   .search input { width: 140px; }
+  #detail:not([hidden]) ~ .tools { right: 8px; top: auto; bottom: 8px; }
 }
 
 /* graph */
@@ -176,7 +197,8 @@ a { color: var(--link); }
   <span class="live" id="live" title="Live updates"></span>
 </header>
 <main>
-  <section id="graphWrap">
+  <section id="progress" aria-label="Progress"><h2 class="sub">Progress</h2><div id="progressBody"></div></section>
+  <section id="graphWrap" aria-label="Plan graph">
     <svg id="graph" aria-label="Plan graph">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
@@ -185,6 +207,7 @@ a { color: var(--link); }
       </defs>
       <g id="viewport"><g id="bands"></g><g id="groups"></g><g id="edges"></g><g id="nodes"></g><rect id="lasso" class="lasso" style="display:none"></rect></g>
     </svg>
+    <aside id="detail" hidden><button class="close" id="closeDetail" aria-label="Close the detail" title="Close (Esc)">×</button><div id="detailBody"></div></aside>
     <div class="tools">
       <button id="allArrows" data-tip="All arrows (a)" aria-label="All arrows" aria-pressed="false">⇉</button>
       <button id="zoomIn" data-tip="Zoom in (+)" aria-label="Zoom in">+</button>
@@ -196,15 +219,14 @@ a { color: var(--link); }
     <div class="pickbar" id="pickbar" hidden></div>
     <div class="empty" id="empty" hidden></div>
   </section>
-  <aside>
+  <section id="below" aria-label="Activity">
     <nav class="tabs" id="tabs">
       <button data-tab="activity">Activity</button>
       <button data-tab="decisions">Decisions</button>
       <button data-tab="findings">Findings</button>
-      <button data-tab="node">Detail</button>
     </nav>
     <div id="pane"></div>
-  </aside>
+  </section>
 </main>
 <script>
 "use strict";
@@ -490,7 +512,9 @@ function centerOn(code, animate = true) {
   const p = S.pos.get(code), r = svg.getBoundingClientRect();
   if (!p || !r.width) return;
   const k = Math.max(S.tf.k, 0.85);
-  const t = { k, x: r.width / 2 - (p.x + W / 2) * k, y: r.height / 2 - (p.y + H / 2) * k };
+  // The middle of the part of the graph that the detail does not cover.
+  const free = r.width - (S.sel || S.selGroup ? Math.min(r.width, Math.max(256, r.width * 0.3)) : 0);
+  const t = { k, x: Math.max(free, W * k + 16) / 2 - (p.x + W / 2) * k, y: r.height / 2 - (p.y + H / 2) * k };
   if (animate) animateTo(t); else { S.tf = t; apply(); }
 }
 function setFollow(on) {
@@ -578,10 +602,10 @@ document.addEventListener("keydown", (e) => {
 });
 
 /** Focus a node by a click in a panel or a search result: centre it and select it. */
-function focusNode(code, openTab = false) {
+function focusNode(code) {
   if (!code || !S.pos.has(code)) return;
+  select(code);
   centerOn(code);
-  select(code, openTab);
 }
 
 // ---------- search ----------
@@ -608,7 +632,7 @@ function renderResults() {
   const list = document.activeElement === $("search") ? S.search.list.slice(0, 5) : [];
   ul.hidden = list.length === 0;
   ul.replaceChildren(...list.map((c, i) => el("li", { class: i === S.search.at ? "on" : "", title: node(c)?.label ?? c,
-    onmousedown: (e) => { e.preventDefault(); S.search.at = i; focusNode(c, true); $("search").blur(); } },
+    onmousedown: (e) => { e.preventDefault(); S.search.at = i; focusNode(c); $("search").blur(); } },
     el("strong", {}, c), " ", (node(c)?.label ?? "").replace(/^\S+\s*/, ""))));
 }
 $("search").addEventListener("input", runSearch);
@@ -624,24 +648,27 @@ $("search").addEventListener("keydown", (e) => {
   focusNode(S.search.list[S.search.at]);
 });
 
-// ---------- side panel ----------
+// ---------- the detail over the graph, and the tabs under it ----------
 function setTab(t) {
   S.tab = t;
   for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === t);
   renderPane();
 }
 $("tabs").addEventListener("click", (e) => { const t = e.target.closest("button")?.dataset.tab; if (t) setTab(t); });
-function select(code, openTab = true) {
+/** Select a node: its detail opens over the graph, and the tabs show its rows. */
+function select(code) {
   S.sel = code;
   S.selGroup = null; S.confirm = null;
+  if (!code) S.msg = null;
   paintMarks();
-  if (code && openTab) setTab("node"); else renderPane();
+  renderPane();
 }
 function selectGroup(code) {
   S.selGroup = code; S.sel = null; S.confirm = null;
   paintMarks();
-  setTab("node");
+  renderPane();
 }
+$("closeDetail").onclick = () => select(null);
 const group = (code) => (S.data?.plan.groups ?? []).find((g) => g.code === code) ?? null;
 const groupName = (g) => (g.kind === "issue" ? `#${g.issue}` : g.code);
 const shq = (a) => (/^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, "'\\''")}'`);
@@ -682,7 +709,7 @@ function renderPickbar() {
   const title = el("input", { placeholder: "Title of the proposal", "aria-label": "Title of the proposal" });
   const go = el("button", { class: "btn primary", onclick: () => {
     if (!title.value.trim()) return title.focus();
-    act("/api/propose", { codes, title: title.value.trim() }, (d) => { S.picked.clear(); S.selGroup = d.code; S.sel = null; setTab("node"); S.msg = { text: `${d.code} proposed.` }; });
+    act("/api/propose", { codes, title: title.value.trim() }, (d) => { S.picked.clear(); S.selGroup = d.code; S.sel = null; S.msg = { text: `${d.code} proposed.` }; });
   } }, "Propose");
   title.addEventListener("keydown", (e) => { if (e.key === "Enter") go.click(); });
   bar.replaceChildren(what, title, go, clear);
@@ -704,8 +731,14 @@ function renderActivity(pane) {
   const chips = el("div", { class: "chips" }, Object.keys(FILTERS).map((f) =>
     el("button", { class: `chip${S.filter === f ? " on" : ""}`, onclick: () => { S.filter = f; renderPane(); } }, f)));
   const kinds = FILTERS[S.filter];
-  const list = S.data.activity.filter((e) => !kinds || kinds.includes(e.kind));
-  pane.append(chips, list.length ? el("ul", { class: "events" }, list.slice(0, 400).map(eventItem)) : el("p", { class: "muted" }, "No events."));
+  // A selected node or area: only its rows.
+  const g = group(S.selGroup);
+  const mine = S.sel ? (e) => e.node === S.sel || e.from === S.sel || e.to === S.sel : g ? (e) => e.group === g.code || g.nodes.includes(e.node) : null;
+  const list = S.data.activity.filter((e) => (!kinds || kinds.includes(e.kind)) && (!mine || mine(e)));
+  const only = mine ? el("div", { class: "only" }, `Only the rows of ${S.sel ?? groupName(g)}`, el("button", { class: "btn", onclick: () => select(null) }, "Show all")) : null;
+  if (only) pane.append(only);
+  pane.prepend(chips);
+  pane.append(list.length ? el("ul", { class: "events" }, list.slice(0, 400).map(eventItem)) : el("p", { class: "muted" }, "No events."));
 }
 
 function renderDecisions(pane) {
@@ -798,7 +831,7 @@ function renderNode(pane) {
   const g = group(S.selGroup);
   if (g) return renderGroup(pane, g);
   const n = node(S.sel);
-  if (!n) return pane.append(el("p", { class: "muted" }, "Click a node or a group in the graph. Shift-drag or shift-click selects nodes for a proposal."));
+  if (!n) return;
   const st = S.data.view.states[n.code];
   const stage = S.data.view.stages.nodes[n.code];
   const crit = S.data.view.critical.includes(n.code);
@@ -821,11 +854,30 @@ function renderNode(pane) {
     timeline.length ? el("ul", { class: "events" }, timeline.map(eventItem)) : el("div", { class: "muted" }, "No events.")));
 }
 
+/** The tab below the graph, and the detail over it. */
 function renderPane() {
-  const pane = $("pane");
-  pane.replaceChildren();
+  const pane = $("pane"), detail = $("detailBody");
+  pane.replaceChildren(); detail.replaceChildren();
+  $("detail").hidden = !S.data || !(S.sel || S.selGroup || S.msg);
   if (!S.data) return;
-  ({ activity: renderActivity, decisions: renderDecisions, findings: renderFindings, node: renderNode })[S.tab](pane);
+  ({ activity: renderActivity, decisions: renderDecisions, findings: renderFindings })[S.tab](pane);
+  if (!$("detail").hidden) renderNode(detail);
+}
+
+/** Progress: the chain of the stages (done before the stage now, the stage now, after it), then the counts. */
+function renderProgress() {
+  const p = S.data.view.progress;
+  const chain = el("ol", { class: "chain", "aria-label": "Stages" }, p.steps.map((s, i) => el("li", {},
+    i ? el("span", { class: "sep", "aria-hidden": "true" }, "›") : null,
+    el("span", { class: `step ${s.position}`, style: `--c: var(--st-${s.stage})`, "aria-current": s.position === "current" ? "step" : null, title: `${s.done} of ${s.total} nodes done` },
+      el("i"), s.position === "past" ? "✓ " : null, s.stage, s.total ? el("small", {}, ` ${s.done}/${s.total}`) : null))));
+  const chips = (list) => list.map((n) => el("span", { class: "code-chip", title: n.label, onclick: () => focusNode(n.code) }, n.code));
+  const counts = el("div", { class: "counts" },
+    el("span", {}, el("b", {}, `${p.done} of ${p.total}`), " nodes done"),
+    p.waits.length ? el("span", {}, el("b", {}, "Waits"), " on ", p.waits.flatMap((n) => [...chips([n]), ` ${KIND[n.kind] ?? n.kind} `])) : null,
+    p.ready.length ? el("span", {}, el("b", {}, "Can be done now"), " ", chips(p.ready)) : null,
+    p.blocked ? el("span", {}, el("b", {}, String(p.blocked)), " blocked") : null);
+  $("progressBody").replaceChildren(chain, counts);
 }
 
 function renderHeader() {
@@ -838,7 +890,7 @@ function renderHeader() {
   b.className = `badge${problems ? " problem" : findings.length ? " question" : ""}`;
   document.title = `${plan.title} · Plan view`;
 }
-$("findings").onclick = () => setTab("findings");
+$("findings").onclick = () => { setTab("findings"); $("below").scrollIntoView({ behavior: "smooth", block: "start" }); };
 
 $("legend").innerHTML = [["ready", "var(--ok)"], ["waits", "var(--wait)"], ["blocked", "var(--line)"], ["critical path", "var(--accent)"], ["done", "var(--muted)"]]
   .map(([t, c]) => `<span><i style="border-color:${c}"></i>${t}</span>`).join("") +
@@ -872,6 +924,7 @@ async function loadPlan(file, live = false) {
   if (S.selGroup && !group(S.selGroup)) S.selGroup = null;
   for (const c of S.picked) if (!node(c)) S.picked.delete(c);
   renderHeader();
+  renderProgress();
   renderGraph();
   runSearch();
   renderPane();
