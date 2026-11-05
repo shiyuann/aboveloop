@@ -247,9 +247,9 @@ function stageOfIssue(fact: IssueFact | undefined, closed: boolean): Stage {
  *
  * - The plan of an issue: `issueNodeStages`.
  * - A milestone plan: a node of a group is in the stage of its group. A proposal is in `proposal`; an issue group
- *   is in the stage of its issue. An open A node in no group is not an issue yet: `proposal`; a done one is closed:
- *   `release`. A release O and an M are in `release`. Each other node (D, O, E) is in the stage of the nodes that
- *   wait on it.
+ *   is in the stage of its issue. An open A node in no group is not an issue yet: `proposal`. A release O and an M
+ *   are in `release`. Each other node (D, O, E, a done A node in no group) is in the stage of the nodes that wait on
+ *   it.
  * - `index.md`: `I<N>` is in the stage of issue N; a release is in `release`; each other node as above.
  */
 export function planStages(plan: Plan, issues: Map<number, IssueFact> = new Map()): PlanStages {
@@ -275,7 +275,9 @@ export function planStages(plan: Plan, issues: Map<number, IssueFact> = new Map(
         const num = Number(/^I(\d+)$/.exec(n.code)?.[1] ?? Number.NaN);
         own.set(n.code, at(stageOfIssue(issues.get(num), finished(n))));
       } else if (isRelease(n)) own.set(n.code, at("release"));
-      else if (n.kind === "A" && plan.kind === "milestone") own.set(n.code, at(finished(n) ? "release" : "proposal"));
+      // An open A node in no group is not an issue yet. A done one has no step left: it sits by the work that waits
+      // on it, so its arrows point forwards.
+      else if (n.kind === "A" && plan.kind === "milestone" && !finished(n)) own.set(n.code, at("proposal"));
       else own.set(n.code, null);
     }
     nodes = fill(plan, own, stages);

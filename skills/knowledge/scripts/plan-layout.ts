@@ -105,6 +105,10 @@ const BOX_PAD = 14;
 export const BOX_HEAD = 34;
 /** Between two cells of a band. */
 const CELL_GAP = 30;
+/** How much lower on a side an arrow back to an earlier band ends. */
+const BACK_LOW = 16;
+/** What a bend of an arrow costs, as a length. */
+const BEND = 40;
 /** The space between two arrows that run side by side. */
 const TRACK = 6;
 
@@ -128,8 +132,9 @@ interface Cell {
 }
 
 /** Lay out one cell: layers by the longest path, the order in a layer by the mean of the neighbours, then each
- *  row pulled to the level of its neighbours. */
-function layCell(codes: string[], edges: { from: string; to: string }[]): Pick<Cell, "at" | "width" | "height"> {
+ *  row pulled to the level of its neighbours. `hint` is the level (the top of the node, inside the cell) of the
+ *  neighbours of a node in other cells: a node with no neighbour in the cell goes to it. */
+function layCell(codes: string[], edges: { from: string; to: string }[], hint = new Map<string, number>()): Pick<Cell, "at" | "width" | "height"> {
   const has = new Set(codes);
   const inner = edges.filter((e) => has.has(e.from) && has.has(e.to) && e.from !== e.to);
   const succ = new Map(codes.map((c) => [c, [] as string[]])), pred = new Map(codes.map((c) => [c, [] as string[]]));
@@ -169,6 +174,11 @@ function layCell(codes: string[], edges: { from: string; to: string }[]): Pick<C
   const L = Math.max(0, ...layer.values()) + 1;
   const layers: string[][] = Array.from({ length: L }, () => []);
   for (const c of codes) layers[layer.get(c) ?? 0].push(c);
+  // The order that the other cells ask for first; the neighbours in the cell then sort it again.
+  for (const l of layers) {
+    const key = new Map(l.map((c, i) => [c, hint.get(c) ?? i * (NODE_H + ROW_GAP)]));
+    l.sort((a, z) => (key.get(a) ?? 0) - (key.get(z) ?? 0));
+  }
   const index = new Map<string, number>();
   layers.forEach((l) => l.forEach((c, i) => index.set(c, i)));
   const bary = (c: string, nb: Map<string, string[]>) => {
@@ -239,8 +249,17 @@ export function planLayout(input: LayoutInput): PlanLayout {
   for (const e of input.edges) {
     const a = cellOfCode.get(e.from), b = cellOfCode.get(e.to);
     if (!a || !b || a === b) continue;
-    outs[a.stage]++;
-    ins[b.stage]++;
+    // An arrow back to an earlier band leaves from the left and enters from the right.
+    if (b.stage < a.stage) {
+      ins[a.stage]++;
+      outs[b.stage]++;
+    } else if (b.stage === a.stage) {
+      // In one band: out of the right side and into the right side, both in the right padding.
+      outs[a.stage] += 2;
+    } else {
+      outs[a.stage]++;
+      ins[b.stage]++;
+    }
   }
   const padL = ins.map((n) => Math.max(BAND_PAD, TRACK * (n + 2)));
   const padR = outs.map((n) => Math.max(BAND_PAD, TRACK * (n + 2)));
@@ -254,10 +273,16 @@ export function planLayout(input: LayoutInput): PlanLayout {
     bands.push({ stage, x, width, empty: mine.length === 0 });
     x += width;
   });
-  // Stack the cells of each band.
-  const bottom = stages.map(() => BAND_HEAD);
-  const nodes: Record<string, Point> = {};
-  const boxes: LayoutBox[] = [];
+  // Stack the cells of each band. Then two rounds: each node goes to the level of its neighbours in other cells,
+  // and the boxes of a band go in the order of the levels of their neighbours, so the arrows between cells are
+  // short. The cell of no group stays first.
+  let nodes: Record<string, Point> = {};
+  let boxes: LayoutBox[] = [];
+  let bottom = stages.map(() => BAND_HEAD);
+  const stack = () => {
+  bottom = stages.map(() => BAND_HEAD);
+  nodes = {};
+  boxes = [];
   const seenGroup = new Set<string>();
   for (const cell of cells) {
     const o = outer(cell);
@@ -272,6 +297,34 @@ export function planLayout(input: LayoutInput): PlanLayout {
       seenGroup.add(cell.group);
     }
     bottom[cell.stage] = cell.y + o.h + CELL_GAP;
+  }
+  };
+  stack();
+  const neighbours = new Map<string, string[]>();
+  for (const e of input.edges) {
+    const a = cellOfCode.get(e.from), b = cellOfCode.get(e.to);
+    if (!a || !b || a === b) continue;
+    neighbours.set(e.from, [...(neighbours.get(e.from) ?? []), e.to]);
+    neighbours.set(e.to, [...(neighbours.get(e.to) ?? []), e.from]);
+  }
+  for (let round = 0; round < 2; round++) {
+    const level = new Map<string, number>();
+    for (const [c, ns] of neighbours) level.set(c, ns.reduce((sum, n) => sum + nodes[n].y, 0) / ns.length);
+    for (const cell of cells) {
+      const hint = new Map<string, number>();
+      for (const c of cell.codes) {
+        const l = level.get(c);
+        if (l !== undefined) hint.set(c, Math.max(0, l - cell.inner.y));
+      }
+      Object.assign(cell, layCell(cell.codes, input.edges, hint));
+    }
+    const mean = (c: Cell) => {
+      const ls = c.codes.map((x) => level.get(x)).filter((l): l is number => l !== undefined);
+      return ls.length ? ls.reduce((a, b) => a + b, 0) / ls.length : c.y;
+    };
+    const keys = new Map(cells.map((c) => [c, mean(c)]));
+    cells.sort((a, z) => a.stage - z.stage || (a.group === null ? -1 : 0) - (z.group === null ? -1 : 0) || (keys.get(a) ?? 0) - (keys.get(z) ?? 0));
+    stack();
   }
   const width = x;
   const height = Math.max(BAND_HEAD, ...bottom) - CELL_GAP / 2;
@@ -362,16 +415,21 @@ function router(cells: Cell[], bands: LayoutBand[], obstacles: Rect[], padL: num
     }
     cellOf.set(`${BOX_PREFIX}${cell.id}`, cell);
   }
+  /** The uprights where no node is: the middle of each side padding, and of each gap between two bands. */
+  const uprights = bands.flatMap((b, i) => [b.x + padL[i] / 2, b.x + b.width - padR[i] / 2, ...(i ? [b.x - BAND_GAP / 2] : [])]);
   /** The levels between cells, and above them all, under the names of the bands. */
   const lanes = [(BAND_NAME + BAND_HEAD) / 2, ...cells.flatMap((c) => [c.y - CELL_GAP / 2, c.y + c.outerH + CELL_GAP / 2])];
   /** The free levels over and under the nodes of a cell: inside its box, under the name; or between the cells. */
   const rims = (c: Cell) =>
     c.group ? [c.inner.y - BOX_PAD / 2, c.inner.y + c.height + BOX_PAD / 2] : [c.y - CELL_GAP / 2, c.y + c.outerH + CELL_GAP / 2];
-  const endOf = (code: string, side: "out" | "in"): Point => {
+  /** The end of an arrow on the right or the left side of a node or a box: the middle of the side, or, for an arrow
+   *  back to an earlier band, lower on the side, so it does not meet the arrows forwards there. */
+  const endOf = (code: string, side: "right" | "left", back: boolean): Point => {
     const cell = cellOf.get(code) as Cell;
-    if (code.startsWith(BOX_PREFIX)) return { x: side === "out" ? cell.x + cell.outerW : cell.x, y: cell.y + cell.outerH / 2 };
+    const low = back ? BACK_LOW : 0;
+    if (code.startsWith(BOX_PREFIX)) return { x: side === "right" ? cell.x + cell.outerW : cell.x, y: cell.y + cell.outerH / 2 + low };
     const n = nodeAt.get(code) as Point;
-    return { x: side === "out" ? n.x + NODE_W : n.x, y: n.y + NODE_H / 2 };
+    return { x: side === "right" ? n.x + NODE_W : n.x, y: n.y + NODE_H / 2 + low };
   };
   /** The way from an end to the side padding of its band at `pad`: points from the end outwards, and the level
    *  where it reaches the padding. */
@@ -385,7 +443,11 @@ function router(cells: Cell[], bands: LayoutBand[], obstacles: Rect[], padL: num
   };
   return (from: string, to: string): Point[] => {
     const a = cellOf.get(from) as Cell, b = cellOf.get(to) as Cell;
-    const s = endOf(from, "out"), t = endOf(to, "in");
+    // An arrow back to an earlier band leaves the left side of its start and enters the right side of its end: the
+    // nearest sides, so it does not go round both bands.
+    // An arrow to another cell of the same band enters the right side too.
+    const back = b.stage < a.stage, side = a !== b && b.stage === a.stage;
+    const s = endOf(from, back ? "left" : "right", back), t = endOf(to, back || side ? "right" : "left", back || side);
     // In one cell, forwards: down or up in the layer gaps, along a free level between them.
     if (a === b && !from.startsWith(BOX_PREFIX) && !to.startsWith(BOX_PREFIX) && t.x > s.x) {
       const xs = s.x + LAYER_GAP / 2, xt = t.x - LAYER_GAP / 2;
@@ -394,16 +456,83 @@ function router(cells: Cell[], bands: LayoutBand[], obstacles: Rect[], padL: num
       const y = [s.y, t.y, ...[under, over].sort((p, q) => Math.abs(p - s.y) - Math.abs(q - s.y))].find((l) => free(l, xs, xt) && freeDown(xs, s.y, l) && freeDown(xt, l, t.y)) ?? under;
       return [s, { x: xs, y: s.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: t.y }, t];
     }
-    // Between cells: out to the right padding of the band of the start, along a free level, down or up in the
-    // left padding of the band of the end, and in. The level is the nearest to both ends.
-    // A track of its own on each side: out of the band of the start, into the band of the end.
-    const outX = bands[a.stage].x + bands[a.stage].width - padR[a.stage] + TRACK * ++usedOut[a.stage];
-    const inX = bands[b.stage].x + padL[b.stage] - TRACK * ++usedIn[b.stage];
+    // Between cells: out to a track of its own in the right padding of the band of the start, then the shortest
+    // way to a track of its own in the left padding of the band of the end, and in. The way goes along free levels,
+    // and up or down only in a padding or in the gap between two bands.
+    const outX = back
+      ? bands[a.stage].x + padL[a.stage] - TRACK * ++usedIn[a.stage]
+      : bands[a.stage].x + bands[a.stage].width - padR[a.stage] + TRACK * ++usedOut[a.stage];
+    const inX = back || side
+      ? bands[b.stage].x + bands[b.stage].width - padR[b.stage] + TRACK * ++usedOut[b.stage]
+      : bands[b.stage].x + padL[b.stage] - TRACK * ++usedIn[b.stage];
     const out = leg(from, s, outX), into = leg(to, t, inX);
-    const near = [...lanes].sort((p, q) => Math.abs(p - out.y) + Math.abs(p - into.y) - (Math.abs(q - out.y) + Math.abs(q - into.y)));
-    const y = [out.y, into.y, ...near].find((l) => free(l, outX, inX)) ?? lanes[0];
-    return [...out.points, { x: outX, y: out.y }, { x: outX, y }, { x: inX, y }, { x: inX, y: into.y }, ...[...into.points].reverse()];
+    const middle = tidy(shortest({ x: outX, y: out.y }, { x: inX, y: into.y }));
+    return alternate([...out.points, ...middle, ...[...into.points].reverse()]);
   };
+
+  /** The shortest way from `p` to `q` on the grid of the free uprights (the paddings and the gaps of the bands) and
+   *  the free levels (between the cells, over them, and the levels of the two ends). A bend costs as much as
+   *  `BEND` of length, so the way turns only where it saves more. */
+  function shortest(p: Point, q: Point): Point[] {
+    const xs = [...new Set([p.x, q.x, ...uprights])].sort((u, v) => u - v);
+    const ys = [...new Set([p.y, q.y, ...lanes])].sort((u, v) => u - v);
+    const key = (i: number, j: number, d: number) => (i * ys.length + j) * 2 + d;
+    const start = { i: xs.indexOf(p.x), j: ys.indexOf(p.y) }, goal = { i: xs.indexOf(q.x), j: ys.indexOf(q.y) };
+    const dist = new Map<number, number>(), prev = new Map<number, number>();
+    // d: 0 the last move was along a level, 1 up or down.
+    const open: [number, number, number, number][] = [[0, start.i, start.j, 0], [0, start.i, start.j, 1]];
+    dist.set(key(start.i, start.j, 0), 0);
+    dist.set(key(start.i, start.j, 1), 0);
+    let end = -1;
+    while (open.length) {
+      open.sort((u, v) => u[0] - v[0]);
+      const [c, i, j, d] = open.shift() as [number, number, number, number];
+      const k = key(i, j, d);
+      if (c > (dist.get(k) ?? Number.POSITIVE_INFINITY)) continue;
+      if (i === goal.i && j === goal.j) {
+        end = k;
+        break;
+      }
+      const steps: [number, number, number][] = [
+        [i - 1, j, 0],
+        [i + 1, j, 0],
+        [i, j - 1, 1],
+        [i, j + 1, 1],
+      ];
+      for (const [ni, nj, nd] of steps) {
+        if (ni < 0 || nj < 0 || ni >= xs.length || nj >= ys.length) continue;
+        const a = { x: xs[i], y: ys[j] }, b = { x: xs[ni], y: ys[nj] };
+        if (nd === 0 ? !free(a.y, a.x, b.x) : !freeDown(a.x, a.y, b.y)) continue;
+        const cost = c + Math.abs(b.x - a.x) + Math.abs(b.y - a.y) + (nd !== d ? BEND : 0);
+        const nk = key(ni, nj, nd);
+        if (cost < (dist.get(nk) ?? Number.POSITIVE_INFINITY)) {
+          dist.set(nk, cost);
+          prev.set(nk, k);
+          open.push([cost, ni, nj, nd]);
+        }
+      }
+    }
+    if (end < 0) return [p, { x: p.x, y: lanes[0] }, { x: q.x, y: lanes[0] }, q];
+    const path: Point[] = [];
+    for (let k: number | undefined = end; k !== undefined; k = prev.get(k)) {
+      const cell = Math.floor(k / 2);
+      path.push({ x: xs[Math.floor(cell / ys.length)], y: ys[cell % ys.length] });
+    }
+    return path.reverse();
+  }
+}
+
+/** The same way, with each joint of two parts on one line kept as a bend of no length: so the parts alternate, level
+ *  and upright, and `separate` can move each part on its own. */
+function alternate(points: Point[]): Point[] {
+  const out: Point[] = [];
+  for (const p of points) {
+    const a = out.at(-2), b = out.at(-1);
+    if (b && b.x === p.x && b.y === p.y) continue;
+    if (a && b && ((a.y === b.y && b.y === p.y) || (a.x === b.x && b.x === p.x))) out.push({ ...b });
+    out.push({ ...p });
+  }
+  return out;
 }
 
 /** Drop a point that repeats the one before it, or that does not turn. */

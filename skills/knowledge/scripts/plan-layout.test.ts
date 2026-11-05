@@ -200,9 +200,34 @@ test("no arrow runs through a node: a wide graph with long arrows inside a cell 
   }
   assert.deepEqual(shared(l.edges), []);
   assert.deepEqual(shared(l.all), []);
-  // Each route starts at the right side of its start and ends at the left side of its end.
+  // Each route starts at the right side of its start and ends at the left side of its end; an arrow back to an
+  // earlier band starts at the left side and ends at the right side, lower than the middle.
+  // An arrow to another cell of its band enters the right side too.
+  const order = ["spec", "implement", "merge", "release"];
   for (const e of l.all) {
-    assert.equal(e.points[0].x, l.nodes[e.from].x + NODE_W);
-    assert.equal(e.points.at(-1)?.x, l.nodes[e.to].x);
+    const back = order.indexOf(stageOf[e.to]) < order.indexOf(stageOf[e.from]);
+    const side = stageOf[e.to] === stageOf[e.from] && groupOf[e.to] !== groupOf[e.from];
+    assert.equal(e.points[0].x, l.nodes[e.from].x + (back ? 0 : NODE_W));
+    assert.equal(e.points.at(-1)?.x, l.nodes[e.to].x + (back || side ? NODE_W : 0));
+    if (back || side) assert.ok((e.points.at(-1)?.y ?? 0) > l.nodes[e.to].y + NODE_H / 2);
   }
+});
+
+const lengthOf = (e: LayoutEdge) => e.points.slice(1).reduce((t, p, i) => t + Math.abs(p.x - e.points[i].x) + Math.abs(p.y - e.points[i].y), 0);
+
+test("the arrows are short: an arrow back to an earlier band takes the near sides, and no arrow goes far round", () => {
+  const l = beta();
+  // Before the near sides and the shortest ways (2026-11-05): 14110 with the ports, 14046 with all arrows.
+  const ports = l.edges.reduce((t, e) => t + lengthOf(e), 0), all = l.all.reduce((t, e) => t + lengthOf(e), 0);
+  assert.ok(ports < 11000, `ports: ${ports}`);
+  assert.ok(all < 12000, `all: ${all}`);
+  // An arrow is at most 600 longer than the straight way between its two ends.
+  for (const e of [...l.edges, ...l.all]) {
+    const [a, b] = [e.points[0], e.points.at(-1) as (typeof e.points)[number]];
+    assert.ok(lengthOf(e) <= Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + 600, `${e.via}: ${lengthOf(e)}`);
+  }
+  // An arrow back to an earlier band leaves the left side of its start and enters the right side of its end.
+  const back = l.edges.find((e) => e.via.includes("A6>A2"));
+  assert.ok(back);
+  assert.ok(back.points[0].x > (back.points.at(-1)?.x ?? 0));
 });
