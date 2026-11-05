@@ -152,12 +152,78 @@ test("the server lists the plans, gives a plan with its activity and findings, a
       [["D1", "存在哪？", "推荐：桶。 agent 做。", "放桶里"]],
     );
 
+    // The graph of open work: #42 is in the stage of its plan in the checkout, with the routes of the layout.
+    const idx = JSON.parse((await get(s.port, `/api/plan?file=${encodeURIComponent("knowledge/plan/index.md")}`)).body);
+    assert.deepEqual(idx.view.stages.stages, ["explore", "spec", "implement", "merge", "release"]);
+    assert.deepEqual(idx.view.stages.nodes, { I42: "spec", O9: "release" });
+    assert.deepEqual(idx.view.layout.edges.map((e: { via: string[] }) => e.via), [["I42>O9"]]);
+    assert.deepEqual(data.view.openBefore, { A2: ["O1"] });
+
     for (const bad of ["../../AGENTS.md", "knowledge/plan/../../AGENTS.md", "/etc/passwd", "knowledge/spec/L1.md", "knowledge/plan/out.md", "knowledge/plan/x.txt"]) {
       assert.equal((await get(s.port, `/api/plan?file=${encodeURIComponent(bad)}`)).status, 400, bad);
     }
     assert.equal((await get(s.port, "/api/plan?file=knowledge/plan/none.md")).status, 404);
     // Another site that resolves its name to 127.0.0.1 gets nothing (DNS rebinding).
     assert.equal((await get(s.port, "/api/plans", "evil.example:80")).status, 403);
+  } finally {
+    await s.close();
+  }
+});
+
+test("an issue group is in the stage of the plan on its branch while HEAD does not hold the branch, then of the plan on main", async () => {
+  const root = mkdtempSync(join(tmpdir(), "plan-view-"));
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "pipe" }).toString();
+  const write = (path: string, text: string) => {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), text);
+  };
+  git("init", "-q", "-b", "main");
+  git("config", "user.email", "t@example.com");
+  git("config", "user.name", "t");
+  const beta = plan(
+    [
+      { code: "A1", label: "A1 agent：导出 #7", group: "I7" },
+      { code: "A2", label: "A2 agent：上传", group: "P1" },
+      { code: "O1", kind: "O", label: "O1 owner：发版" },
+    ],
+    [
+      ["A1", "A2"],
+      ["A2", "O1"],
+    ],
+    {
+      kind: "milestone",
+      groups: [
+        { code: "I7", kind: "issue", title: "导出", issue: 7, nodes: ["A1"], line: 5, endLine: 8, from: "P2" },
+        { code: "P1", kind: "proposal", title: "上传", issue: null, nodes: ["A2"], line: 9, endLine: 11, from: null },
+      ],
+    },
+  );
+  write("knowledge/plan/beta.md", JSON.stringify(beta));
+  git("add", ".");
+  git("commit", "-qm", "beta");
+  // The spec step of #7, on its branch: the spec review waits.
+  git("checkout", "-qb", "issues/7");
+  write("knowledge/plan/7-export.md", JSON.stringify(v1));
+  git("add", ".");
+  git("commit", "-qm", "plan of #7");
+  git("checkout", "-q", "main");
+  const s = await startPlanView({ cwd: root, port: 0, parse });
+  const stages = async () => JSON.parse((await get(s.port, `/api/plan?file=${encodeURIComponent("knowledge/plan/beta.md")}`)).body).view.stages;
+  try {
+    let st = await stages();
+    assert.deepEqual(st.nodes, { A1: "spec", A2: "proposal", O1: "release" });
+    assert.deepEqual(
+      { ...st.groups.I7, issue: { ...st.groups.I7.issue, next: st.groups.I7.issue.next.map((n: { code: string }) => n.code) } },
+      { stage: "spec", openBefore: [], issue: { issue: 7, where: "branch", file: "knowledge/plan/7-export.md", ref: "issues/7", stage: "spec", next: ["A1", "D1"] } },
+    );
+    assert.deepEqual(st.groups.P1, { stage: "proposal", issue: null, openBefore: ["A1"] });
+    // The merge: the plan is on main, and its spec step is done.
+    git("merge", "-q", "issues/7");
+    write("knowledge/plan/7-export.md", JSON.stringify({ ...v1, nodes: v1.nodes.map((n) => (["A1", "D1", "O1"].includes(n.code) ? { ...n, done: true } : n)) }));
+    st = await stages();
+    assert.equal(st.groups.I7.issue.where, "worktree");
+    assert.equal(st.groups.I7.stage, "implement");
+    assert.equal(st.nodes.A1, "implement");
   } finally {
     await s.close();
   }

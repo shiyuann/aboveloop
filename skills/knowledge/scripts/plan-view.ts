@@ -9,7 +9,8 @@
  * - `/api/plans`: each plan file, with its kind, title and counts.
  * - `/api/plan?file=knowledge/plan/<name>.md`: the Plan (`plan-graph.ts`), the findings of `checkPlan` (and of
  *   `checkTransition` for an uncommitted change), the activity (`plan-activity.ts`) and the view: the state of
- *   each node, the critical path and the decisions. A file outside `knowledge/plan/` gets 400.
+ *   each node, the critical path, the decisions, the stage of each node and group (`plan-stages.ts`, with the
+ *   plans of its issues from git) and the layout (`plan-layout.ts`). A file outside `knowledge/plan/` gets 400.
  * - `/api/events`: Server-Sent Events. `changed` with `{"file": …}` when a file under `knowledge/plan/` changes
  *   on disk, and with `{"file": null, "head": …}` when `git rev-parse HEAD` changes.
  * - POST `/api/propose`, `/api/unpropose`, `/api/regroup`, `/api/open-issue`: edit the groups of a milestone plan
@@ -31,6 +32,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { type ActivityEvent, answerOf, plain, planActivity, type PlanVersion } from "./plan-activity.ts";
 import type { Plan, PlanFinding } from "./plan-graph.ts";
+import { planLayout } from "./plan-layout.ts";
+import { finished, type IssueFact, issueStage, type NodeState, nextNodes, nodeStates, openBefore, planStages } from "./plan-stages.ts";
 
 export type ParseFn = (text: string, file: string) => Plan;
 export type CheckFn = (plan: Plan, text: string) => PlanFinding[];
@@ -97,33 +100,7 @@ const HISTORY_CAP = 200;
 // The view model: pure, from a Plan.
 // ---------------------------------------------------------------------------
 
-/**
- * - done, dropped: the node is ✅, or struck through.
- * - ready (能做): every incoming node is done or dropped, and an agent does it (not D, O, E).
- * - waits (等): every incoming node is done or dropped, and it is a D, an O or an E: the owner or an event moves.
- * - blocked: an incoming node is open.
- */
-export type NodeState = "done" | "dropped" | "ready" | "waits" | "blocked";
-
-const finished = (n: { done: boolean; dropped: boolean }) => n.done || n.dropped;
-const OUTSIDE = new Set(["D", "O", "E"]);
-
-export function nodeStates(plan: Plan): Record<string, NodeState> {
-  const byCode = new Map(plan.nodes.map((n) => [n.code, n]));
-  const states: Record<string, NodeState> = {};
-  for (const n of plan.nodes) {
-    if (n.dropped) states[n.code] = "dropped";
-    else if (n.done) states[n.code] = "done";
-    else {
-      const open = plan.edges.filter((e) => e.to === n.code).some((e) => {
-        const p = byCode.get(e.from);
-        return p ? !finished(p) : false;
-      });
-      states[n.code] = open ? "blocked" : OUTSIDE.has(n.kind) ? "waits" : "ready";
-    }
-  }
-  return states;
-}
+export { type NodeState, nodeStates } from "./plan-stages.ts";
 
 /** The longest path of open nodes (by count) that ends at a node with no open node after it. The first in
  *  chart order wins a tie. Empty when no node is open. */
@@ -236,6 +213,26 @@ export function githubRepoOf(url: string): string | null {
   return m ? `${m[1]}/${m[2]}` : null;
 }
 
+/** The view of a plan: what the page draws. Each part is worked out here, not in the page. */
+export function viewOf(plan: Plan, activity: ActivityEvent[], issues: Map<number, IssueFact> = new Map()) {
+  const stages = planStages(plan, issues);
+  const layout = planLayout({
+    nodes: plan.nodes.map((n) => n.code),
+    edges: plan.edges,
+    stages: stages.stages,
+    stageOf: stages.nodes,
+    groupOf: Object.fromEntries(plan.nodes.map((n) => [n.code, n.group ?? null])),
+  });
+  return {
+    states: nodeStates(plan),
+    critical: criticalPath(plan),
+    decisions: decisionsOf(plan, activity),
+    openBefore: openBefore(plan),
+    stages,
+    layout,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // git
 // ---------------------------------------------------------------------------
@@ -305,6 +302,84 @@ function readBlobs(root: string, blobs: string[]): Promise<Map<string, string>> 
     });
     p.stdin.end(`${blobs.join("\n")}\n`);
   });
+}
+
+/** The issues that a plan names: its issue groups, and `I<N>` in `index.md`. */
+export function issuesOf(plan: Plan): number[] {
+  const out = new Set<number>();
+  for (const g of plan.groups ?? []) if (g.kind === "issue" && g.issue !== null) out.add(g.issue);
+  for (const n of plan.nodes) {
+    const m = n.kind === "I" ? /^I(\d+)$/.exec(n.code) : null;
+    if (m) out.add(Number(m[1]));
+  }
+  return [...out];
+}
+
+/** The newest branch `issues/<N>` of each issue, local or remote-tracking, that `HEAD` does not hold yet, and each
+ *  other one as `merged`. It reads only the refs of the repo: it does not fetch. */
+async function issueBranches(root: string): Promise<Map<number, { ref: string; sha: string; merged: boolean }>> {
+  let out: string;
+  try {
+    out = await git(root, ["for-each-ref", "--format=%(refname)%09%(objectname)%09%(committerdate:unix)", "refs/heads/issues/", "refs/remotes/"]);
+  } catch {
+    return new Map();
+  }
+  const newest = new Map<number, { ref: string; sha: string; time: number }>();
+  for (const line of out.split("\n")) {
+    const [ref, sha, time] = line.split("\t");
+    const m = /^refs\/(?:heads|remotes\/[^/]+)\/issues\/(\d+)$/.exec(ref ?? "");
+    if (!m || !sha) continue;
+    const n = Number(m[1]), old = newest.get(n);
+    if (!old || Number(time) > old.time) newest.set(n, { ref: ref.replace(/^refs\/(heads|remotes)\//, ""), sha, time: Number(time) });
+  }
+  const res = new Map<number, { ref: string; sha: string; merged: boolean }>();
+  for (const [n, b] of newest) {
+    const merged = await git(root, ["merge-base", "--is-ancestor", b.sha, "HEAD"]).then(() => true, () => false);
+    res.set(n, { ref: b.ref, sha: b.sha, merged });
+  }
+  return res;
+}
+
+/**
+ * What git tells of each issue that the plan names (`IssueFact`): its plan, and the stage of that plan. The plan
+ * on the branch `issues/<N>` comes first while `HEAD` does not hold that branch (the work is not merged); else the
+ * plan in the checkout; else the plan on a merged branch. An issue with no plan has no fact.
+ */
+async function issueFacts(root: string, plan: Plan, parse: ParseFn): Promise<Map<number, IssueFact>> {
+  const facts = new Map<number, IssueFact>();
+  const nums = issuesOf(plan);
+  if (!nums.length) return facts;
+  const dir = resolve(root, PLAN_DIR);
+  const names = existsSync(dir) ? readdirSync(dir) : [];
+  const branches = await issueBranches(root);
+  const fact = (n: number, p: Plan, where: IssueFact["where"], file: string, ref: string | null, merged: boolean): IssueFact => ({
+    issue: n,
+    where,
+    file,
+    ref,
+    stage: issueStage(p, merged),
+    next: nextNodes(p),
+  });
+  for (const n of nums) {
+    const local = names.find((f) => f.startsWith(`${n}-`) && f.endsWith(".md"));
+    const b = branches.get(n);
+    try {
+      if (local && (!b || b.merged)) {
+        const file = `${PLAN_DIR}/${local}`;
+        facts.set(n, fact(n, parse(readFileSync(resolve(dir, local), "utf8"), file), "worktree", file, null, true));
+        continue;
+      }
+      if (!b) continue;
+      const tree = await git(root, ["ls-tree", "--name-only", b.sha, `${PLAN_DIR}/`]);
+      const file = tree.split("\n").find((f) => f.startsWith(`${PLAN_DIR}/${n}-`) && f.endsWith(".md"));
+      if (!file) continue;
+      const text = await git(root, ["show", `${b.sha}:${file}`]);
+      facts.set(n, fact(n, parse(text, file), "branch", file, b.ref, b.merged));
+    } catch {
+      // A plan that git or the parser cannot read gives no fact: the issue shows as explore.
+    }
+  }
+  return facts;
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +479,7 @@ export async function startPlanView(o: PlanViewOptions): Promise<PlanViewServer>
       plan,
       findings: findings.map((f) => ({ ...f, node: findingNode(plan, f.where) })),
       activity,
-      view: { states: nodeStates(plan), critical: criticalPath(plan), decisions: decisionsOf(plan, activity) },
+      view: viewOf(plan, activity, await issueFacts(root, plan, o.parse)),
     };
   }
 
