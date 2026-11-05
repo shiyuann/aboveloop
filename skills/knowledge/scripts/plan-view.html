@@ -62,7 +62,7 @@ h2.sub { margin: 0; font-size: 11px; font-weight: 650; color: var(--muted); text
 .step.current { color: var(--text); font-weight: 650; border-color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: 0 0 0 1px var(--c); }
 .counts { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); }
 .counts b { color: var(--text); font-weight: 600; }
-#graphWrap { position: relative; height: clamp(340px, 62vh, 900px); min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+#graphWrap { position: relative; height: 340px; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 #graph { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 #graph.panning { cursor: grabbing; }
 .tools { position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; gap: 3px; }
@@ -71,7 +71,8 @@ h2.sub { margin: 0; font-size: 11px; font-weight: 650; color: var(--muted); text
 .tools button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 /* A text tooltip, on hover and on focus. */
 [data-tip]:hover::after, [data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; padding: 3px 7px; border-radius: 5px; background: var(--text); color: var(--bg); font-size: 11px; white-space: nowrap; pointer-events: none; }
-.legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 4px 8px; border-radius: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: -4px; padding: 0 4px; color: var(--muted); font-size: 11px; }
+.pager { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; border: 2px solid var(--line); }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 /* The detail of the selected node or area: over the right 30% of the graph. */
@@ -87,7 +88,6 @@ h2.sub { margin: 0; font-size: 11px; font-weight: 650; color: var(--muted); text
 @media (max-width: 800px) {
   main { padding: 8px; }
   #progress { flex-direction: column; gap: 4px; }
-  #graphWrap { height: 58vh; }
   .search input { width: 140px; }
   #detail:not([hidden]) ~ .tools { right: 8px; top: auto; bottom: 8px; }
 }
@@ -215,10 +215,10 @@ a { color: var(--link); }
       <button id="fit" data-tip="Fit the graph (0)" aria-label="Fit the graph">⤢</button>
       <button id="follow" data-tip="Follow new activity (f)" aria-label="Follow new activity" aria-pressed="true">◎</button>
     </div>
-    <div class="legend" id="legend"></div>
     <div class="pickbar" id="pickbar" hidden></div>
     <div class="empty" id="empty" hidden></div>
   </section>
+  <div class="legend" id="legend"></div>
   <section id="below" aria-label="Activity">
     <nav class="tabs" id="tabs">
       <button data-tab="activity">Activity</button>
@@ -234,6 +234,10 @@ const $ = (id) => document.getElementById(id);
 const SVG = "http://www.w3.org/2000/svg";
 /** The size of a node: the server's layout gives it with each plan. */
 let W = 172, H = 66;
+/** The strip at the top of the frame where the tools are: Fit leaves it free. */
+const TOOLS_H = 34;
+/** The rows of a page of Activity. */
+const PAGE = 25;
 const KIND = { A: "agent", D: "owner decides", O: "owner step", E: "outside event", M: "milestone", I: "issue", X: "other" };
 const FILTERS = {
   all: null,
@@ -247,7 +251,7 @@ const FILTERS = {
 
 const S = {
   plans: [], file: null, data: null, pos: new Map(), size: { w: 0, h: 0 },
-  tf: { x: 0, y: 0, k: 1 }, follow: true, all: false, sel: null, tab: "activity", filter: "all",
+  tf: { x: 0, y: 0, k: 1 }, follow: true, all: false, sel: null, tab: "activity", filter: "all", page: 0,
   seen: new Set(), search: { q: "", list: [], at: -1 },
   picked: new Set(), selGroup: null, confirm: null, msg: null,
 };
@@ -396,6 +400,7 @@ function renderGraph() {
   const states = view.states, crit = new Set(view.critical);
   const critEdges = new Set(view.critical.slice(1).map((c, i) => `${view.critical[i]}>${c}`));
   S.pos = new Map(Object.entries(L.nodes)); S.size = { w: L.width, h: L.height };
+  sizeFrame();
   const bandsG = $("bands"), edgesG = $("edges"), nodesG = $("nodes"), groupsG = $("groups");
   bandsG.replaceChildren(); edgesG.replaceChildren(); nodesG.replaceChildren(); groupsG.replaceChildren();
   // One band for each stage of the life of an issue; the stage of the plan now is marked.
@@ -501,11 +506,21 @@ function zoomBy(f, px, py, animate = true) {
   const t = { x: px - gx * k, y: py - gy * k, k };
   if (animate) animateTo(t, 180); else { anim++; S.tf = t; apply(); }
 }
+/** The height of the graph's frame: the graph at the scale that fits its width, between 260 px (420 px while a
+ *  detail is open over it) and 70% of the window. */
+function sizeFrame() {
+  const wrap = $("graphWrap");
+  if (!S.size.w || !wrap.clientWidth) return;
+  const k = Math.min((wrap.clientWidth - 24) / S.size.w, 1.2);
+  const least = S.sel || S.selGroup || S.msg ? 420 : 260;
+  wrap.style.height = `${Math.round(Math.min(Math.max(least, S.size.h * k + 24 + TOOLS_H), Math.max(least, innerHeight * 0.7)))}px`;
+}
+window.addEventListener("resize", () => { if (S.data) { sizeFrame(); fitView(false); } });
 function fitView(animate = true) {
-  const r = svg.getBoundingClientRect(), pad = 40;
+  const r = svg.getBoundingClientRect(), pad = 24;
   if (!S.size.w || !r.width) return;
-  const k = clampK(Math.min((r.width - pad) / S.size.w, (r.height - pad) / S.size.h, 1.4));
-  const t = { k, x: (r.width - S.size.w * k) / 2, y: (r.height - S.size.h * k) / 2 };
+  const k = clampK(Math.min((r.width - pad) / S.size.w, (r.height - pad - TOOLS_H) / S.size.h, 1.4));
+  const t = { k, x: (r.width - S.size.w * k) / 2, y: TOOLS_H + (r.height - TOOLS_H - S.size.h * k) / 2 };
   if (animate) animateTo(t); else { S.tf = t; apply(); }
 }
 function centerOn(code, animate = true) {
@@ -629,7 +644,7 @@ function runSearch() {
 /** At most 5 matches under the search box; a click moves the view to that node and opens it. */
 function renderResults() {
   const ul = $("results");
-  const list = document.activeElement === $("search") ? S.search.list.slice(0, 5) : [];
+  const list = document.activeElement === $("search") && !S.search.closed ? S.search.list.slice(0, 5) : [];
   ul.hidden = list.length === 0;
   ul.replaceChildren(...list.map((c, i) => el("li", { class: i === S.search.at ? "on" : "", title: node(c)?.label ?? c,
     onmousedown: (e) => { e.preventDefault(); S.search.at = i; focusNode(c); $("search").blur(); } },
@@ -644,6 +659,8 @@ $("search").addEventListener("keydown", (e) => {
   const n = S.search.list.length;
   S.search.at = (S.search.at + (e.shiftKey ? n - 1 : 1)) % n;
   $("searchCount").textContent = `${S.search.at + 1}/${n}`;
+  // Enter takes the next match and closes the list; typing opens it again.
+  S.search.closed = true;
   renderResults();
   focusNode(S.search.list[S.search.at]);
 });
@@ -658,13 +675,15 @@ $("tabs").addEventListener("click", (e) => { const t = e.target.closest("button"
 /** Select a node: its detail opens over the graph, and the tabs show its rows. */
 function select(code) {
   S.sel = code;
+  S.page = 0;
   S.selGroup = null; S.confirm = null;
   if (!code) S.msg = null;
   paintMarks();
   renderPane();
 }
 function selectGroup(code) {
-  S.selGroup = code; S.sel = null; S.confirm = null;
+  S.selGroup = code;
+  S.page = 0; S.sel = null; S.confirm = null;
   paintMarks();
   renderPane();
 }
@@ -729,7 +748,7 @@ function eventItem(e) {
 
 function renderActivity(pane) {
   const chips = el("div", { class: "chips" }, Object.keys(FILTERS).map((f) =>
-    el("button", { class: `chip${S.filter === f ? " on" : ""}`, onclick: () => { S.filter = f; renderPane(); } }, f)));
+    el("button", { class: `chip${S.filter === f ? " on" : ""}`, onclick: () => { S.filter = f; S.page = 0; renderPane(); } }, f)));
   const kinds = FILTERS[S.filter];
   // A selected node or area: only its rows.
   const g = group(S.selGroup);
@@ -738,7 +757,15 @@ function renderActivity(pane) {
   const only = mine ? el("div", { class: "only" }, `Only the rows of ${S.sel ?? groupName(g)}`, el("button", { class: "btn", onclick: () => select(null) }, "Show all")) : null;
   if (only) pane.append(only);
   pane.prepend(chips);
-  pane.append(list.length ? el("ul", { class: "events" }, list.slice(0, 400).map(eventItem)) : el("p", { class: "muted" }, "No events."));
+  // Pages of 25 rows.
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  S.page = Math.min(S.page, pages - 1);
+  const from = S.page * PAGE;
+  pane.append(list.length ? el("ul", { class: "events" }, list.slice(from, from + PAGE).map(eventItem)) : el("p", { class: "muted" }, "No events."));
+  if (pages > 1) pane.append(el("div", { class: "pager" },
+    el("button", { class: "btn", disabled: S.page === 0 ? "" : null, onclick: () => { S.page--; renderPane(); } }, "‹ Previous"),
+    el("span", {}, `${from + 1}–${Math.min(from + PAGE, list.length)} of ${list.length}`),
+    el("button", { class: "btn", disabled: S.page === pages - 1 ? "" : null, onclick: () => { S.page++; renderPane(); } }, "Next ›")));
 }
 
 function renderDecisions(pane) {
@@ -859,6 +886,7 @@ function renderPane() {
   const pane = $("pane"), detail = $("detailBody");
   pane.replaceChildren(); detail.replaceChildren();
   $("detail").hidden = !S.data || !(S.sel || S.selGroup || S.msg);
+  sizeFrame();
   if (!S.data) return;
   ({ activity: renderActivity, decisions: renderDecisions, findings: renderFindings })[S.tab](pane);
   if (!$("detail").hidden) renderNode(detail);
@@ -919,7 +947,7 @@ async function loadPlan(file, live = false) {
   S.file = file; S.data = data;
   $("plan").value = file;
   if (location.hash !== `#file=${encodeURIComponent(file)}`) history.replaceState(null, "", `#file=${encodeURIComponent(file)}`);
-  if (first) { S.sel = null; S.selGroup = null; S.picked = new Set(); S.seen = new Set(); S.msg = null; }
+  if (first) { S.sel = null; S.selGroup = null; S.picked = new Set(); S.seen = new Set(); S.msg = null; S.page = 0; }
   if (S.sel && !node(S.sel)) S.sel = null;
   if (S.selGroup && !group(S.selGroup)) S.selGroup = null;
   for (const c of S.picked) if (!node(c)) S.picked.delete(c);
