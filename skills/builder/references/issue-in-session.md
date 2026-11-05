@@ -16,7 +16,7 @@ flowchart TB
 
 1. explore：开 issue，当场 explore，照 [explore.md](explore.md) 第 7 节。issue 照 `entry` 的 [issue 模板](../../entry/references/issue-template.md)开。
 2. spec：owner 说做，照 [spec.md](spec.md) 做，会话的部分在它最后一节（开分支 `issues/<N>` 和 draft PR，在分支上写 plan、改 spec，deep-verify，带 owner 过 D 和 O，spec review）。spec 和 plan 怎么改，见第 2 节。deep-verify 的形式（多人或单人）照 `knowledge` 的 [deep-verify-knowledge.md](../../knowledge/references/deep-verify-knowledge.md) 的「两种形式」。牵连的页放进同一个 commit。deep-verify 是 spec review 前面的固定节点，在后台跑，不先问 owner（spec.md 6.2）。
-3. implement：spec 那一步结束（重的：最后一次 spec review；轻的：短 plan），照 [implement.md](implement.md) 在同一个分支上写代码，从它的第 0 步起，不再等 owner 叫执行。
+3. implement：spec 那一步结束（重的：最后一次 spec review；轻的：短 plan），照 [implement.md](implement.md) 在同一个分支上写代码，从它的第 0 步起，不再等 owner 叫执行。之后 spec 要改意思：回到 spec 那一步，加一次新的 spec review（implement.md 6.4）。
 4. 做完，照 [implement.md](implement.md) 的第 7–8 步收尾、写 PR 正文、过检查、标成 ready，回复里链过去。owner merge，就是 code sign-off。
 
 - 新功能、改画面、改数据、修 bug、改规矩，都这样做。例外：已经开了的、清楚的小 issue，owner 在场时当场做完，不写 plan、不跑 deep-verify：照 [implement.md](implement.md) 第 9 节「当场做完的小事」。

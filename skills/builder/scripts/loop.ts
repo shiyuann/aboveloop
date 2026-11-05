@@ -203,6 +203,10 @@ export function recheck(input: { issue: Issue; prs: Pr[]; branches?: string[] })
   return take(issue.number, linkedPrs(prs).get(issue.number) ?? [], input.branches ?? []) ?? { stop: "linked" };
 }
 
+const LATE_SPEC_TITLE = "Spec changed after the spec step";
+const LATE_SPEC = /^spec changed after the spec step\b/i;
+const SPEC_PAGE = /\bL[123]-|knowledge\/spec\//;
+
 /** Text under a `## <name>` or `### <name>` heading, up to the next heading of any level. */
 function section(body: string, name: RegExp): string | null {
   const lines = body.split(/\r?\n/);
@@ -216,6 +220,9 @@ function section(body: string, name: RegExp): string | null {
 /**
  * Problems in a PR body; empty means it passes. The parts: `Fixes #<issue>`,
  * and under `## Evidence` the tests that ran and what was not verified.
+ * `## Spec changed after the spec step` is optional (CI lists there an L3 change
+ * after the spec step, L2-loop-builder §7); when present, it is not empty and
+ * names a spec page.
  * `refs`: the form for a closed issue (a node after a release, L2-loop-builder §5):
  * `Refs #<issue>`, and no closing keyword for it.
  */
@@ -232,6 +239,10 @@ export function checkPrBody(body: string, issue: number, opts: { refs?: boolean 
   if (!tests) problems.push('no "### Tests" with the commands that ran and their results');
   const notVerified = section(body, /^not verified\b/i);
   if (!notVerified) problems.push('no "### Not verified" with what nobody ran or examined (write "Nothing" if so)');
+
+  const late = section(body, LATE_SPEC);
+  if (late === "") problems.push(`"## ${LATE_SPEC_TITLE}" is empty: list each change (page and section, what changed, why), or remove the heading`);
+  else if (late !== null && !SPEC_PAGE.test(late)) problems.push(`"## ${LATE_SPEC_TITLE}" names no spec page (L1-, L2-, L3- or knowledge/spec/)`);
 
   return problems;
 }

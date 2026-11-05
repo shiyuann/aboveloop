@@ -63,7 +63,7 @@ The rules of this section are in `scripts/loop.ts`. `select.ts` and `recheck.ts`
 The steps of the implement step, and the differences of the modes, are in `implement.md` (its §9). This section holds the code that the step uses.
 
 - `recheck.ts --session` is the session form of the script: it selects nothing, and it prints the branch and the draft of one issue (`sessionCheck` in `scripts/loop.ts`). Its words are in `implement.md` §0.
-- `scripts/check-pr-body.ts --repo` examines the PR body (`checkPrBody` in `scripts/loop.ts`): `Fixes #N`, the Tests of the evidence, and Not verified. It reads the issue itself: a closed issue takes the form of a `Refs #N` PR.
+- `scripts/check-pr-body.ts --repo` examines the PR body (`checkPrBody` in `scripts/loop.ts`): `Fixes #N`, the Tests of the evidence, and Not verified. The heading "Spec changed after the spec step" is optional ([L2-loop-builder §7](L2-loop-builder.md#7-the-owners-part)); when it is present, it must not be empty and must name a spec page (`L1-`, `L2-`, `L3-` or `knowledge/spec/`). The script cannot know if the spec changed after the spec step, so it does not ask for the heading. It reads the issue itself: a closed issue takes the form of a `Refs #N` PR.
 
 ### 1.4 The spec step in both modes
 
