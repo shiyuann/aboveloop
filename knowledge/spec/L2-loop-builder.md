@@ -458,6 +458,16 @@ Each PR that an agent opens tells who opened it, in three labels. They describe 
   - Why: Pine Yan, a partner of the owner (a 1:1 of 2026-10-22): "if the spec changed without review, that is not allowed; it cannot go on". The owner (2026-11-03): "in general, if we need to go back in progress stages because we need new decisions to be made, we need to re-sign off (with a new sign-off node if the previous one is already closed.)"
   - Why no D to build again: the owner (2026-11-03): "if a decision is made to change the spec and the new spec is signed off, why do we need a separate decision node for rebuilding?"
   - Why: before this rule, a session could change the spec in the implement step with no new review. The owner then saw the change only in the PR, mixed with the code. In CI, the owner reads the whole spec diff at the merge, but cannot see which part came after the code started.
+- **Other work when the spec goes back.** A node or an issue can send the spec back (the item above). Then the agent examines each other running node of the issue, and each other open issue of the same milestone plan, whose work depends on the changed sections. For each, the agent selects one of three:
+  1. Continue.
+  2. Wait: the work stops at a pushed commit, and continues after the new spec review.
+  3. Continue, and add a repair node after the new spec review.
+  - The agent writes each selection in the D that sends the work back, as "Agent decided". With no D, it writes them in the new spec review. The owner can change any selection in the same answer.
+  - Fixed rule: no PR merges work that was built on a spec that a new spec review replaced.
+  - In CI, the implement run does its nodes one after the other, so no other node runs. The delta nodes (the item above) cover the done nodes.
+  - The steps are in `implement.md` 6.4.
+  - Why: the owner (2026-11-03): "let's see projects just as a way to group nodes. so whether the sibling projects' build should stop and wait depends on the situation, whether they are affected ... If the repair is minor or the build is already progressed a lot, then for the sake of not wasting efforts, we can continue and append a repair." The plan of a milestone groups issues as a project groups nodes.
+  - Why the agent selects: the size of the repair and the progress of the work are facts, so the agent decides (`entry`, 「拍板只问方向」). The owner sees each selection in the D, and can change it there.
 - **The sign-off of the code** is the merge of the PR, in both modes.
 - **The owner's points of all loops** (the start, each D and O, the last spec review and the merge of an issue too) are in one table in [L2-loops §4](L2-loops.md#4-how-the-loops-talk-to-the-owner).
 

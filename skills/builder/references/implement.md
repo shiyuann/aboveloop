@@ -324,6 +324,19 @@ spec 那一步结束了（会话：重的是最后一次 spec review，轻的是
   3. PR 正文在「Spec changed after the spec step」下面列出这次改动：哪几节、改了什么、为什么（第 8 步）。
 - merge 就签了这次改动（L2-loop-builder §6）。列出来，owner 才看得出哪些是写代码以后改的。
 
+**别的活：接着做、等，还是接着做再补。** 一个节点或一个 issue 把 spec 送回去时（会话），agent 查两种活：这个 issue 别的在跑的节点；同一份里程碑的 plan 里别的开着的 issue。它们的活依据改了的那几节，就给每一个定一种：
+
+1. 接着做。
+2. 等：照 6.3 的「做到一半要停」，commit、push 到节点的分支，停下；新的 spec review ✅ 了再接着做。
+3. 接着做，新的 spec review ✅ 以后加一个修的节点（`plan.ts add --after <新的 O>`）。
+
+- 修小、或活已经做了一大半：多半选 3，不白扔做过的活。改动把这份活的前提推翻了：选 2。
+- 每一条写进送回 spec 的那个 D，写成「Agent decided (日期)：<节点或 #N>：<哪一种>，because …」。没有 D，写进新的 spec review 那一节。owner 在同一个回答里可以改任何一条（[spec.md](spec.md) 6.4）。
+- 别的 issue：在它下面写一条评论，链到这个 D，写清选的是哪一种。做那个 issue 的会话照它做：等，或在它的 plan 里加修的节点。
+- 定死的规矩：照被换掉的 spec 做的活，哪个 PR 都不 merge。修的节点没做完，那个 PR 不标成 ready。
+- CI 一轮只有一个 agent，节点一个接一个，没有别的在跑的节点：只照上面加补的节点。
+- 为什么：[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#7-the-owners-part) 的「Other work when the spec goes back」。
+
 ### 7. 收尾
 
 agent 的节点都做完了（发版的 O 和它后面的不算），照这个顺序收尾。两种模式一样；不一样的地方，写在那一条里：

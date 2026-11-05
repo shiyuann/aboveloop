@@ -192,6 +192,7 @@ owner 说做（[L2-loop-builder §7](../../../knowledge/spec/L2-loop-builder.md#
 4. owner 加了要求，或一个选项都不要：当场改 spec 和 plan，或找新的选项，再问。
 5. owner 说以后再定：留着 ⬜，接着做不被它挡的节点。
 6. owner 跳过这个 D：说跳过，或对它说「你定」「继续」。取推荐的那一个选项。在 plan 的这个 D 里打勾，写「Agent decided (日期)：推荐的那一个，因为这个 D 被跳过了」（`plan.ts answer --skipped`）。D 在跳过之前就写全了（背景、问题、例子、选项），owner 以后读得到，也改得了（[L2-plugin §4](../../../knowledge/spec/L2-plugin.md#4-what-is-in-the-repo)）。
+7. 把 spec 送回来的 D（[implement.md](implement.md) 6.4）：背景里列出 agent 给别的活定的每一条（接着做、等、接着做再补）。owner 在同一个回答里改了哪一条，就照 owner 的做，写进那一条。
 
 - **离开项目配置的默认，先问 D。** owner 没说过这件事，agent 又要不照项目配置的默认做：先写一个 D，带 owner 拍板。owner 在这个会话里说过怎么做，就照 owner 的话做，不问；plan 把它写成 owner 的决定，带原话。CI 没有 owner，照项目配置做。
 - **因为 owner 的话不做的节点，留在 plan 里划掉（`plan.ts drop`），** 带 owner 的原话（`knowledge` 的 [spec-and-plan.md](../../knowledge/references/spec-and-plan.md)「不做了的划掉，不删」）。
