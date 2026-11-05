@@ -14,6 +14,7 @@
   --accent: #d1452f; --link: #2559c7; --ok: #2f8f4e; --wait: #c98a06; --bad: #c43333;
   --kA: #e3ecfb; --kD: #efe4fa; --kO: #fcebd9; --kE: #dcf2ef; --kM: #fbe1ec; --kI: #e6e8ef; --kX: #ececea;
   --sA: #4b78d0; --sD: #8d55c9; --sO: #d0782a; --sE: #2e9a8c; --sM: #c9497e; --sI: #5b6584; --sX: #8a8a85;
+  --st-proposal: #0f8f86; --st-explore: #7a716b; --st-spec: #5b5ee6; --st-implement: #c47a06; --st-merge: #b02fc0; --st-release: #5c9410;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -22,6 +23,7 @@
     --accent: #ff7a5c; --link: #8fb0ff; --ok: #5cc27e; --wait: #f0b43a; --bad: #ff6b6b;
     --kA: #1f2a3d; --kD: #2c2238; --kO: #392a1b; --kE: #183330; --kM: #3a1f2b; --kI: #262934; --kX: #2a2a28;
     --sA: #7ea3ee; --sD: #b98ae9; --sO: #eda15b; --sE: #5cc8b8; --sM: #ea7dab; --sI: #9aa3c4; --sX: #a6a6a0;
+    --st-proposal: #3cc9bd; --st-explore: #b2a9a2; --st-spec: #9b9dff; --st-implement: #f0b23e; --st-merge: #e07cf0; --st-release: #9ccf4f;
     color-scheme: dark;
   }
 }
@@ -33,7 +35,10 @@ button, select, input { font: inherit; color: inherit; }
 header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
 header select { max-width: 340px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
 .now { flex: 1 1 260px; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.search { display: flex; align-items: center; gap: 4px; }
+.search { position: relative; display: flex; align-items: center; gap: 4px; }
+.results { position: absolute; top: 100%; left: 0; z-index: 5; margin: 4px 0 0; padding: 4px; list-style: none; width: 320px; max-width: 80vw; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.results li { padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.results li:hover, .results li.on { background: var(--soft); }
 .search input { width: 200px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
 .search small { color: var(--muted); min-width: 3em; }
 .badge { border: 1px solid var(--line); background: var(--soft); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
@@ -45,10 +50,12 @@ main { flex: 1; display: flex; min-height: 0; }
 #graphWrap { position: relative; flex: 1; min-width: 0; overflow: hidden; }
 #graph { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 #graph.panning { cursor: grabbing; }
-.tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
-.tools button { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 15px; line-height: 1; }
-.tools button:hover { background: var(--soft); }
+.tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 3px; }
+.tools button { position: relative; width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); cursor: pointer; font-size: 13px; line-height: 1; }
+.tools button:hover { background: color-mix(in srgb, var(--link) 18%, var(--soft)); }
 .tools button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* A text tooltip, on hover and on focus. */
+[data-tip]:hover::after, [data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; padding: 3px 7px; border-radius: 5px; background: var(--text); color: var(--bg); font-size: 11px; white-space: nowrap; pointer-events: none; }
 .legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 4px 8px; border-radius: 6px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; border: 2px solid var(--line); }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
@@ -65,36 +72,45 @@ aside { width: 400px; max-width: 45vw; border-left: 1px solid var(--line); backg
 }
 
 /* graph */
+.band rect { fill: color-mix(in srgb, var(--c) 7%, transparent); stroke: color-mix(in srgb, var(--c) 22%, transparent); }
+.band text { font-size: 11px; fill: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.band .sw { fill: var(--c); stroke: none; }
+.band.current text { fill: var(--text); font-weight: 750; }
+.band.current rect { stroke: var(--c); stroke-width: 1.5; }
 .edge { fill: none; stroke: var(--muted); stroke-width: 1.3; opacity: .7; }
 .edge.crit { stroke: var(--accent); stroke-width: 2.4; opacity: 1; }
 .edge.hl { stroke: var(--link); stroke-width: 2.2; opacity: 1; }
 .edge.dim { opacity: .2; }
-.node .box { stroke-width: 1.5; rx: 8; }
+.edge.past { stroke-dasharray: 4 3; opacity: .45; }
+.node .box { stroke-width: 1.5; rx: 8; fill: var(--panel); stroke: var(--line); }
 .node .card { height: 100%; padding: 5px 8px; overflow: hidden; font-size: 11.5px; line-height: 1.3; color: var(--text); cursor: pointer; }
 .node .code { font-weight: 650; font-size: 11px; display: flex; gap: 6px; align-items: center; }
-.node .st { font-weight: 500; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.node .st { font-weight: 500; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node .tag { font-size: 9.5px; font-weight: 700; padding: 0 5px; border-radius: 4px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
 .node .label { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .node.done .card { opacity: .55; }
+.node.done .box { stroke: color-mix(in srgb, var(--ok) 45%, var(--line)); fill: color-mix(in srgb, var(--ok) 6%, var(--panel)); }
 .node.dropped .card { opacity: .45; text-decoration: line-through; }
 .node.dropped .box { stroke-dasharray: 4 3; }
 .node.ready .box { stroke: var(--ok); stroke-width: 2; }
-.node.waits .box { stroke: var(--wait); stroke-width: 3; filter: drop-shadow(0 0 5px var(--wait)); }
+.node.waits .box { stroke: var(--wait); stroke-width: 3; animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { filter: drop-shadow(0 0 1px var(--wait)); } 50% { filter: drop-shadow(0 0 7px var(--wait)); } }
+@media (prefers-reduced-motion: reduce) { .node.waits .box { animation: none; filter: drop-shadow(0 0 4px var(--wait)); } }
 .node.crit .box { stroke: var(--accent); stroke-width: 2.5; }
 .node.waits.crit .box { stroke: var(--wait); }
 .node.match .box { stroke: var(--link); stroke-width: 3; stroke-dasharray: none; }
 .node.sel .box { stroke: var(--link); stroke-width: 3.5; }
 .node.faded { opacity: .35; }
-.node.pulse .box { animation: pulse 1.6s ease-out 2; }
-@keyframes pulse { 0% { stroke: var(--accent); stroke-width: 8; } 100% { stroke-width: 1.5; } }
 
-.group .gline { fill: none; stroke: var(--link); stroke-width: 3; stroke-dasharray: 7 4; }
-.group .gbox { fill: color-mix(in srgb, var(--link) 7%, var(--bg)); stroke: none; }
+.group .gline { fill: none; stroke: var(--link); stroke-width: 2.5; stroke-dasharray: 7 4; }
 .group.issue .gline { stroke: var(--ok); stroke-dasharray: none; }
-.group.issue .gbox { fill: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
-.group.sel .gline { stroke-width: 6; }
-.group .glabel { font-size: 11px; font-weight: 650; color: var(--link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 8px; cursor: pointer; }
-.group.issue .glabel { color: var(--ok); }
-.group .glabel a { color: inherit; }
+.group.sel .gline { stroke-width: 5; }
+.group .glabel { font-size: 11px; line-height: 15px; padding: 2px 8px; cursor: pointer; }
+.group .glabel div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.group .gname { font-weight: 650; color: var(--link); }
+.group.issue .gname { color: var(--ok); }
+.group .gname a { color: inherit; }
+.group .gstate { color: var(--muted); font-size: 10.5px; }
 .node.picked .box { stroke: var(--link); stroke-width: 3; stroke-dasharray: 5 3; }
 .lasso { fill: color-mix(in srgb, var(--link) 12%, transparent); stroke: var(--link); stroke-dasharray: 4 3; }
 .pickbar { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; box-shadow: 0 2px 10px rgba(0,0,0,.15); max-width: calc(100% - 20px); }
@@ -155,7 +171,7 @@ a { color: var(--link); }
 <header>
   <select id="plan" aria-label="Plan"></select>
   <div class="now" id="now"></div>
-  <div class="search"><input id="search" type="search" placeholder="Search (/)" aria-label="Search nodes"><small id="searchCount"></small></div>
+  <div class="search"><input id="search" type="search" placeholder="Search (/)" aria-label="Search nodes" autocomplete="off"><small id="searchCount"></small><ul class="results" id="results" hidden></ul></div>
   <button class="badge" id="findings" title="Findings of the plan check">0</button>
   <span class="live" id="live" title="Live updates"></span>
 </header>
@@ -167,13 +183,14 @@ a { color: var(--link); }
         <marker id="arrowCrit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
         <marker id="arrowHl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--link)"/></marker>
       </defs>
-      <g id="viewport"><g id="groups"></g><g id="edges"></g><g id="nodes"></g><rect id="lasso" class="lasso" style="display:none"></rect></g>
+      <g id="viewport"><g id="bands"></g><g id="groups"></g><g id="edges"></g><g id="nodes"></g><rect id="lasso" class="lasso" style="display:none"></rect></g>
     </svg>
     <div class="tools">
-      <button id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
-      <button id="zoomOut" title="Zoom out (-)" aria-label="Zoom out">−</button>
-      <button id="fit" title="Fit the graph (0)" aria-label="Fit the graph">⤢</button>
-      <button id="follow" title="Follow new activity (f)" aria-label="Follow new activity" aria-pressed="true">◎</button>
+      <button id="allArrows" data-tip="All arrows (a)" aria-label="All arrows" aria-pressed="false">⇉</button>
+      <button id="zoomIn" data-tip="Zoom in (+)" aria-label="Zoom in">+</button>
+      <button id="zoomOut" data-tip="Zoom out (-)" aria-label="Zoom out">−</button>
+      <button id="fit" data-tip="Fit the graph (0)" aria-label="Fit the graph">⤢</button>
+      <button id="follow" data-tip="Follow new activity (f)" aria-label="Follow new activity" aria-pressed="true">◎</button>
     </div>
     <div class="legend" id="legend"></div>
     <div class="pickbar" id="pickbar" hidden></div>
@@ -193,7 +210,8 @@ a { color: var(--link); }
 "use strict";
 const $ = (id) => document.getElementById(id);
 const SVG = "http://www.w3.org/2000/svg";
-const W = 172, H = 66, GX = 60, GY = 18;
+/** The size of a node: the server's layout gives it with each plan. */
+let W = 172, H = 66;
 const KIND = { A: "agent", D: "owner decides", O: "owner step", E: "outside event", M: "milestone", I: "issue", X: "other" };
 const FILTERS = {
   all: null,
@@ -207,7 +225,7 @@ const FILTERS = {
 
 const S = {
   plans: [], file: null, data: null, pos: new Map(), size: { w: 0, h: 0 },
-  tf: { x: 0, y: 0, k: 1 }, follow: true, sel: null, tab: "activity", filter: "all",
+  tf: { x: 0, y: 0, k: 1 }, follow: true, all: false, sel: null, tab: "activity", filter: "all",
   seen: new Set(), search: { q: "", list: [], at: -1 },
   picked: new Set(), selGroup: null, confirm: null, msg: null,
 };
@@ -306,152 +324,109 @@ function md(src) {
   return out;
 }
 
-// ---------- layout: layers by the longest path, order by barycenter, rows pulled to their neighbours ----------
-function layout(plan) {
-  const codes = plan.nodes.map((n) => n.code), has = new Set(codes);
-  const edges = plan.edges.filter((e) => has.has(e.from) && has.has(e.to) && e.from !== e.to);
-  const succ = new Map(codes.map((c) => [c, []])), pred = new Map(codes.map((c) => [c, []]));
-  // Break loops: a back edge of a depth-first walk in chart order does not set a layer.
-  const mark = new Map(), back = new Set();
-  const out = new Map(codes.map((c) => [c, []]));
-  for (const e of edges) out.get(e.from).push(e.to);
-  const dfs = (c) => {
-    mark.set(c, 1);
-    for (const s of out.get(c)) {
-      if (mark.get(s) === 1) back.add(`${c}>${s}`); else if (!mark.get(s)) dfs(s);
-    }
-    mark.set(c, 2);
-  };
-  codes.forEach((c) => mark.get(c) || dfs(c));
-  for (const e of edges) if (!back.has(`${e.from}>${e.to}`)) { succ.get(e.from).push(e.to); pred.get(e.to).push(e.from); }
-  const layer = new Map(), indeg = new Map(codes.map((c) => [c, pred.get(c).length]));
-  const queue = codes.filter((c) => indeg.get(c) === 0);
-  queue.forEach((c) => layer.set(c, 0));
-  while (queue.length) {
-    const c = queue.shift();
-    for (const s of succ.get(c)) {
-      layer.set(s, Math.max(layer.get(s) ?? 0, layer.get(c) + 1));
-      indeg.set(s, indeg.get(s) - 1);
-      if (indeg.get(s) === 0) queue.push(s);
-    }
+// ---------- the graph: the server gives the stage bands, the boxes, the nodes and the routes ----------
+/** A route as a path, with small round corners. */
+function routePath(pts) {
+  if (!pts.length) return "";
+  let d = `M${pts[0].x},${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i], q = pts[i + 1], o = pts[i - 1];
+    if (!q) { d += ` L${p.x},${p.y}`; break; }
+    const r = Math.min(6, Math.hypot(p.x - o.x, p.y - o.y) / 2, Math.hypot(q.x - p.x, q.y - p.y) / 2);
+    const a = { x: p.x - Math.sign(p.x - o.x) * r, y: p.y - Math.sign(p.y - o.y) * r };
+    const b = { x: p.x + Math.sign(q.x - p.x) * r, y: p.y + Math.sign(q.y - p.y) * r };
+    d += ` L${a.x},${a.y} Q${p.x},${p.y} ${b.x},${b.y}`;
   }
-  // Pull each node right, next to the first node that waits on it (a D or an E sits by what it blocks).
-  const topo = [...codes].sort((a, z) => (layer.get(a) ?? 0) - (layer.get(z) ?? 0));
-  for (const c of topo.reverse()) {
-    const s = succ.get(c);
-    if (s.length) layer.set(c, Math.max(layer.get(c) ?? 0, Math.min(...s.map((x) => layer.get(x) ?? 0)) - 1));
-  }
-  const L = Math.max(0, ...layer.values()) + 1;
-  const layers = Array.from({ length: L }, () => []);
-  codes.forEach((c) => layers[layer.get(c) ?? 0].push(c));
-  const index = new Map();
-  const reindex = () => layers.forEach((l) => l.forEach((c, i) => index.set(c, i)));
-  reindex();
-  const bary = (c, nb) => { const ns = nb.get(c); return ns.length ? ns.reduce((s, x) => s + index.get(x), 0) / ns.length : index.get(c); };
-  // The nodes of one group sit next to each other in their layer: a group is one block, at the mean of its nodes.
-  const groupOf = new Map();
-  for (const g of plan.groups ?? []) for (const c of g.nodes) groupOf.set(c, g.code);
-  const order = (l, key) => {
-    const keys = new Map(layers[l].map((c) => [c, key(c)]));
-    const blocks = new Map();
-    for (const c of layers[l]) {
-      const k = groupOf.get(c) ?? c, b = blocks.get(k) ?? { codes: [], sum: 0 };
-      b.codes.push(c); b.sum += keys.get(c); blocks.set(k, b);
-    }
-    layers[l] = [...blocks.values()].sort((a, z) => a.sum / a.codes.length - z.sum / z.codes.length).flatMap((b) => b.codes);
-    layers[l].forEach((c, i) => index.set(c, i));
-  };
-  for (let l = 0; l < L; l++) order(l, (c) => index.get(c));
-  for (let it = 0; it < 6; it++) {
-    for (let l = 1; l < L; l++) order(l, (c) => bary(c, pred));
-    for (let l = L - 2; l >= 0; l--) order(l, (c) => bary(c, succ));
-  }
-  // Between two nodes of different groups: room for the box of each, and for the label above the lower one.
-  const gap = (a, b) => H + GY + (groupOf.get(a) !== groupOf.get(b) ? (groupOf.get(a) ? 14 : 0) + (groupOf.get(b) ? 30 : 0) : 0);
-  const y = new Map();
-  layers.forEach((l) => { let at = 0; l.forEach((c, i) => { if (i) at += gap(l[i - 1], c); y.set(c, at); }); });
-  const place = (l, nb) => {
-    const want = l.map((c) => { const ns = nb(c); return ns.length ? ns.reduce((s, x) => s + y.get(x), 0) / ns.length : y.get(c); });
-    for (let i = l.length - 2; i >= 0; i--) want[i] = Math.min(want[i], want[i + 1] - gap(l[i], l[i + 1]));
-    for (let i = 1; i < l.length; i++) want[i] = Math.max(want[i], want[i - 1] + gap(l[i - 1], l[i]));
-    l.forEach((c, i) => y.set(c, want[i]));
-  };
-  for (let it = 0; it < 4; it++) {
-    for (let l = 1; l < L; l++) place(layers[l], (c) => pred.get(c));
-    for (let l = L - 2; l >= 0; l--) place(layers[l], (c) => succ.get(c));
-  }
-  const minY = Math.min(0, ...y.values()) - 30;
-  const pos = new Map();
-  for (const c of codes) pos.set(c, { x: (layer.get(c) ?? 0) * (W + GX), y: y.get(c) - minY });
-  const maxY = Math.max(0, ...[...pos.values()].map((p) => p.y)) + H;
-  return { pos, size: { w: L * (W + GX) - GX, h: maxY } };
+  return d;
+}
+const codesOfVia = (via) => [...new Set(via.flatMap((v) => v.split(">")))];
+
+/** The two lines at the top of a box: the group and its count; then where it is and what it waits on. */
+function boxLabel(gr, box) {
+  const { view, plan } = S.data;
+  const gs = view.stages.groups[gr.code];
+  const members = plan.nodes.filter((n) => gr.nodes.includes(n.code));
+  const done = members.filter((n) => n.done || n.dropped).length;
+  const name = el("div", { class: "gname" });
+  if (gr.kind === "issue") {
+    name.append(S.data.github ? el("a", { href: `https://github.com/${S.data.github}/issues/${gr.issue}`, target: "_blank", rel: "noopener noreferrer" }, `#${gr.issue}`) : `#${gr.issue}`, ` ${gr.title}`);
+  } else name.append(`${gr.code} proposal · ${gr.title}`);
+  if (!box.first) return el("div", { class: "glabel", title: gr.title }, name);
+  name.append(` · ${done}/${members.length}`);
+  return el("div", { class: "glabel", title: gr.title }, name, el("div", { class: "gstate" }, groupState(gr, gs)));
+}
+/** Where a group is in the life of an issue, in words. */
+function groupState(gr, gs) {
+  const parts = [];
+  if (gr.kind === "proposal") parts.push("not an issue yet");
+  else if (gs.issue) {
+    const next = gs.issue.next.map((n) => `#${gs.issue.issue} ${n.code} ${n.state}`).join(", ");
+    parts.push(`its plan: ${gs.issue.stage}${next ? ` · next ${next}` : ""}${gs.issue.where === "branch" ? ` · on ${gs.issue.ref}` : ""}`);
+  } else parts.push(gs.stage === "release" ? "closed" : "no plan yet");
+  if (gs.openBefore.length) parts.push(`blocked by ${gs.openBefore.join(" ")}`);
+  return parts.join(" · ");
 }
 
-// ---------- the graph ----------
 function renderGraph() {
   const { plan, view } = S.data;
+  const L = view.layout;
+  W = L.node.width; H = L.node.height;
   const states = view.states, crit = new Set(view.critical);
   const critEdges = new Set(view.critical.slice(1).map((c, i) => `${view.critical[i]}>${c}`));
-  const { pos, size } = layout(plan);
-  S.pos = pos; S.size = size;
-  const edgesG = $("edges"), nodesG = $("nodes"), groupsG = $("groups");
-  edgesG.replaceChildren(); nodesG.replaceChildren(); groupsG.replaceChildren();
-  for (const gr of plan.groups ?? []) {
-    // One piece for each layer (the nodes of a group are next to each other in a layer), and a bridge between
-    // the pieces of two next layers: so the box never covers a node of another group.
-    const cols = new Map();
-    for (const c of gr.nodes) { const p = pos.get(c); if (p) cols.set(p.x, [...(cols.get(p.x) ?? []), p]); }
-    if (!cols.size) continue;
-    const pieces = [...cols.entries()].sort((a, z) => a[0] - z[0]).map(([x, ps]) => ({
-      x0: x - 12, x1: x + W + 12, y0: Math.min(...ps.map((p) => p.y)) - 12, y1: Math.max(...ps.map((p) => p.y)) + H + 12,
-    }));
-    const rects = [], heads = [pieces[0]];
-    pieces.forEach((p, i) => {
-      const q = pieces[i + 1];
-      if (!q) return;
-      if (q.x0 - p.x1 > GX) { heads.push(q); return; } // not the next layer: a piece of its own, with its label
-      const top = Math.max(p.y0, q.y0), bottom = Math.min(p.y1, q.y1);
-      rects.push(top < bottom ? { x0: p.x1 - 1, x1: q.x0 + 1, y0: top, y1: bottom }
-        : { x0: p.x1 - 1, x1: q.x0 + 1, y0: Math.min(p.y1, q.y1) - 24, y1: Math.max(p.y0, q.y0) + 24 });
-    });
-    for (const h of heads) h.y0 -= 18; // room for the label
-    const all = [...pieces, ...rects];
+  S.pos = new Map(Object.entries(L.nodes)); S.size = { w: L.width, h: L.height };
+  const bandsG = $("bands"), edgesG = $("edges"), nodesG = $("nodes"), groupsG = $("groups");
+  bandsG.replaceChildren(); edgesG.replaceChildren(); nodesG.replaceChildren(); groupsG.replaceChildren();
+  // One band for each stage of the life of an issue; the stage of the plan now is marked.
+  for (const b of L.bands) {
+    const g = svgEl("g", { class: `band${b.stage === view.stages.current ? " current" : ""}`, style: `--c: var(--st-${b.stage})` });
+    g.append(svgEl("rect", { x: b.x, y: 0, width: b.width, height: L.height, rx: 8 }));
+    g.append(svgEl("rect", { class: "sw", x: b.x + 10, y: 11, width: 9, height: 9, rx: 2 }));
+    const t = svgEl("text", { x: b.x + 24, y: 19.5 });
+    t.textContent = b.stage === view.stages.current ? `${b.stage} · now` : b.stage;
+    g.append(t);
+    bandsG.append(g);
+  }
+  // A box for each group in each band where it has nodes.
+  const groupOf = new Map((plan.groups ?? []).map((g) => [g.code, g]));
+  for (const box of L.boxes) {
+    const gr = groupOf.get(box.group);
+    if (!gr) continue;
     const g = svgEl("g", { class: `group ${gr.kind}` });
     g.dataset.group = gr.code;
-    // The outline of the union: each piece with a wide stroke, then each piece filled over the strokes inside.
-    const box = (r, cls) => svgEl("rect", { class: cls, x: r.x0, y: r.y0, width: r.x1 - r.x0, height: r.y1 - r.y0, rx: rects.includes(r) ? 3 : 12 });
-    for (const r of all) g.append(box(r, "gline"));
-    for (const r of all) g.append(box(r, "gbox"));
-    for (const h of heads) {
-    const fo = svgEl("foreignObject", { x: h.x0, y: h.y0, width: h.x1 - h.x0, height: 24 });
-    const label = el("div", { class: "glabel", title: gr.title });
-    if (gr.kind === "issue") {
-      label.append(S.data.github ? el("a", { href: `https://github.com/${S.data.github}/issues/${gr.issue}`, target: "_blank", rel: "noopener noreferrer" }, `#${gr.issue}`) : `#${gr.issue}`, ` ${gr.title}`);
-    } else label.append(`${gr.code} proposal · ${gr.title}`);
-    fo.append(label);
+    g.append(svgEl("rect", { class: "gline", x: box.x, y: box.y, width: box.width, height: box.height, rx: 10 }));
+    const fo = svgEl("foreignObject", { x: box.x, y: box.y, width: box.width, height: 34 });
+    fo.append(boxLabel(gr, box));
     g.append(fo);
-    }
     groupsG.append(g);
   }
-  for (const e of plan.edges) {
-    const a = pos.get(e.from), b = pos.get(e.to);
-    if (!a || !b) continue;
-    const x1 = a.x + W, y1 = a.y + H / 2, x2 = b.x, y2 = b.y + H / 2;
-    const dx = Math.max(40, Math.abs(x2 - x1) / 2);
-    const c = critEdges.has(`${e.from}>${e.to}`);
-    const p = svgEl("path", { d: `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2 - 2},${y2}`, class: `edge${c ? " crit" : ""}`, "marker-end": `url(#${c ? "arrowCrit" : "arrow"})` });
-    p.dataset.from = e.from; p.dataset.to = e.to;
+  // The arrows: to the ports of the boxes, or each one from node to node.
+  for (const e of S.all ? L.all : L.edges) {
+    const c = e.via.some((v) => critEdges.has(v));
+    // An arrow out of finished work only: it holds nothing now.
+    const past = e.via.every((v) => ["done", "dropped"].includes(states[v.split(">")[0]]));
+    const p = svgEl("path", { d: routePath(e.points), class: `edge${c ? " crit" : ""}${past ? " past" : ""}`, "marker-end": `url(#${c ? "arrowCrit" : "arrow"})` });
+    p.dataset.codes = codesOfVia(e.via).join(" ");
+    if (e.via.length > 1 || e.from.startsWith("box:") || e.to.startsWith("box:")) {
+      const t = svgEl("title");
+      t.textContent = e.via.map((v) => v.replace(">", " → ")).join(", ");
+      p.append(t);
+    }
     edgesG.append(p);
   }
   for (const n of plan.nodes) {
-    const p = pos.get(n.code);
-    const g = svgEl("g", { transform: `translate(${p.x},${p.y})`, class: `node ${states[n.code]}${crit.has(n.code) ? " crit" : ""}` });
+    const p = S.pos.get(n.code);
+    if (!p) continue;
+    const st = states[n.code], stage = view.stages.nodes[n.code];
+    const g = svgEl("g", { transform: `translate(${p.x},${p.y})`, class: `node ${st}${crit.has(n.code) ? " crit" : ""}` });
     g.dataset.code = n.code;
-    g.append(svgEl("rect", { class: "box", width: W, height: H, rx: 8, fill: `var(--k${n.kind in KIND ? n.kind : "X"})`, stroke: `var(--s${n.kind in KIND ? n.kind : "X"})` }));
+    g.append(svgEl("rect", { class: "box", width: W, height: H, rx: 8 }));
     const fo = svgEl("foreignObject", { width: W, height: H });
     const rest = n.label.startsWith(n.code) ? n.label.slice(n.code.length) : "";
     const label = /^[\s:：]/.test(rest) ? rest.replace(/^[\s:：]+/, "") : n.label;
-    fo.append(el("div", { class: "card", title: n.label }, el("div", { class: "code" }, n.code, el("span", { class: "st" }, states[n.code])), el("div", { class: "label" }, label)));
+    const before = view.openBefore[n.code] ?? [];
+    const status = st === "blocked" && before.length ? `blocked by ${before.join(" ")}` : st;
+    const tag = el("span", { class: "tag", style: `--c: var(--st-${stage})`, title: `${KIND[n.kind] ?? n.kind} · stage: ${stage}` }, n.kind);
+    fo.append(el("div", { class: "card", title: `${n.label}\n${status} · stage: ${stage}` }, el("div", { class: "code" }, n.code, el("span", { class: "st" }, status), tag), el("div", { class: "label" }, label)));
     g.append(fo);
     nodesG.append(g);
   }
@@ -473,19 +448,11 @@ function paintMarks() {
   for (const g of $("groups").children) g.classList.toggle("sel", g.dataset.group === S.selGroup);
   renderPickbar();
   for (const p of $("edges").children) {
-    const on = S.sel && (p.dataset.from === S.sel || p.dataset.to === S.sel);
+    const on = S.sel && p.dataset.codes.split(" ").includes(S.sel);
     p.classList.toggle("hl", !!on);
     p.classList.toggle("dim", !!S.sel && !on);
     if (on) p.setAttribute("marker-end", "url(#arrowHl)");
     else p.setAttribute("marker-end", p.classList.contains("crit") ? "url(#arrowCrit)" : "url(#arrow)");
-  }
-}
-
-function pulse(codes) {
-  for (const g of $("nodes").children) {
-    if (!codes.includes(g.dataset.code)) continue;
-    g.classList.remove("pulse"); void g.getBBox(); g.classList.add("pulse");
-    setTimeout(() => g.classList.remove("pulse"), 3400);
   }
 }
 
@@ -530,10 +497,10 @@ function setFollow(on) {
   S.follow = on;
   $("follow").classList.toggle("on", on);
   $("follow").setAttribute("aria-pressed", String(on));
-  $("follow").title = `Follow new activity (${on ? "on" : "off"}) (f)`;
+  $("follow").dataset.tip = `Follow new activity (${on ? "on" : "off"}) (f)`;
 }
-/** A move by hand pauses following (deepdev graph-follow semantics). */
-const manual = () => S.follow && setFollow(false);
+// Only the Follow button turns Follow off: a pan, a zoom, Fit, a search or a click leaves it on (owner, on
+// deepdev: 「the auto-focus button for the graph should only be canceled when users click on it」).
 /** The node of the newest event that is still in the graph. */
 const newestNode = (events) => events.find((e) => e.node && S.pos.has(e.node))?.node ?? null;
 
@@ -562,7 +529,7 @@ svg.addEventListener("pointermove", (e) => {
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   if (!drag.moved && Math.hypot(dx, dy) < 4) return;
-  if (!drag.moved) { drag.moved = true; manual(); anim++; svg.classList.add("panning"); }
+  if (!drag.moved) { drag.moved = true; anim++; svg.classList.add("panning"); }
   S.tf.x = drag.tx + dx; S.tf.y = drag.ty + dy; apply();
 });
 svg.addEventListener("pointerup", () => {
@@ -582,34 +549,39 @@ svg.addEventListener("pointerup", () => {
 });
 svg.addEventListener("wheel", (e) => {
   e.preventDefault();
-  manual();
   const r = svg.getBoundingClientRect();
   zoomBy(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top, false);
 }, { passive: false });
-$("zoomIn").onclick = () => { manual(); zoomBy(1.25); };
-$("zoomOut").onclick = () => { manual(); zoomBy(0.8); };
-$("fit").onclick = () => { manual(); fitView(); };
+$("zoomIn").onclick = () => zoomBy(1.25);
+$("zoomOut").onclick = () => zoomBy(0.8);
+$("fit").onclick = () => fitView();
 $("follow").onclick = () => {
   setFollow(!S.follow);
-  if (S.follow && S.data) { const c = newestNode(S.data.activity); if (c) { centerOn(c); pulse([c]); } }
+  if (S.follow && S.data) { const c = newestNode(S.data.activity); if (c) centerOn(c); }
+};
+$("allArrows").onclick = () => {
+  S.all = !S.all;
+  $("allArrows").classList.toggle("on", S.all);
+  $("allArrows").setAttribute("aria-pressed", String(S.all));
+  $("allArrows").dataset.tip = S.all ? "Arrows to the boxes (a)" : "All arrows (a)";
+  if (S.data) renderGraph();
 };
 document.addEventListener("keydown", (e) => {
   if ((e.target instanceof Element && e.target.closest("input, select, textarea")) || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === "+" || e.key === "=") { manual(); zoomBy(1.25); }
-  else if (e.key === "-" || e.key === "_") { manual(); zoomBy(0.8); }
-  else if (e.key === "0") { manual(); fitView(); }
+  if (e.key === "+" || e.key === "=") zoomBy(1.25);
+  else if (e.key === "-" || e.key === "_") zoomBy(0.8);
+  else if (e.key === "0") fitView();
   else if (e.key === "f") $("follow").click();
+  else if (e.key === "a") $("allArrows").click();
   else if (e.key === "/") { e.preventDefault(); $("search").focus(); }
   else if (e.key === "Escape") select(null);
 });
 
-/** Focus a node by a click in a panel: centre it, pulse it, select it. A move by hand. */
-function focusNode(code) {
+/** Focus a node by a click in a panel or a search result: centre it and select it. */
+function focusNode(code, openTab = false) {
   if (!code || !S.pos.has(code)) return;
-  manual();
   centerOn(code);
-  pulse([code]);
-  select(code, false);
+  select(code, openTab);
 }
 
 // ---------- search ----------
@@ -627,15 +599,28 @@ function runSearch() {
     S.search.list = S.data.plan.nodes.map((n, at) => ({ n, at, r: rank(n) })).filter((m) => m.r >= 0).sort((a, b) => a.r - b.r || a.at - b.at).map((m) => m.n.code);
   }
   $("searchCount").textContent = q ? String(S.search.list.length) : "";
+  renderResults();
   paintMarks();
 }
+/** At most 5 matches under the search box; a click moves the view to that node and opens it. */
+function renderResults() {
+  const ul = $("results");
+  const list = document.activeElement === $("search") ? S.search.list.slice(0, 5) : [];
+  ul.hidden = list.length === 0;
+  ul.replaceChildren(...list.map((c, i) => el("li", { class: i === S.search.at ? "on" : "", title: node(c)?.label ?? c,
+    onmousedown: (e) => { e.preventDefault(); S.search.at = i; focusNode(c, true); $("search").blur(); } },
+    el("strong", {}, c), " ", (node(c)?.label ?? "").replace(/^\S+\s*/, ""))));
+}
 $("search").addEventListener("input", runSearch);
+$("search").addEventListener("focus", renderResults);
+$("search").addEventListener("blur", () => { $("results").hidden = true; });
 $("search").addEventListener("keydown", (e) => {
   if (e.key === "Escape") { $("search").value = ""; runSearch(); $("search").blur(); return; }
   if (e.key !== "Enter" || !S.search.list.length) return;
   const n = S.search.list.length;
   S.search.at = (S.search.at + (e.shiftKey ? n - 1 : 1)) % n;
   $("searchCount").textContent = `${S.search.at + 1}/${n}`;
+  renderResults();
   focusNode(S.search.list[S.search.at]);
 });
 
@@ -790,9 +775,17 @@ function renderGroup(pane, g) {
   const link = g.kind === "issue" && S.data.github
     ? el("a", { href: `https://github.com/${S.data.github}/issues/${g.issue}`, target: "_blank", rel: "noopener noreferrer" }, `#${g.issue} on GitHub`) : null;
   const timeline = S.data.activity.filter((e) => e.group === g.code);
+  const gs = S.data.view.stages.groups[g.code];
+  const fact = gs?.issue;
+  const plan = fact ? el("div", {},
+    "Its plan: ", fact.where === "worktree" ? el("a", { href: `#file=${encodeURIComponent(fact.file)}` }, fact.file) : `${fact.file} on ${fact.ref}`,
+    " · stage ", el("span", { class: "state", style: `color:var(--st-${fact.stage})` }, fact.stage),
+    fact.next.length ? el("ul", { class: "plain" }, fact.next.map((x) => el("li", {}, el("span", { class: `state ${x.state}` }, x.state), " ", x.label))) : null) : null;
   pane.append(el("div", { class: "detail" },
-    el("h3", {}, groupName(g), " ", el("span", { class: "state" }, g.kind)),
+    el("h3", {}, groupName(g), " ", el("span", { class: "state" }, g.kind), gs ? [" · stage ", el("span", { class: "state", style: `color:var(--st-${gs.stage})` }, gs.stage)] : null),
     el("div", {}, g.title), link,
+    gs && !fact ? el("div", { class: "muted" }, groupState(g, gs)) : null, plan,
+    gs?.openBefore.length ? [el("h5", {}, "Blocked by"), el("div", { class: "chips" }, gs.openBefore.map(codeChip))] : null,
     el("h5", {}, `Nodes · ${g.nodes.length}`), members,
     actions, confirm,
     !S.data.editable ? el("div", { class: "muted" }, "Editing is off.") : null,
@@ -807,6 +800,7 @@ function renderNode(pane) {
   const n = node(S.sel);
   if (!n) return pane.append(el("p", { class: "muted" }, "Click a node or a group in the graph. Shift-drag or shift-click selects nodes for a proposal."));
   const st = S.data.view.states[n.code];
+  const stage = S.data.view.stages.nodes[n.code];
   const crit = S.data.view.critical.includes(n.code);
   const ins = S.data.plan.edges.filter((e) => e.to === n.code).map((e) => e.from);
   const outs = S.data.plan.edges.filter((e) => e.from === n.code).map((e) => e.to);
@@ -816,10 +810,10 @@ function renderNode(pane) {
   const timeline = S.data.activity.filter((e) => e.node === n.code || e.from === n.code);
   pane.append(el("div", { class: "detail" },
     el("h3", {}, n.code),
-    el("div", { class: "sub" }, KIND[n.kind] ?? n.kind, " · ", el("span", { class: `state ${st}` }, st), crit ? el("span", { class: "state", style: "color:var(--accent)" }, " critical path") : null),
+    el("div", { class: "sub" }, KIND[n.kind] ?? n.kind, " · ", el("span", { class: `state ${st}` }, st), " · stage ", el("span", { class: "state", style: `color:var(--st-${stage})` }, stage), crit ? el("span", { class: "state", style: "color:var(--accent)" }, " critical path") : null),
     el("div", {}, n.label),
     n.group && group(n.group) ? el("div", { class: "chips", style: "margin-top:6px" }, el("span", { class: "chip", onclick: () => selectGroup(n.group) }, `in ${groupName(group(n.group))}`)) : null,
-    el("h5", {}, "Waits on"), ins.length ? el("div", { class: "chips" }, ins.map(codeChip)) : el("div", { class: "muted" }, "—"),
+    el("h5", {}, "Waits on"), ins.length ? el("ul", { class: "plain" }, ins.map((c) => el("li", {}, codeChip(c), " ", el("span", { class: `state ${S.data.view.states[c]}` }, S.data.view.states[c]), " ", node(c)?.label.replace(/^\S+\s*/, "") ?? ""))) : el("div", { class: "muted" }, "—"),
     el("h5", {}, "Next"), outs.length ? el("div", { class: "chips" }, outs.map(codeChip)) : el("div", { class: "muted" }, "—"),
     n.items.length ? el("h5", {}, `Items · ${checked}/${n.items.length} checked`) : null,
     n.section ? [el("h5", {}, `Section · line ${n.section.line}`), body] : el("p", { class: "muted" }, "No section."),
@@ -849,7 +843,7 @@ $("findings").onclick = () => setTab("findings");
 $("legend").innerHTML = [["ready", "var(--ok)"], ["waits", "var(--wait)"], ["blocked", "var(--line)"], ["critical path", "var(--accent)"], ["done", "var(--muted)"]]
   .map(([t, c]) => `<span><i style="border-color:${c}"></i>${t}</span>`).join("") +
   `<span><i style="border-color:var(--link);border-style:dashed"></i>proposal</span><span><i style="border-color:var(--ok)"></i>issue</span>` +
-  Object.entries(KIND).filter(([k]) => k !== "X").map(([k, t]) => `<span><i style="background:var(--k${k});border-color:var(--s${k})"></i>${k} ${t}</span>`).join("");
+  `<span>${Object.entries(KIND).filter(([k]) => k !== "X").map(([k, t]) => `${k} ${t}`).join(" · ")}</span>`;
 
 // ---------- data ----------
 async function loadPlans() {
@@ -886,11 +880,10 @@ async function loadPlan(file, live = false) {
   if (first) {
     fitView(false);
     const c = S.follow && newestNode(data.activity);
-    if (c) { centerOn(c, false); pulse([c]); }
+    if (c) centerOn(c, false);
     return;
   }
   if (!live || !fresh.length) return;
-  pulse([...new Set(fresh.map((e) => e.node).filter(Boolean))].slice(0, 8));
   const c = S.follow && newestNode(fresh);
   if (c) centerOn(c);
 }
