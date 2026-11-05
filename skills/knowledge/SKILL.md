@@ -52,6 +52,7 @@ owner 说一样东西应该怎么样（纠正 agent、对产品提意见、说�
 - 它只听 127.0.0.1。只读的时候，它不往外发东西，不改文件。
 - 节点的状态（能做、等、挡着）、关键路径、活动和拍板，都由脚本从 plan 和 git 算出来，页面只画。
 - 图按 issue 的一生分栏（proposal、explore、spec、implement、merge、release）：每个节点在哪一栏，由它的种类、箭头和它的 issue 的 plan 算出来，不写进 plan。里程碑的 plan 里，每个圈（proposal、开成的 issue）是它那一栏里的一个框，框头写它到哪了、等什么。
+- 页面从上到下：plan 和进度（各栏的链，现在在哪一栏，几个做完、等谁、能做哪些），图，再是 Activity、Decisions、Findings 三个标签页。点一个节点或框，它的详情盖在图的右边 30%，Activity 只列它的行。
 - 在里程碑的 plan 里，owner 能在页面上改分组。每一样都走 `plan.ts` 的同一个函数和同一道检查（[spec-and-plan.md](references/spec-and-plan.md) 的「图的部分用 `plan.ts` 改」）：
   - 按住 shift 拖一个框，或按住 shift 点节点，选中几个 A 节点；写标题，点 Propose：圈成一个 proposal。
   - 点一个 proposal：看它的节点，加、减节点，删掉这个 proposal。
