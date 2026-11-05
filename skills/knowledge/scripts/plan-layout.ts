@@ -14,8 +14,12 @@
  * - **Arrows.** `edges`: an arrow that crosses the edge of a box ends at the box: it leaves from the middle of the
  *   right side, and enters at the middle of the left side. Arrows that then have the same two ends are one, and
  *   `via` names the arrows of the plan that it stands for. `all`: each arrow from node to node.
- * - **No arrow runs through a node.** An arrow goes up or down only in the gap between two layers of a cell, or in
- *   the side padding of a band; it goes along a level only where no node is.
+ * - **No arrow runs through a node or a name** (of a band, or of a box). An arrow goes up or down only in the gap
+ *   between two layers of a cell, or in the side padding of a band; it goes along a level only where no node and no
+ *   name is.
+ * - **No two arrows run on one line.** Each arrow between two cells has a track of its own in the padding of each
+ *   band; then `separate` moves each part that lies on another arrow to the nearest free track. Two arrows share a
+ *   line only out of one start or into one end.
  */
 
 export interface Point {
@@ -82,22 +86,27 @@ export interface PlanLayout {
 export const NODE_W = 172;
 export const NODE_H = 66;
 /** Between two layers of a cell. */
-const LAYER_GAP = 44;
+const LAYER_GAP = 48;
 /** Between two nodes of a layer. */
 const ROW_GAP = 16;
-/** The side padding of a band: the arrows go up and down in it. */
-const BAND_PAD = 22;
+/** The least side padding of a band. The arrows go up and down in it, each on a track of its own: a band has a
+ *  track on its left for each arrow into it, and on its right for each arrow out of it. */
+const BAND_PAD = 30;
 /** The empty space between two bands. */
 const BAND_GAP = 24;
 /** The width of a band with no node: room for its name. */
 const EMPTY_BAND = 84;
-/** Room above the cells for the names of the bands. */
-export const BAND_HEAD = 30;
+/** Room above the cells: the names of the bands, then a level for arrows. */
+export const BAND_HEAD = 50;
+/** The names of the bands: no arrow goes through them. */
+export const BAND_NAME = 28;
 /** Inside a box: the padding, and the room for its two lines of name and state. */
-const BOX_PAD = 10;
+const BOX_PAD = 14;
 export const BOX_HEAD = 34;
 /** Between two cells of a band. */
-const CELL_GAP = 18;
+const CELL_GAP = 30;
+/** The space between two arrows that run side by side. */
+const TRACK = 6;
 
 export const BOX_PREFIX = "box:";
 
@@ -223,12 +232,24 @@ export function planLayout(input: LayoutInput): PlanLayout {
   const cells = [...byId.values()].sort((a, z) => a.stage - z.stage || rank(a) - rank(z));
   for (const cell of cells) Object.assign(cell, layCell(cell.codes, input.edges));
   // The bands, side by side.
+  // The arrows between two cells, for the tracks in the paddings of the bands.
+  const cellOfCode = new Map<string, Cell>();
+  for (const cell of cells) for (const c of cell.codes) cellOfCode.set(c, cell);
+  const ins = stages.map(() => 0), outs = stages.map(() => 0);
+  for (const e of input.edges) {
+    const a = cellOfCode.get(e.from), b = cellOfCode.get(e.to);
+    if (!a || !b || a === b) continue;
+    outs[a.stage]++;
+    ins[b.stage]++;
+  }
+  const padL = ins.map((n) => Math.max(BAND_PAD, TRACK * (n + 2)));
+  const padR = outs.map((n) => Math.max(BAND_PAD, TRACK * (n + 2)));
   const outer = (c: Cell) => ({ w: c.width + (c.group ? 2 * BOX_PAD : 0), h: c.height + (c.group ? BOX_HEAD + 2 * BOX_PAD : 0) });
   const bands: LayoutBand[] = [];
   let x = 0;
   stages.forEach((stage, i) => {
     const mine = cells.filter((c) => c.stage === i);
-    const width = mine.length ? Math.max(...mine.map((c) => outer(c).w)) + 2 * BAND_PAD : EMPTY_BAND;
+    const width = mine.length ? Math.max(...mine.map((c) => outer(c).w)) + padL[i] + padR[i] : EMPTY_BAND;
     if (i) x += BAND_GAP;
     bands.push({ stage, x, width, empty: mine.length === 0 });
     x += width;
@@ -240,7 +261,7 @@ export function planLayout(input: LayoutInput): PlanLayout {
   const seenGroup = new Set<string>();
   for (const cell of cells) {
     const o = outer(cell);
-    cell.x = bands[cell.stage].x + BAND_PAD;
+    cell.x = bands[cell.stage].x + padL[cell.stage];
     cell.y = bottom[cell.stage];
     cell.outerW = o.w;
     cell.outerH = o.h;
@@ -253,48 +274,103 @@ export function planLayout(input: LayoutInput): PlanLayout {
     bottom[cell.stage] = cell.y + o.h + CELL_GAP;
   }
   const width = x;
-  const height = Math.max(BAND_HEAD, ...bottom) - CELL_GAP + 8;
-  const route = router(cells, bands, nodes);
-  const cellOf = new Map<string, Cell>();
-  for (const cell of cells) for (const c of cell.codes) cellOf.set(c, cell);
+  const height = Math.max(BAND_HEAD, ...bottom) - CELL_GAP / 2;
+  const obstacles = obstaclesOf({ nodes, boxes, bands });
+  // One router for each set of arrows: each takes its own tracks.
+  const routeAll = router(cells, bands, obstacles, padL, padR);
+  const routePorts = router(cells, bands, obstacles, padL, padR);
+  const cellOf = cellOfCode;
   const all: LayoutEdge[] = [];
   const merged = new Map<string, LayoutEdge>();
   for (const e of input.edges) {
     const a = cellOf.get(e.from), b = cellOf.get(e.to);
     if (!a || !b || e.from === e.to) continue;
     const via = `${e.from}>${e.to}`;
-    all.push({ from: e.from, to: e.to, via: [via], points: route(e.from, e.to) });
+    all.push({ from: e.from, to: e.to, via: [via], points: routeAll(e.from, e.to) });
     // The ports: an arrow that leaves or enters a box ends at the box.
     const from = a.group && a !== b ? `${BOX_PREFIX}${a.id}` : e.from;
     const to = b.group && a !== b ? `${BOX_PREFIX}${b.id}` : e.to;
     const key = `${from}\u0000${to}`;
     const m = merged.get(key);
     if (m) m.via.push(via);
-    else merged.set(key, { from, to, via: [via], points: route(from, to) });
+    else merged.set(key, { from, to, via: [via], points: routePorts(from, to) });
   }
-  return { node: { width: NODE_W, height: NODE_H }, bands, nodes, boxes, edges: [...merged.values()], all, width, height };
+  // Each set of arrows apart: no two arrows on one line.
+  const apart = (list: LayoutEdge[]) => {
+    const moved = separate(list.map((e) => e.points), obstacles);
+    return list.map((e, i) => ({ ...e, points: tidy(moved[i]) }));
+  };
+  const edges = apart([...merged.values()]), each = apart(all);
+  const points = [...edges, ...each].flatMap((e) => e.points);
+  return {
+    node: { width: NODE_W, height: NODE_H },
+    bands,
+    nodes,
+    boxes,
+    edges,
+    all: each,
+    width: Math.max(width, ...points.map((p) => p.x + 4)),
+    height: Math.max(height, ...points.map((p) => p.y + 4)),
+  };
 }
 
-/** The routes: each one a list of points, from the right side of its start to the left side of its end. */
-function router(cells: Cell[], bands: LayoutBand[], nodes: Record<string, Point>) {
-  const rects = Object.values(nodes);
-  /** No node on the level `y` between `xa` and `xb`. */
-  const free = (y: number, xa: number, xb: number) =>
-    !rects.some((r) => Math.max(xa, xb) > r.x + 1 && Math.min(xa, xb) < r.x + NODE_W - 1 && y > r.y + 1 && y < r.y + NODE_H - 1);
-  /** No node on the line `x` between `ya` and `yb`. */
-  const freeDown = (x: number, ya: number, yb: number) =>
-    !rects.some((r) => x > r.x + 1 && x < r.x + NODE_W - 1 && Math.max(ya, yb) > r.y + 1 && Math.min(ya, yb) < r.y + NODE_H - 1);
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** True when the level or upright segment a–b passes through the inside of the rectangle. */
+export function crosses(a: Point, b: Point, r: Rect): boolean {
+  return Math.max(a.x, b.x) > r.x + 1 && Math.min(a.x, b.x) < r.x + r.w - 1 && Math.max(a.y, b.y) > r.y + 1 && Math.min(a.y, b.y) < r.y + r.h - 1;
+}
+
+/** True when two segments lie on one line and share more than a point. */
+export function overlaps(a: Point, b: Point, c: Point, d: Point): boolean {
+  if (a.y === b.y && c.y === d.y && Math.abs(a.y - c.y) < 0.5) {
+    return Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) - Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)) > 1;
+  }
+  if (a.x === b.x && c.x === d.x && Math.abs(a.x - c.x) < 0.5) {
+    return Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y)) - Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)) > 1;
+  }
+  return false;
+}
+
+/** The rectangles that no arrow goes through: the nodes, the names of the boxes, the names of the bands. */
+export function obstaclesOf(layout: Pick<PlanLayout, "nodes" | "boxes" | "bands">): Rect[] {
+  return [
+    ...Object.values(layout.nodes).map((n) => ({ x: n.x, y: n.y, w: NODE_W, h: NODE_H })),
+    ...layout.boxes.map((b) => ({ x: b.x, y: b.y, w: b.width, h: BOX_HEAD })),
+    ...layout.bands.map((b) => ({ x: b.x, y: 0, w: b.width, h: BAND_NAME })),
+  ];
+}
+
+/** The routes: each one a list of points, from the right side of its start to the left side of its end. A route
+ *  keeps its bends that do not turn (a jog of no length), so `separate` can still move each part of it; `tidy`
+ *  drops them after. */
+function router(cells: Cell[], bands: LayoutBand[], obstacles: Rect[], padL: number[], padR: number[]) {
+  const usedIn = bands.map(() => 0), usedOut = bands.map(() => 0);
+  const free = (y: number, xa: number, xb: number) => !obstacles.some((r) => crosses({ x: xa, y }, { x: xb, y }, r));
+  const freeDown = (x: number, ya: number, yb: number) => !obstacles.some((r) => crosses({ x, y: ya }, { x, y: yb }, r));
+  const nodeAt = new Map<string, Point>();
   const cellOf = new Map<string, Cell>();
   for (const cell of cells) {
-    for (const c of cell.codes) cellOf.set(c, cell);
+    for (const [c, p] of cell.at) {
+      cellOf.set(c, cell);
+      nodeAt.set(c, { x: cell.inner.x + p.x, y: cell.inner.y + p.y });
+    }
     cellOf.set(`${BOX_PREFIX}${cell.id}`, cell);
   }
-  /** The levels between cells, and above them all. */
-  const lanes = [BAND_HEAD / 2, ...cells.flatMap((c) => [c.y - CELL_GAP / 2, c.y + c.outerH + CELL_GAP / 2])];
+  /** The levels between cells, and above them all, under the names of the bands. */
+  const lanes = [(BAND_NAME + BAND_HEAD) / 2, ...cells.flatMap((c) => [c.y - CELL_GAP / 2, c.y + c.outerH + CELL_GAP / 2])];
+  /** The free levels over and under the nodes of a cell: inside its box, under the name; or between the cells. */
+  const rims = (c: Cell) =>
+    c.group ? [c.inner.y - BOX_PAD / 2, c.inner.y + c.height + BOX_PAD / 2] : [c.y - CELL_GAP / 2, c.y + c.outerH + CELL_GAP / 2];
   const endOf = (code: string, side: "out" | "in"): Point => {
     const cell = cellOf.get(code) as Cell;
     if (code.startsWith(BOX_PREFIX)) return { x: side === "out" ? cell.x + cell.outerW : cell.x, y: cell.y + cell.outerH / 2 };
-    const n = nodes[code];
+    const n = nodeAt.get(code) as Point;
     return { x: side === "out" ? n.x + NODE_W : n.x, y: n.y + NODE_H / 2 };
   };
   /** The way from an end to the side padding of its band at `pad`: points from the end outwards, and the level
@@ -303,13 +379,9 @@ function router(cells: Cell[], bands: LayoutBand[], nodes: Record<string, Point>
     if (free(end.y, end.x, pad)) return { points: [end], y: end.y };
     const cell = cellOf.get(code) as Cell;
     const jog = end.x + Math.sign(pad - end.x) * (LAYER_GAP / 2);
-    const tries = [cell.y - CELL_GAP / 2, cell.y + cell.outerH + CELL_GAP / 2].sort((a, z) => Math.abs(a - end.y) - Math.abs(z - end.y));
+    const tries = rims(cell).sort((a, z) => Math.abs(a - end.y) - Math.abs(z - end.y));
     const y = tries.find((l) => freeDown(jog, end.y, l) && free(l, jog, pad)) ?? tries[0];
     return { points: [end, { x: jog, y: end.y }, { x: jog, y }], y };
-  };
-  const tidy = (points: Point[]) => {
-    const kept = points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
-    return kept.filter((p, i) => i === 0 || i === kept.length - 1 || !((kept[i - 1].x === p.x && p.x === kept[i + 1].x) || (kept[i - 1].y === p.y && p.y === kept[i + 1].y)));
   };
   return (from: string, to: string): Point[] => {
     const a = cellOf.get(from) as Cell, b = cellOf.get(to) as Cell;
@@ -317,19 +389,86 @@ function router(cells: Cell[], bands: LayoutBand[], nodes: Record<string, Point>
     // In one cell, forwards: down or up in the layer gaps, along a free level between them.
     if (a === b && !from.startsWith(BOX_PREFIX) && !to.startsWith(BOX_PREFIX) && t.x > s.x) {
       const xs = s.x + LAYER_GAP / 2, xt = t.x - LAYER_GAP / 2;
-      if (xs >= xt) return tidy([s, { x: xs, y: s.y }, { x: xs, y: t.y }, t]);
-      const under = a.inner.y + a.height + (a.group ? BOX_PAD / 2 : CELL_GAP / 2);
-      const over = a.group ? a.inner.y - BOX_PAD / 2 : a.y - CELL_GAP / 2;
+      if (xs >= xt) return [s, { x: xs, y: s.y }, { x: xs, y: t.y }, t];
+      const [over, under] = rims(a);
       const y = [s.y, t.y, ...[under, over].sort((p, q) => Math.abs(p - s.y) - Math.abs(q - s.y))].find((l) => free(l, xs, xt) && freeDown(xs, s.y, l) && freeDown(xt, l, t.y)) ?? under;
-      return tidy([s, { x: xs, y: s.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: t.y }, t]);
+      return [s, { x: xs, y: s.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: t.y }, t];
     }
     // Between cells: out to the right padding of the band of the start, along a free level, down or up in the
-    // left padding of the band of the end, and in.
-    const outX = bands[a.stage].x + bands[a.stage].width - BAND_PAD / 2;
-    const inX = bands[b.stage].x + BAND_PAD / 2;
+    // left padding of the band of the end, and in. The level is the nearest to both ends.
+    // A track of its own on each side: out of the band of the start, into the band of the end.
+    const outX = bands[a.stage].x + bands[a.stage].width - padR[a.stage] + TRACK * ++usedOut[a.stage];
+    const inX = bands[b.stage].x + padL[b.stage] - TRACK * ++usedIn[b.stage];
     const out = leg(from, s, outX), into = leg(to, t, inX);
     const near = [...lanes].sort((p, q) => Math.abs(p - out.y) + Math.abs(p - into.y) - (Math.abs(q - out.y) + Math.abs(q - into.y)));
-    const y = [out.y, into.y, ...near].find((l) => free(l, outX, inX)) ?? BAND_HEAD / 2;
-    return tidy([...out.points, { x: outX, y: out.y }, { x: outX, y }, { x: inX, y }, { x: inX, y: into.y }, ...[...into.points].reverse()]);
+    const y = [out.y, into.y, ...near].find((l) => free(l, outX, inX)) ?? lanes[0];
+    return [...out.points, { x: outX, y: out.y }, { x: outX, y }, { x: inX, y }, { x: inX, y: into.y }, ...[...into.points].reverse()];
   };
+}
+
+/** Drop a point that repeats the one before it, or that does not turn. */
+function tidy(points: Point[]): Point[] {
+  const kept = points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+  return kept.filter((p, i) => i === 0 || i === kept.length - 1 || !((kept[i - 1].x === p.x && p.x === kept[i + 1].x) || (kept[i - 1].y === p.y && p.y === kept[i + 1].y)));
+}
+
+/** Two arrows can share a segment only at one end: the first segments out of the same start, or the last segments
+ *  into the same end. */
+export function mayShare(p: Point[], k: number, q: Point[], m: number): boolean {
+  const same = (u: Point, v: Point) => u.x === v.x && u.y === v.y;
+  if (k === 0 && m === 0 && same(p[0], q[0])) return true;
+  return k === p.length - 2 && m === q.length - 2 && same(p[p.length - 1], q[q.length - 1]);
+}
+
+/**
+ * Move the inner segments of each route aside, a track at a time, so that no two arrows run on one line: a
+ * segment that lies on a segment of another arrow moves to the nearest track where it lies on none, and passes
+ * through no node and no name. The first and the last segment stay: they hold the ends.
+ */
+function separate(routes: Point[][], obstacles: Rect[]): Point[][] {
+  const out = routes.map((r) => r.map((p) => ({ ...p })));
+  const offsets = [0];
+  for (let d = TRACK; d <= 10 * TRACK; d += TRACK) offsets.push(d, -d);
+  /** How many arrows the segment k lies on; with no way through a node or a name. */
+  const clash = (ri: number, pts: Point[], k: number) => {
+    const a = pts[k], b = pts[k + 1];
+    if (obstacles.some((r) => crosses(a, b, r))) return Number.POSITIVE_INFINITY;
+    let n = 0;
+    for (let rj = 0; rj < out.length; rj++) {
+      if (rj === ri) continue;
+      const q = out[rj];
+      for (let m = 0; m + 1 < q.length; m++) if (overlaps(a, b, q[m], q[m + 1]) && !mayShare(pts, k, q, m)) n++;
+    }
+    return n;
+  };
+  // A move takes a segment to a track where it lies on no other arrow, and does not make its two neighbours (which
+  // it stretches) lie on more arrows than before; a later move frees the neighbours. Three rounds over all arrows.
+  for (let pass = 0; pass < 3; pass++) {
+    for (let ri = 0; ri < out.length; ri++) {
+      for (let k = 1; k + 2 < out[ri].length; k++) {
+        const pts = out[ri];
+        if (pts[k].x === pts[k + 1].x && pts[k].y === pts[k + 1].y) continue;
+        if (clash(ri, pts, k) === 0) continue;
+        const level = pts[k].y === pts[k + 1].y;
+        const before = [clash(ri, pts, k - 1), clash(ri, pts, k + 1)];
+        const n = pts.length - 1;
+        for (const d of offsets.slice(1)) {
+          const cand = pts.map((p) => ({ ...p }));
+          for (const j of [k, k + 1]) {
+            if (level) cand[j].y += d;
+            else cand[j].x += d;
+          }
+          // The first and the last segment keep their way out of the start and into the end.
+          const firstOk = k > 1 || (Math.sign(cand[1].x - cand[0].x) === Math.sign(pts[1].x - pts[0].x) && Math.abs(cand[1].x - cand[0].x) >= TRACK);
+          const lastOk = k + 1 < n - 1 || (Math.sign(cand[n].x - cand[n - 1].x) === Math.sign(pts[n].x - pts[n - 1].x) && Math.abs(cand[n].x - cand[n - 1].x) >= TRACK);
+          if (!firstOk || !lastOk) continue;
+          if (clash(ri, cand, k) !== 0) continue;
+          if (clash(ri, cand, k - 1) > before[0] || clash(ri, cand, k + 1) > before[1]) continue;
+          out[ri] = cand;
+          break;
+        }
+      }
+    }
+  }
+  return out;
 }

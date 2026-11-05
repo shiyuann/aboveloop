@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parsePlan } from "./plan-graph.ts";
-import { BOX_PREFIX, type LayoutEdge, type LayoutInput, NODE_H, NODE_W, type PlanLayout, planLayout } from "./plan-layout.ts";
-import { planStages } from "./plan-stages.ts";
+import { BOX_HEAD, BOX_PREFIX, type LayoutEdge, type LayoutInput, NODE_H, NODE_W, type PlanLayout, planLayout } from "./plan-layout.ts";
+import { type IssueFact, planStages } from "./plan-stages.ts";
 
 const fixture = (name: string, file: string) => parsePlan(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"), file);
 
@@ -22,8 +22,51 @@ function through(layout: PlanLayout, e: LayoutEdge): string[] {
   return hits;
 }
 
-function inputOf(plan: ReturnType<typeof parsePlan>): LayoutInput {
-  const st = planStages(plan);
+/** The segments of a route that pass through the name of a box. */
+function throughNames(layout: PlanLayout, e: LayoutEdge): string[] {
+  const hits: string[] = [];
+  for (let i = 1; i < e.points.length; i++) {
+    const a = e.points[i - 1], b = e.points[i];
+    for (const r of layout.boxes) {
+      const inX = Math.max(a.x, b.x) > r.x + 1 && Math.min(a.x, b.x) < r.x + r.width - 1;
+      const inY = Math.max(a.y, b.y) > r.y + 1 && Math.min(a.y, b.y) < r.y + BOX_HEAD - 1;
+      if (inX && inY) hits.push(`${e.via.join(",")} through the name of ${r.id}`);
+    }
+  }
+  return hits;
+}
+
+/** Each pair of arrows that lie on one line for more than a point, apart from the first segments out of one start
+ *  and the last segments into one end. */
+function shared(edges: LayoutEdge[]): string[] {
+  const out: string[] = [];
+  const same = (u: { x: number; y: number }, v: { x: number; y: number }) => u.x === v.x && u.y === v.y;
+  for (let i = 0; i < edges.length; i++) {
+    for (let j = i + 1; j < edges.length; j++) {
+      const p = edges[i].points, q = edges[j].points;
+      for (let k = 0; k + 1 < p.length; k++) {
+        for (let m = 0; m + 1 < q.length; m++) {
+          const [a, b, c, d] = [p[k], p[k + 1], q[m], q[m + 1]];
+          const level = a.y === b.y && c.y === d.y && a.y === c.y;
+          const upright = a.x === b.x && c.x === d.x && a.x === c.x;
+          const len = level
+            ? Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) - Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x))
+            : upright
+              ? Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y)) - Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y))
+              : 0;
+          if (len <= 1) continue;
+          if (k === 0 && m === 0 && same(p[0], q[0])) continue;
+          if (k === p.length - 2 && m === q.length - 2 && same(p.at(-1) as never, q.at(-1) as never)) continue;
+          out.push(`${edges[i].via.join(",")} and ${edges[j].via.join(",")}`);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function inputOf(plan: ReturnType<typeof parsePlan>, issues = new Map<number, IssueFact>()): LayoutInput {
+  const st = planStages(plan, issues);
   return {
     nodes: plan.nodes.map((n) => n.code),
     edges: plan.edges,
@@ -101,6 +144,42 @@ test("no arrow runs through a node: each fixture, with the arrows to the ports a
   }
 });
 
+/** A milestone plan with areas in four stages, done work in release that earlier work waits on, and the plans of
+ *  two issues. */
+const beta = () => {
+  const fact = (issue: number, stage: IssueFact["stage"]): IssueFact => ({ issue, where: "worktree", file: "", ref: null, stage, next: [] });
+  return planLayout(inputOf(fixture("beta.txt", "knowledge/plan/beta.md"), new Map([[7, fact(7, "implement")], [9, fact(9, "spec")]])));
+};
+
+test("no arrow runs through a node or the name of a box, with the ports and with all arrows", () => {
+  const l = beta();
+  assert.deepEqual(l.boxes.map((b) => b.stage), ["proposal", "explore", "spec", "implement", "release"]);
+  for (const e of [...l.edges, ...l.all]) {
+    assert.deepEqual(through(l, e), []);
+    assert.deepEqual(throughNames(l, e), []);
+  }
+  for (const [name, file] of [["alpha.txt", "knowledge/plan/alpha.md"], ["42-export.txt", "knowledge/plan/42-export.md"]]) {
+    const a = planLayout(inputOf(fixture(name, file)));
+    for (const e of [...a.edges, ...a.all]) assert.deepEqual(throughNames(a, e), [], name);
+  }
+});
+
+test("no two arrows run on one line: only the first segments out of one start or the last into one end", () => {
+  const l = beta();
+  assert.deepEqual(shared(l.edges), []);
+  assert.deepEqual(shared(l.all), []);
+  for (const [name, file] of [
+    ["alpha.txt", "knowledge/plan/alpha.md"],
+    ["42-export.txt", "knowledge/plan/42-export.md"],
+    ["index.txt", "knowledge/plan/index.md"],
+    ["7-english.txt", "knowledge/plan/7-english.md"],
+  ]) {
+    const a = planLayout(inputOf(fixture(name, file)));
+    assert.deepEqual(shared(a.edges), [], name);
+    assert.deepEqual(shared(a.all), [], name);
+  }
+});
+
 test("no arrow runs through a node: a wide graph with long arrows inside a cell and back to an earlier band", () => {
   const nodes = Array.from({ length: 14 }, (_, i) => `A${i + 1}`);
   const edges = [
@@ -115,7 +194,12 @@ test("no arrow runs through a node: a wide graph with long arrows inside a cell 
     groupOf[c] = i % 3 === 0 ? "P1" : i % 3 === 1 ? null : "P2";
   });
   const l = planLayout({ nodes, edges, stages: ["spec", "implement", "merge", "release"], stageOf, groupOf });
-  for (const e of [...l.edges, ...l.all]) assert.deepEqual(through(l, e), []);
+  for (const e of [...l.edges, ...l.all]) {
+    assert.deepEqual(through(l, e), []);
+    assert.deepEqual(throughNames(l, e), []);
+  }
+  assert.deepEqual(shared(l.edges), []);
+  assert.deepEqual(shared(l.all), []);
   // Each route starts at the right side of its start and ends at the left side of its end.
   for (const e of l.all) {
     assert.equal(e.points[0].x, l.nodes[e.from].x + NODE_W);
