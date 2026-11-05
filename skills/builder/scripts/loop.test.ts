@@ -106,6 +106,14 @@ test("a body that misses one part is rejected, each part on its own", () => {
   assert.ok(has(cut(/## Evidence\n/), "Evidence"));
 });
 
+test("the list of a spec change after the spec step is optional, but not empty and it names a spec page", () => {
+  const late = (list: string) => ok.replace("## Evidence", `## Spec changed after the spec step\n\n${list}\n\n## Evidence`);
+  assert.deepEqual(checkPrBody(late("- knowledge/spec/L3-sync.md §2 — the batch is 50, not 100 — the API caps a page at 50."), 5), []);
+  assert.deepEqual(checkPrBody(late("- L3-sync §2: the batch is 50."), 5), []);
+  assert.match(checkPrBody(late(""), 5).join(), /is empty/);
+  assert.match(checkPrBody(late("- <only in CI>"), 5).join(), /names no spec page/);
+});
+
 test("the explore batch: open issues without explored, lowest first, PRs and closed ones never, at most EXPLORE_MAX", () => {
   const rows: Issue[] = [
     { number: 9, state: "open" },

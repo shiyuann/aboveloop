@@ -13,6 +13,7 @@ Marks: ✅ built · 🔶 partly built · ⬜ not built.
 - **Two labels control the work** (§3). `explored` tells that explore is done. `ready-for-auto-builder` hands the issue to CI: it is the lock, not a sign-off. The implement run removes it when it stops.
 - **The automatic mode changes only L3 and the words of L2** (§6).
 - **The owner signs off at three points in the semi-automatic mode:** the start of the issue, the last spec review (a heavy spec only), and the merge. Between them, the owner acts only at a D. In the automatic mode, the merge is the only sign-off. The deep-verify runs in the background and does not stop the owner (§7).
+- **A change of meaning to the spec after the spec step goes back to the spec step.** In a session it gets a new spec review; in CI the PR body lists it. Each done node that the change touches gets a delta node (§7).
 - **Other pages.** The instructions of the three steps are only in the skill `builder` (`explore.md`, `spec.md`, `implement.md`, `issue-in-session.md`); this page holds the decisions and their Why ([L2-plugin §2](L2-plugin.md#2-entry-the-start-for-all-rules-and-skills)). The code (the runs in CI, the scripts, B1): [L3-loop-builder](L3-loop-builder.md). The dev loop above it (the session entry of `dev`, the graph of open work, and the briefing as a design): [L2-loop-dev](L2-loop-dev.md). What the loops share, and the shared terms: [L2-loops](L2-loops.md).
 
 ## 0. Terms
@@ -35,6 +36,7 @@ Marks: ✅ built · 🔶 partly built · ⬜ not built.
 | Plan of an issue | `knowledge/plan/<N>-<slug>.md`. In both modes, on the branch of the issue from the start of the spec step. After the merge, it stays on `main` until the release after its last node (§5). |
 | Spec review | An owner step (O) in the plan of an issue: the owner reads the full spec change of the issue (the spec diff of its PR) and the summary of the deep-verify node before it (§7). |
 | Sign-off | A point where the owner accepts the work: the start of an issue, a spec review, the merge (§7). |
+| Delta node | A new A node, on the same branch, that brings the work of a done node to a spec that changed after the spec step (§7). |
 | Kind | A class of issue that a project defines, with its own research and its own way to do the work. Example: a small data correction, a change to the data pipeline, product feedback. |
 
 Other terms (the builder loop, the deep-verify, issue, PR): [L2-loops §0](L2-loops.md#0-terms).
@@ -50,7 +52,7 @@ flowchart LR
   SP --> DC{"a D or O<br/>is open?"}
   DC -->|"session: the owner decides in the dialog;<br/>CI: a question comment stops the run"| SP
   DC -->|"none is open"| IM["implement: the agent nodes,<br/>the branch and the PR"]
-  IM -->|"a new decision or step of the owner"| SP
+  IM -->|"a new decision or step of the owner,<br/>or a change of meaning to the spec"| SP
   IM --> PR["PR ready: the owner merges"]
   PR --> DN
 ```
@@ -379,6 +381,7 @@ Each PR that an agent opens tells who opened it, in three labels. They describe 
 
 - Explore tells in the Explore comment which levels the change touches. A change of L1, or of the content of L2, is in the semi-automatic mode: explore does not add the label (§3).
 - The implement run that finds such a change, in the spec step or later, stops (§3). A heavy spec in CI changes only L3 and the words of L2.
+- This table decides a change after the spec step too, not the judgement of the agent. A change of L3 after the spec step is permitted, but the PR body lists it under its own heading, and each done node that it touches gets a delta node (§7, "A spec change after the spec step").
 - The rules also count as L2 here: `AGENTS.md`, `.agents/*.md`, and the rules in `skills/`. Why: agents obey the rules first, and `.agents/*.md` holds the Auto-ready rules.
   - A change of the meaning of a rule in `skills/` is a change of L2 content, also when the L2 page holds only its decision and the skill holds its steps (§5). So the automatic mode still cannot make it.
 - A project with no spec levels yet: the automatic mode changes no page of `knowledge/`; only the plan of the issue.
@@ -400,7 +403,7 @@ Each PR that an agent opens tells who opened it, in three labels. They describe 
   - A fixed agent node, the deep-verify, comes before each spec review (below). Before the spec review, every node that points to it is done.
   - The owner reads the spec diff of the draft PR and the summary of the deep-verify; from the second spec review, the agent shows what changed since the last one first.
   - Changes that the owner asks for go into the spec at once, and lead to the next spec review. When the owner accepts the last spec review, the agent writes the code with no other start.
-  - **The owner acts only at a D, at the last spec review and at the merge** (semi-automatic mode). Between them, the owner can talk and change the spec at any time; a change goes in at once, with its cascade in the same commit (L2-loops §2.2). The owner gets no question before a deep-verify.
+  - **The owner acts only at a D, at the last spec review and at the merge** (semi-automatic mode). Between them, the owner can talk and change the spec at any time; a change goes in at once, with its cascade in the same commit (L2-loops §2.2). After the spec step, a change of meaning also gets a new spec review (below). The owner gets no question before a deep-verify.
   - **The deep-verify node runs in the background.** A deep-verify is subagents that verify a spec change and its plan; the agent repairs what they find (`knowledge`, deep-verify-knowledge). The chart of the knowledge loop shows where it runs ([L2-loops §2.2](L2-loops.md#22-the-knowledge-loop)).
     - The agent starts it with no question to the owner: when the draft of a heavy spec is complete, when the change since the last deep-verify is large enough for the panel form, and before each spec review when a meaning changed since the last deep-verify. If no meaning changed, the node is done with no run. The owner can also ask for one. The steps (the start times, the fixed commit and its detached worktree, the one subagent that repairs, the summary that the spec review shows) are in `spec.md` 6.2 and `knowledge`'s [deep-verify-knowledge](../../skills/knowledge/references/deep-verify-knowledge.md#1-定范围).
     - The owner can go on talking, and the agent goes on changing the spec. A direction-level finding becomes a new D node of the plan, and the agent leads the owner through it like any D. The plan grows; the agent does not predict these nodes.
@@ -437,6 +440,34 @@ Each PR that an agent opens tells who opened it, in three labels. They describe 
       - Few findings blocked: 1 of 15, 1 of 33, 0 of 32.
       - The rebuttal dropped few: 1 of 15, 3 of 32.
       - A later round has a smaller diff, so one subagent is sufficient there.
+- **A spec change after the spec step** (both modes). The spec step ends at the last spec review of a heavy spec, at the short plan of a light spec, and in CI when no D or O before the agent nodes is open. After that, the agent or the owner can find that the spec must change.
+  - A change of words, as [knowledge-base](../../skills/knowledge/references/knowledge-base.md) defines it (wording, a typo, a link), goes in as before. The rules below are for a change of meaning.
+  - **Semi-automatic mode: the change goes back to the spec step.**
+    1. A D comes first, when the change holds a direction-level choice (§1, the decision rule).
+    2. The agent changes the spec on the branch, with its cascade in the same commit.
+    3. A new O node `owner: spec review` comes next, with its deep-verify node before it. The done spec review stays ✅ as history; nobody opens it again (`knowledge`'s [spec-and-plan](../../skills/knowledge/references/spec-and-plan.md), 「plan 既是记录，也是计划」).
+    - The new spec review is the go-ahead. No separate D asks whether to build again or to keep the work.
+    - After the new spec review, each done agent node whose spec sections changed gets a delta node: a new A node on the same branch.
+    - The PR is not ready until the new spec review is ✅ and each delta node is done.
+    - A light spec that meets a change of meaning becomes heavy (`spec.md` §2).
+    - The steps are in `implement.md` 6.4.
+  - **Automatic mode: §6 decides, not the judgement of the agent.** A change of L1 or of the content of L2 stops the implement run, as before (§3). A change of L3 is permitted, with two conditions:
+    - The PR body lists it under its own heading, "Spec changed after the spec step": the sections, what changed, and why (`implement.md` §8).
+    - Each done node whose section changed gets a delta node before the PR is ready.
+    - The merge signs off the change (§6). The list puts the change in front of the owner, apart from the rest of the spec diff.
+  - Why: Pine Yan, a partner of the owner (a 1:1 of 2026-10-22): "if the spec changed without review, that is not allowed; it cannot go on". The owner (2026-11-03): "in general, if we need to go back in progress stages because we need new decisions to be made, we need to re-sign off (with a new sign-off node if the previous one is already closed.)"
+  - Why no D to build again: the owner (2026-11-03): "if a decision is made to change the spec and the new spec is signed off, why do we need a separate decision node for rebuilding?"
+  - Why: before this rule, a session could change the spec in the implement step with no new review. The owner then saw the change only in the PR, mixed with the code. In CI, the owner reads the whole spec diff at the merge, but cannot see which part came after the code started.
+- **Other work when the spec goes back.** A node or an issue can send the spec back (the item above). Then the agent examines each other running node of the issue, and each other open issue of the same milestone plan, whose work depends on the changed sections. For each, the agent selects one of three:
+  1. Continue.
+  2. Wait: the work stops at a pushed commit, and continues after the new spec review.
+  3. Continue, and add a repair node after the new spec review.
+  - The agent writes each selection in the D that sends the work back, as "Agent decided". With no D, it writes them in the new spec review. The owner can change any selection in the same answer.
+  - Fixed rule: no PR merges work that was built on a spec that a new spec review replaced.
+  - In CI, the implement run does its nodes one after the other, so no other node runs. The delta nodes (the item above) cover the done nodes.
+  - The steps are in `implement.md` 6.4.
+  - Why: the owner (2026-11-03): "let's see projects just as a way to group nodes. so whether the sibling projects' build should stop and wait depends on the situation, whether they are affected ... If the repair is minor or the build is already progressed a lot, then for the sake of not wasting efforts, we can continue and append a repair." The plan of a milestone groups issues as a project groups nodes.
+  - Why the agent selects: the size of the repair and the progress of the work are facts, so the agent decides (`entry`, 「拍板只问方向」). The owner sees each selection in the D, and can change it there.
 - **The sign-off of the code** is the merge of the PR, in both modes.
 - **The owner's points of all loops** (the start, each D and O, the last spec review and the merge of an issue too) are in one table in [L2-loops §4](L2-loops.md#4-how-the-loops-talk-to-the-owner).
 
