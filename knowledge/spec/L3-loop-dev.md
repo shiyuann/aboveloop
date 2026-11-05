@@ -227,6 +227,7 @@ These rules of `spec-and-plan.md` stay with the agent and the deep-verify:
 ✅ The plan viewer is a local web page that draws each plan of `knowledge/plan/` as a graph, with its activity from git. On the plan of a milestone, it also makes the groups of §4.4: a person circles nodes into a proposal, and opens a proposal as a GitHub issue. The steps to start it are in `knowledge`'s `SKILL.md` (「看 plan 的图」).
 
 - **The script** is `plan-view.ts` in `knowledge`'s `scripts/`. It uses only Node and `git`, with no package to install. The page is `plan-view.html` beside it, with no script or style from another site.
+- **The page only draws.** The server works out each part of the view (§5.4) with pure modules beside it: `plan-stages.ts` (the state and the stage of each node and group) and `plan-layout.ts` (the bands, the boxes, the place of each node and the route of each arrow). Each has its tests.
 - **It binds to 127.0.0.1 only.** It answers only a request whose `Host` is `127.0.0.1:<port>` or `localhost:<port>`. Another `Host` gets 403.
   - Agent decided: a plan can name private work. A page of another site must not read it through a DNS name that points to 127.0.0.1.
 - **It parses and edits only with the plan scripts** (§4): `parsePlan`, `checkPlan` and `checkTransition` of `plan-graph.ts`, and the functions for a server of `plan.ts` (§4.5). It does not parse or edit a plan itself (P3). The server takes them as arguments; the tests give a stand-in for `gh`.
@@ -293,9 +294,44 @@ The activity of one plan comes from git, with no database. The server reads the 
 | Field | What it holds |
 | --- | --- |
 | `states` | The state of each node: `done` (✅), `dropped` (struck through), `ready` (能做: each node before it is done or dropped, and an agent does it), `waits` (等: each node before it is done or dropped, and it is a D, an O or an E), `blocked` (a node before it is open). |
+| `openBefore` | For each open node, the open nodes right before it: what it waits on. |
 | `critical` | The longest path of open nodes, by count, that ends at an open node with no open node after it. |
 | `decisions` | Each D: its question (the line that starts with 「问题」 or "Question"), the line that names the recommended option, and, when it is ✅, who decided, the quote and the date. |
+| `stages` | `stages` (the bands, in order), `current` (where the plan is now), `nodes` (the stage of each node) and `groups` (for each group: its `stage`, `issue`, the fact of its issue from git, and `openBefore`, the open nodes outside the group that a node of the group waits on) (§5.5). |
+| `layout` | The output of `plan-layout.ts`: `bands`, `nodes` (the top left of each node), `boxes` (a box for each group in each band where it has nodes), `edges` (the arrows to the ports of the boxes), `all` (each arrow from node to node), and the size of a node and of the graph (§5.6). |
 
 - Agent decided: `waits` names only a D, an O or an E whose turn it is, so the word keeps the meaning of [L2-loop-dev §4](L2-loop-dev.md#4-the-graph-of-open-work). A node after open work is `blocked`, not `waits`.
-- The page follows the newest event: on load, and on each `changed`, it moves the view to the node of the newest new event, and makes that node pulse. A pan, a zoom or a click in a panel stops the follow. The follow button starts it again.
-- The page draws a group as one box for each layer of the graph, with a bridge between two next layers, so a box does not cover a node of another group. The nodes of a group are next to each other in their layer.
+- **Follow.** The page follows the newest event: on load, and on each `changed`, it moves the view to the node of the newest new event. Follow is on when the page opens. Only the Follow button turns it off: a pan, a zoom, Fit, a search or a click leaves it on.
+  - Why: the owner (on the same viewer of deepdev, 2026-10-20): 「by default, the follow-activity button is checked」 and 「the auto-focus button for the graph should only be canceled when users click on it」.
+- **What pulses.** Only a node that `waits` pulses. A node that is only `ready` does not, and a new event does not make its node pulse. Why: the owner's words in [L2-loop-dev §4](L2-loop-dev.md#4-the-graph-of-open-work) (「only the waiting and actively running nodes should shine」). The viewer knows of no session that runs a node, so no node is "running".
+- **The tools** of the graph, at its top right: All arrows, zoom in, zoom out, Fit, Follow. Each has a text tooltip, on hover and on focus. The search box shows at most 5 matches; a click on one moves the view to that node and opens it.
+
+### 5.5 The stages
+
+The view draws the graph in columns: one band for each stage of the life of an issue, in order, from left to right. The stage of a node comes from its kind, its arrows and the plan of its issue. The plan file does not store it.
+
+- Owner decided (on the same viewer of deepdev, 2026-11-03): 「the stages need to match the current progress labels … instead of reinventing a new stage system」. So the stages are the steps of [L2-loop-builder §1](L2-loop-builder.md#1-the-life-of-an-issue-) (explore, spec, implement, the merge), the release O of a plan, and, in a milestone plan, the A nodes that are not an issue yet (`proposal`). There is no other stage.
+
+| Plan | Bands |
+| --- | --- |
+| The plan of an issue | `spec`, `implement`, `merge`, `release` |
+| `index.md` | `explore`, `spec`, `implement`, `merge`, `release` |
+| A milestone plan | `proposal`, `explore`, `spec`, `implement`, `merge`, `release` |
+
+- **The plan of an issue.** `release`: a release O (its label has 「发版」 or "release"), and each node after it. `spec`: a D, a spec review O, an O before an agent node (the spec step ends when every D and O before the agent nodes is done), and each node before a node of `spec`. `implement`: each other A node. `merge`: an O before no agent node: the owner does it before the merge. Each other node (E, X): the earliest stage of the nodes that wait on it; with none, the latest stage of the nodes before it; with none, the first stage.
+- **The stage of an issue** is the earliest stage of the open nodes of its plan, and `release` when no node is open. A plan that is only on the branch of the issue is not merged, so its stage is at most `merge`.
+- **A milestone plan.** A node of a group is in the stage of its group: a proposal is in `proposal`; an issue group is in `release` when each of its nodes is done or dropped, else in the stage of its issue, else (no plan of the issue) in `explore`. An open A node in no group is in `proposal`, a done one in `release`. A release O and an M are in `release`. Each other node takes the stage of its arrows, as above.
+- **`index.md`.** `I<N>` is in the stage of issue N, as an issue group. A release is in `release`. Each other node takes the stage of its arrows.
+- **The facts of an issue** come from git only, at each load of the plan: the plan `knowledge/plan/<N>-*.md` on the branch `issues/<N>` (the newest local or remote-tracking one) while `HEAD` does not hold that branch; else the plan in the checkout; else the plan on the merged branch. The server does not fetch, and it does not read GitHub.
+  - Agent decided: the states of an issue in `dev`'s `SKILL.md` (「issue 的状态」) need labels, PRs and comments from GitHub, and they are written once, in that skill (P3). The viewer reads only git, so it shows the step that the plan of the issue records, and `explore` for an issue with no plan, which holds `unexplored`, `to_decide`, `ready` and `on_hold`.
+- **`current`**: for the plan of an issue, the stage of the issue; for another plan, the earliest stage with an open node.
+
+### 5.6 The bands, the boxes and the arrows
+
+- **Bands.** The bands are side by side, with an empty gap between them. A band with no node is narrow. Each band has the tint of its stage, and the band of `current` has its name in bold.
+- **Areas.** A group is a box with a thick border and no fill. A group with nodes in two stages has a box in each band. In a band, the nodes of no group are one cell, and the nodes of each group one cell; the band stacks its cells top to bottom, the nodes of no group first, then the groups in chart order. The bands are not aligned with each other. The first box of a group names it, its count of done nodes, where it is (not an issue yet; no plan yet; the stage of its plan and the next nodes of that plan, with the issue number; closed), and the open nodes outside it that it waits on.
+  - Owner decided (on deepdev, 2026-11-03): 「let's use the previous way to use subgraph for each project」, 「we still need to stage columns.. we just don't need the rows」; and a box in each column, because one box across the columns made the graph 「确实太宽，同时也太高」.
+- **A node** shows its code, its state, the open nodes that it waits on (「blocked by D1 A3」), and its label. The tag of its kind, top right, has the colour of its stage; the border keeps the colour of its state.
+- **Arrows.** An arrow that crosses the edge of a box ends at the box: it leaves from the middle of the right side, and enters at the middle of the left side. Arrows that then have the same two ends are one arrow, and its tooltip names the arrows of the plan. The tool button All arrows draws each arrow from node to node. Each arrow of the plan is drawn: the view does not hide an arrow that another path implies. An arrow out of nodes that are all done or dropped is dashed and faint.
+  - Owner decided (on deepdev, 2026-11-03): 「现在有了subgraph的连线点合并，应该会好很多」, and the implied arrows came back.
+- **No arrow runs through a node.** An arrow goes up or down only in the gap between two layers of a cell, or in the side padding of a band. It goes along a level only where no node is: its own level, a level between two cells, or the level above the cells.
